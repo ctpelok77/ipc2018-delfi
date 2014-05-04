@@ -3,6 +3,7 @@
 
 #include "shrink_strategy.h"
 
+//#include "symmetries/symmetries.h"
 #include "../utilities.h"
 
 #include <ext/slist>
@@ -12,6 +13,7 @@ class EquivalenceRelation;
 class Label;
 class Labels;
 class State;
+class Symmetries;
 
 struct AbstractTransition {
     AbstractStateRef src;
@@ -43,6 +45,7 @@ class Abstraction {
     friend class CompositeAbstraction;
 
     friend class ShrinkStrategy; // for apply() -- TODO: refactor!
+    friend class Symmetries; // for apply() TODO
 
     static const int PRUNED_STATE = -1;
     static const int DISTANCE_UNKNOWN = -2;
@@ -156,6 +159,7 @@ public:
     // These methods should be private but is public for shrink_bisimulation
     int get_label_cost_by_index(int label_no) const;
     const std::vector<AbstractTransition> &get_transitions_for_label(int label_no) const;
+    bool is_label_reduced(int label_no) const;
     // This method is shrink_bisimulation-exclusive
     int get_num_labels() const;
     // These methods are used by non_linear_merge_strategy
