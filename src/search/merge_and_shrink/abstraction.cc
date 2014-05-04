@@ -95,6 +95,10 @@ int Abstraction::get_num_labels() const {
     return labels->get_size();
 }
 
+bool Abstraction::is_label_reduced(int label_no) const {
+    return labels->is_label_reduced(label_no);
+}
+
 void Abstraction::compute_label_ranks(vector<int> &label_ranks) {
     // abstraction needs to be normalized when considering labels and their
     // transitions

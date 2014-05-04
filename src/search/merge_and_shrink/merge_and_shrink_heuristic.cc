@@ -3,6 +3,7 @@
 #include "abstraction.h"
 #include "labels.h"
 #include "merge_strategy.h"
+#include "merge_symmetries.h"
 #include "shrink_fh.h"
 #include "shrink_strategy.h"
 
