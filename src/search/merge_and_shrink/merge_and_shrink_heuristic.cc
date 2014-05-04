@@ -3,6 +3,7 @@
 #include "abstraction.h"
 #include "labels.h"
 #include "merge_strategy.h"
+#include "merge_symmetries.h"
 #include "shrink_strategy.h"
 
 #include "../globals.h"
@@ -60,6 +61,7 @@ Abstraction *MergeAndShrinkHeuristic::build_abstraction() {
 
     // vector of all abstractions. entries with 0 have been merged.
     vector<Abstraction *> all_abstractions;
+    cout << "reserve: " << g_variable_domain.size() * 2 - 1 << endl;
     all_abstractions.reserve(g_variable_domain.size() * 2 - 1);
     Abstraction::build_atomic_abstractions(all_abstractions, labels);
 
@@ -131,6 +133,7 @@ Abstraction *MergeAndShrinkHeuristic::build_abstraction() {
         Abstraction *new_abstraction = new CompositeAbstraction(labels,
                                                                 abstraction,
                                                                 other_abstraction);
+        new_abstraction->compute_distances();
 
         abstraction->release_memory();
         other_abstraction->release_memory();
