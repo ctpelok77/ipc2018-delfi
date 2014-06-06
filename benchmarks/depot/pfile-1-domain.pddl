@@ -2,11 +2,11 @@
 (:predicates
      (at ?x ?y) (in ?x ?y) (place ?x) (truck ?x) (crate ?x) )
 (:action drive
- :parameters ( ?x ?y ?z)
+ :parameters ( ?truck ?place1 ?place2)
  :precondition
-    (and (truck ?x) (place ?y) (place ?z)  (at ?x ?y))
+    (and (truck ?truck) (place ?place1) (place ?place2)  (at ?truck ?place1))
  :effect
-    (and (at ?x ?z) (not (at ?x ?y))))
+    (and (not (at ?truck ?place1)) (at ?truck ?place2)))
 
 (:action load
  :parameters ( ?crate ?truck ?place)
