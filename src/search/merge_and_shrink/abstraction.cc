@@ -42,11 +42,12 @@ using namespace __gnu_cxx;
 //        grep for it). It should only be defined once.
 static const int infinity = numeric_limits<int>::max();
 
-Abstraction::Abstraction(Labels *labels_)
+Abstraction::Abstraction(Labels *labels_, bool debug_)
     : labels(labels_), num_labels(labels->get_size()),
       transitions_by_label(g_operators.empty() ? 0 : g_operators.size() * 2 - 1),
       relevant_labels(transitions_by_label.size(), false),
-      transitions_sorted_unique(true), peak_memory(0) {
+      transitions_sorted_unique(true), peak_memory(0),
+      debug(debug_) {
     clear_distances();
 }
 
@@ -94,6 +95,10 @@ const vector<AbstractTransition> &Abstraction::get_transitions_for_label(int lab
 
 int Abstraction::get_num_labels() const {
     return labels->get_size();
+}
+
+bool Abstraction::is_label_reduced(int label_no) const {
+    return labels->is_label_reduced(label_no);
 }
 
 void Abstraction::compute_label_ranks(vector<int> &label_ranks) {
@@ -575,14 +580,15 @@ EquivalenceRelation *Abstraction::compute_local_equivalence_relation() const {
 }
 
 void Abstraction::build_atomic_abstractions(vector<Abstraction *> &result,
-                                            Labels *labels) {
+                                            Labels *labels,
+                                            bool debug) {
     assert(result.empty());
     cout << "Building atomic abstractions... " << endl;
     int var_count = g_variable_domain.size();
 
     // Step 1: Create the abstraction objects without transitions.
     for (int var_no = 0; var_no < var_count; var_no++)
-        result.push_back(new AtomicAbstraction(labels, var_no));
+        result.push_back(new AtomicAbstraction(labels, var_no, debug));
 
     // Step 2: Add transitions.
     // Note that when building atomic abstractions, no other labels than the
@@ -668,8 +674,8 @@ void Abstraction::build_atomic_abstractions(vector<Abstraction *> &result,
     }
 }
 
-AtomicAbstraction::AtomicAbstraction(Labels *labels, int variable_)
-    : Abstraction(labels), variable(variable_) {
+AtomicAbstraction::AtomicAbstraction(Labels *labels, int variable_, bool debug)
+    : Abstraction(labels, debug), variable(variable_) {
     varset.push_back(variable);
     /*
       This generates the states of the atomic abstraction, but not the
@@ -689,7 +695,30 @@ AtomicAbstraction::AtomicAbstraction(Labels *labels, int variable_)
         }
     }
 
+    if (debug) {
+        for (size_t abs_state = 0; abs_state < range; ++abs_state) {
+            vector<set<int> > var_multi_vals;
+            for (int var = 0; var < g_variable_domain.size(); ++var) {
+                set<int> multi_vals;
+                if (var == variable) {
+                    // if var is the abstrations variable, its value can only be the
+                    // value of the abstract state
+                    multi_vals.insert(abs_state);
+                } else {
+                    // all values of var are allowed (i.e. value = -1)
+                    for (int val = 0; val < g_variable_domain[var]; ++val) {
+                        multi_vals.insert(val);
+                    }
+                }
+                var_multi_vals.push_back(multi_vals);
+            }
+            abs_state_to_var_multi_vals.push_back(var_multi_vals);
+        }
+    }
+
     num_states = range;
+    if (range > lookup_table.max_size())
+        exit_with(EXIT_OUT_OF_MEMORY);
     lookup_table.reserve(range);
     goal_states.resize(num_states, false);
     for (int value = 0; value < range; value++) {
@@ -707,8 +736,9 @@ AtomicAbstraction::~AtomicAbstraction() {
 
 CompositeAbstraction::CompositeAbstraction(Labels *labels,
                                            Abstraction *abs1,
-                                           Abstraction *abs2)
-    : Abstraction(labels) {
+                                           Abstraction *abs2,
+                                           bool debug)
+    : Abstraction(labels, debug) {
     cout << "Merging " << abs1->description() << " and "
          << abs2->description() << endl;
 
@@ -734,6 +764,26 @@ CompositeAbstraction::CompositeAbstraction(Labels *labels,
                 goal_states[state] = true;
             if (s1 == abs1->init_state && s2 == abs2->init_state)
                 init_state = state;
+
+            if (debug) {
+                const vector<set<int> > &abs1_var_multi_vals = abs1->abs_state_to_var_multi_vals[s1];
+                const vector<set<int> > &abs2_var_multi_vals = abs2->abs_state_to_var_multi_vals[s2];
+                assert(abs1_var_multi_vals.size() == abs2_var_multi_vals.size());
+                assert(abs1_var_multi_vals.size() == g_variable_domain.size());
+                vector<set<int> > new_var_multi_vals;
+                // this assumes that the two abstractions do no share any variables. otherwise,
+                // a more complex double-union should be computed, as in apply_abstraction()
+                for (size_t i = 0; i < abs1_var_multi_vals.size(); ++i) {
+                    const set<int> &abs1_multi_vals = abs1_var_multi_vals[i];
+                    const set<int> &abs2_multi_vals = abs2_var_multi_vals[i];
+                    set<int> new_multi_vals;
+                    set_intersection(abs1_multi_vals.begin(), abs1_multi_vals.end(),
+                                     abs2_multi_vals.begin(), abs2_multi_vals.end(),
+                                     inserter(new_multi_vals, new_multi_vals.begin()));
+                    new_var_multi_vals.push_back(new_multi_vals);
+                }
+                abs_state_to_var_multi_vals.push_back(new_var_multi_vals);
+            }
         }
     }
 
@@ -762,6 +812,8 @@ CompositeAbstraction::CompositeAbstraction(Labels *labels,
             const vector<AbstractTransition> &bucket2 =
                 abs2->transitions_by_label[label_no];
             if (relevant1 && relevant2) {
+                if (bucket1.size() * bucket2.size() > transitions.max_size())
+                    exit_with(EXIT_OUT_OF_MEMORY);
                 transitions.reserve(bucket1.size() * bucket2.size());
                 for (int i = 0; i < bucket1.size(); i++) {
                     int src1 = bucket1[i].src;
@@ -776,6 +828,8 @@ CompositeAbstraction::CompositeAbstraction(Labels *labels,
                 }
             } else if (relevant1) {
                 assert(!relevant2);
+                if (bucket1.size() * abs2->size() > transitions.max_size())
+                    exit_with(EXIT_OUT_OF_MEMORY);
                 transitions.reserve(bucket1.size() * abs2->size());
                 for (int i = 0; i < bucket1.size(); i++) {
                     int src1 = bucket1[i].src;
@@ -788,6 +842,8 @@ CompositeAbstraction::CompositeAbstraction(Labels *labels,
                 }
             } else if (relevant2) {
                 assert(!relevant1);
+                if (bucket2.size() * abs1->size() > transitions.max_size())
+                    exit_with(EXIT_OUT_OF_MEMORY);
                 transitions.reserve(bucket2.size() * abs1->size());
                 for (int s1 = 0; s1 < abs1->size(); s1++) {
                     for (int i = 0; i < bucket2.size(); i++) {
@@ -890,6 +946,32 @@ void Abstraction::apply_abstraction(
     }
 
     int new_num_states = collapsed_groups.size();
+
+    if (debug) {
+//        for (size_t i = 0; i < abstraction_mapping.size(); ++i) {
+//            cout << "State " << i << " mapped to state " << abstraction_mapping[i] << endl;
+//        }
+        vector<vector<set<int> > > new_abs_state_to_var_multi_vals(new_num_states, vector<set<int> >(g_variable_domain.size()));
+        for (size_t i = 0; i < num_states; ++i) {
+            if (abstraction_mapping[i] == PRUNED_STATE)
+                continue;
+            const vector<set<int> > &var_multi_vals = abs_state_to_var_multi_vals[i];
+            assert(var_multi_vals.size() == g_variable_domain.size());
+            vector<set<int> > &new_var_multi_vals = new_abs_state_to_var_multi_vals[abstraction_mapping[i]];
+            for (int var = 0; var < g_variable_domain.size(); ++var) {
+                const set<int> &multi_vals = var_multi_vals[var];
+                // when mapping several states to one, we need to take the union of the possibly non-empty set of values from a
+                // previous state mapping and the current set of values.
+                set<int> &new_multi_vals = new_var_multi_vals[var];
+                set_union(multi_vals.begin(), multi_vals.end(),
+                          new_multi_vals.begin(), new_multi_vals.end(),
+                          inserter(new_multi_vals, new_multi_vals.end()));
+            }
+        }
+        vector<vector<set<int> > >().swap(abs_state_to_var_multi_vals);
+        abs_state_to_var_multi_vals.swap(new_abs_state_to_var_multi_vals);
+    }
+
     vector<int> new_init_distances(new_num_states, infinity);
     vector<int> new_goal_distances(new_num_states, infinity);
     vector<bool> new_goal_states(new_num_states, false);
@@ -1065,6 +1147,32 @@ void Abstraction::dump_relevant_labels() const {
     for (size_t label_no = 0; label_no < relevant_labels.size(); ++label_no) {
         if (label_no) {
             cout << label_no << endl;
+        }
+    }
+}
+
+void Abstraction::dump_state() const {
+    if (!debug)
+        return;
+    cout << "State dump for " << tag() << endl;
+    for (size_t i = 0; i < num_states; ++i) {
+        cout << "Abstract state " << i << ":" << endl;
+        const vector<set<int> > &var_multi_vals = abs_state_to_var_multi_vals[i];
+        assert(var_multi_vals.size() == g_variable_domain.size());
+        for (size_t var = 0; var < var_multi_vals.size(); ++var) {
+            const set<int> &multi_vals = var_multi_vals[var];
+            if (multi_vals.size() == g_variable_domain[var]) {
+                for (size_t values = 0; values < g_variable_domain[var]; ++values) {
+                    assert(multi_vals.count(values) > 0);
+                }
+                cout << g_variable_name[var] << " has value -1 (can take all values): ";
+            } else {
+                cout << g_variable_name[var] << " can take the following value(s): ";
+            }
+            for (set<int>::const_iterator it = multi_vals.begin(); it != multi_vals.end(); ++it) {
+                cout << *it << " (" << g_fact_names[var][*it] << ") ";
+            }
+            cout << endl;
         }
     }
 }

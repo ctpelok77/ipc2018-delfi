@@ -84,12 +84,19 @@ HEADERS += merge_and_shrink/abstraction.h \
            merge_and_shrink/merge_dfp.h \
            merge_and_shrink/merge_linear.h \
            merge_and_shrink/merge_strategy.h \
+           merge_and_shrink/merge_symmetries.h \
+           merge_and_shrink/merge_symmetries_linear.h \
            merge_and_shrink/shrink_bisimulation.h \
            merge_and_shrink/shrink_bucket_based.h \
            merge_and_shrink/shrink_fh.h \
            merge_and_shrink/shrink_random.h \
            merge_and_shrink/shrink_strategy.h \
            merge_and_shrink/variable_order_finder.h \
+
+HEADERS += merge_and_shrink/symmetries/graph_creator.h \
+           merge_and_shrink/symmetries/permutation.h \
+           merge_and_shrink/symmetries/scc.h \
+           merge_and_shrink/symmetries/symmetries.h \
 
 HEADERS += landmarks/exploration.h \
            landmarks/h_m_landmarks.h \
@@ -127,9 +134,21 @@ HEADERS += pdbs/canonical_pdbs_heuristic.h \
            pdbs/util.h \
            pdbs/zero_one_pdbs_heuristic.h \
 
+BLISSHEADERS = bliss/bignum.hh \
+               bliss/defs.hh \
+               bliss/graph.hh \
+               bliss/heap.hh \
+               bliss/kqueue.hh \
+               bliss/kstack.hh \
+               bliss/orbit.hh \
+               bliss/partition.hh \
+               bliss/timer.hh \
+               bliss/uintseqhash.hh \
+               bliss/utils.hh \
+
 SHELL = /bin/bash
 
-SOURCES = planner.cc $(HEADERS:%.h=%.cc)
+SOURCES = planner.cc $(HEADERS:%.h=%.cc) $(BLISSHEADERS:%.hh=%.cc)
 TARGET  = downward
 
 ARGS_PROFILE = --search 'astar(lmcut())' < profile-input.pre
@@ -360,7 +379,7 @@ distclean: clean
 ## subdirectory, it will strip the directory part in the output. Hence
 ## the for loop with the sed call.
 
-Makefile.depend: $(SOURCES) $(HEADERS)
+Makefile.depend: $(SOURCES) $(HEADERS) $(BLISSHEADERS)
 	rm -f Makefile.temp
 	for source in $(SOURCES) ; do \
 	    $(DEPEND) $$source > Makefile.temp0; \
