@@ -10,7 +10,6 @@
     (at truck place0)
 
     (crate crate)
-    (clear crate)
     (at crate place1)
 )
 
