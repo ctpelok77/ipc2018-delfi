@@ -3,12 +3,14 @@
 
 #include <ext/slist>
 #include <string>
+#include <set>
 #include <vector>
 
 class EquivalenceRelation;
 class Label;
 class Labels;
 class State;
+class Symmetries;
 
 typedef int AbstractStateRef;
 
@@ -42,6 +44,7 @@ class Abstraction {
     friend class CompositeAbstraction;
 
     friend class ShrinkStrategy; // for apply() -- TODO: refactor!
+    friend class Symmetries; // for apply() TODO
 
     static const int PRUNED_STATE = -1;
     static const int DISTANCE_UNKNOWN = -2;
@@ -97,12 +100,17 @@ class Abstraction {
 protected:
     std::vector<int> varset;
 
+    // for debugging: for each abstract state, store for all variables a set
+    // of values that each variable can take in that abstract state
+    std::vector<std::vector<std::set<int> > > abs_state_to_var_multi_vals;
+    bool debug;
+
     virtual AbstractStateRef get_abstract_state(const State &state) const = 0;
     virtual void apply_abstraction_to_lookup_table(const std::vector<
                                                        AbstractStateRef> &abstraction_mapping) = 0;
     virtual int memory_estimate() const;
 public:
-    Abstraction(Labels *labels);
+    Abstraction(Labels *labels, bool debug);
     virtual ~Abstraction();
 
     // Two methods to identify the abstraction in output.
@@ -112,7 +120,8 @@ public:
     std::string tag() const;
 
     static void build_atomic_abstractions(std::vector<Abstraction *> &result,
-                                          Labels *labels);
+                                          Labels *labels,
+                                          bool debug);
     bool is_solvable() const;
 
     int get_cost(const State &state) const;
@@ -133,6 +142,7 @@ public:
     void release_memory();
 
     void dump_relevant_labels() const;
+    void dump_state() const;
     void dump() const;
 
     // The following methods exist for the benefit of shrink strategies.
@@ -155,6 +165,7 @@ public:
     // These methods should be private but is public for shrink_bisimulation
     int get_label_cost_by_index(int label_no) const;
     const std::vector<AbstractTransition> &get_transitions_for_label(int label_no) const;
+    bool is_label_reduced(int label_no) const;
     // This method is shrink_bisimulation-exclusive
     int get_num_labels() const;
     // These methods are used by non_linear_merge_strategy
@@ -166,6 +177,9 @@ public:
     const std::vector<int> &get_varset() const {
         return varset;
     }
+
+    // This is for joining symmetric abstractions into one
+    void merge_abstraction_into(const Abstraction *other);
 };
 
 class AtomicAbstraction : public Abstraction {
@@ -178,7 +192,7 @@ protected:
     virtual AbstractStateRef get_abstract_state(const State &state) const;
     virtual int memory_estimate() const;
 public:
-    AtomicAbstraction(Labels *labels, int variable);
+    AtomicAbstraction(Labels *labels, int variable, bool debug);
     virtual ~AtomicAbstraction();
 };
 
@@ -192,7 +206,7 @@ protected:
     virtual AbstractStateRef get_abstract_state(const State &state) const;
     virtual int memory_estimate() const;
 public:
-    CompositeAbstraction(Labels *labels, Abstraction *abs1, Abstraction *abs2);
+    CompositeAbstraction(Labels *labels, Abstraction *abs1, Abstraction *abs2, bool debug);
     virtual ~CompositeAbstraction();
 };
 

@@ -20,8 +20,25 @@ MergeAndShrinkHeuristic::MergeAndShrinkHeuristic(const Options &opts)
     : Heuristic(opts),
       merge_strategy(opts.get<MergeStrategy *>("merge_strategy")),
       shrink_strategy(opts.get<ShrinkStrategy *>("shrink_strategy")),
-      use_expensive_statistics(opts.get<bool>("expensive_statistics")) {
+      use_expensive_statistics(opts.get<bool>("expensive_statistics")),
+      debug_abstractions(opts.get<bool>("debug_abstractions")) {
     labels = new Labels(is_unit_cost_problem(), opts, cost_type);
+    Timer timer;
+    cout << "Initializing merge-and-shrink heuristic..." << endl;
+    dump_options();
+    warn_on_unusual_options();
+
+    verify_no_axioms();
+
+    cout << "Building abstraction..." << endl;
+    final_abstraction = build_abstraction();
+    if (!final_abstraction->is_solvable()) {
+        cout << "Abstract problem is unsolvable!" << endl;
+    }
+
+    cout << "Done initializing merge-and-shrink heuristic [" << timer << "]"
+         << endl << "initial h value: " << compute_heuristic(g_initial_state()) << endl;
+    cout << "Estimated peak memory for abstraction: " << final_abstraction->get_peak_memory_estimate() << " bytes" << endl;
 }
 
 MergeAndShrinkHeuristic::~MergeAndShrinkHeuristic() {
@@ -60,8 +77,10 @@ Abstraction *MergeAndShrinkHeuristic::build_abstraction() {
 
     // vector of all abstractions. entries with 0 have been merged.
     vector<Abstraction *> all_abstractions;
+    if (g_variable_domain.size() * 2 - 1 > all_abstractions.max_size())
+        exit_with(EXIT_OUT_OF_MEMORY);
     all_abstractions.reserve(g_variable_domain.size() * 2 - 1);
-    Abstraction::build_atomic_abstractions(all_abstractions, labels);
+    Abstraction::build_atomic_abstractions(all_abstractions, labels, debug_abstractions);
 
     cout << "Shrinking atomic abstractions..." << endl;
     for (size_t i = 0; i < all_abstractions.size(); ++i) {
@@ -130,7 +149,8 @@ Abstraction *MergeAndShrinkHeuristic::build_abstraction() {
 
         Abstraction *new_abstraction = new CompositeAbstraction(labels,
                                                                 abstraction,
-                                                                other_abstraction);
+                                                                other_abstraction,
+                                                                debug_abstractions);
 
         abstraction->release_memory();
         other_abstraction->release_memory();
@@ -142,7 +162,9 @@ Abstraction *MergeAndShrinkHeuristic::build_abstraction() {
         all_abstractions.push_back(new_abstraction);
     }
 
-    assert(all_abstractions.size() == g_variable_domain.size() * 2 - 1);
+    // TODO: violated by merge symmetries! reconsider what information
+    // about symmetries should be passed here.
+    //assert(all_abstractions.size() == g_variable_domain.size() * 2 - 1);
     Abstraction *final_abstraction = 0;
     for (size_t i = 0; i < all_abstractions.size(); ++i) {
         if (all_abstractions[i]) {
@@ -161,6 +183,7 @@ Abstraction *MergeAndShrinkHeuristic::build_abstraction() {
 
     final_abstraction->statistics(use_expensive_statistics);
     final_abstraction->release_memory();
+    cout << "Final abstraction size: " << final_abstraction->size() << endl;
 
     cout << "Order of merged systems: ";
     for (size_t i = 1; i < system_order.size(); i += 2) {
@@ -171,22 +194,6 @@ Abstraction *MergeAndShrinkHeuristic::build_abstraction() {
 }
 
 void MergeAndShrinkHeuristic::initialize() {
-    Timer timer;
-    cout << "Initializing merge-and-shrink heuristic..." << endl;
-    dump_options();
-    warn_on_unusual_options();
-
-    verify_no_axioms();
-
-    cout << "Building abstraction..." << endl;
-    final_abstraction = build_abstraction();
-    if (!final_abstraction->is_solvable()) {
-        cout << "Abstract problem is unsolvable!" << endl;
-    }
-
-    cout << "Done initializing merge-and-shrink heuristic [" << timer << "]"
-         << endl << "initial h value: " << compute_heuristic(g_initial_state()) << endl;
-    cout << "Estimated peak memory for abstraction: " << final_abstraction->get_peak_memory_estimate() << " bytes" << endl;
 }
 
 int MergeAndShrinkHeuristic::compute_heuristic(const State &state) {
@@ -293,6 +300,8 @@ static Heuristic *_parse(OptionParser &parser) {
                             "prints a big warning on stderr with information on the performance impact. "
                             "Don't use when benchmarking!)",
                             "false");
+    parser.add_option<bool>("debug_abstractions", "store additional information "
+                            "in abstractions for debug output.", "False");
     Heuristic::add_options_to_parser(parser);
     Options opts = parser.parse();
 
