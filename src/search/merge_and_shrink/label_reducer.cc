@@ -23,6 +23,8 @@ LabelReducer::LabelReducer(const Options &options)
       label_reduction_system_order(LabelReductionSystemOrder(options.get_enum("label_reduction_system_order"))) {
 
     size_t max_no_systems = g_variable_domain.size() * 2 - 1;
+    if (max_no_systems > system_order.max_size())
+        exit_with(EXIT_OUT_OF_MEMORY);
     system_order.reserve(max_no_systems);
     if (label_reduction_system_order == REGULAR
         || label_reduction_system_order == RANDOM) {
@@ -57,6 +59,11 @@ void LabelReducer::reduce_labels(pair<int, int> next_merge,
         assert(all_abstractions[next_merge.first]->get_varset().size() >=
                all_abstractions[next_merge.second]->get_varset().size());
         reduce_old(all_abstractions[next_merge.first]->get_varset(), labels);
+        for (size_t i = 0; i < all_abstractions.size(); ++i) {
+            if (all_abstractions[i]) {
+                all_abstractions[i]->normalize();
+            }
+        }
         return;
     }
 
