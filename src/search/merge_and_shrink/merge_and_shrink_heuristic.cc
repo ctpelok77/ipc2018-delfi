@@ -20,7 +20,8 @@ MergeAndShrinkHeuristic::MergeAndShrinkHeuristic(const Options &opts)
       merge_strategy(opts.get<MergeStrategy *>("merge_strategy")),
       shrink_strategy(opts.get<ShrinkStrategy *>("shrink_strategy")),
       use_expensive_statistics(opts.get<bool>("expensive_statistics")),
-      terminate(opts.get<bool>("terminate")) {
+      terminate(opts.get<bool>("terminate")),
+      debug_abstractions(opts.get<bool>("debug_abstractions")) {
     labels = new Labels(opts);
 }
 
@@ -64,7 +65,7 @@ TransitionSystem *MergeAndShrinkHeuristic::build_transition_system() {
     if (g_variable_domain.size() * 2 - 1 > all_transition_systems.max_size())
         exit_with(EXIT_OUT_OF_MEMORY);
     all_transition_systems.reserve(g_variable_domain.size() * 2 - 1);
-    TransitionSystem::build_atomic_transition_systems(all_transition_systems, labels, cost_type);
+    TransitionSystem::build_atomic_transition_systems(all_transition_systems, labels, cost_type, debug_abstractions);
 
     cout << "Merging transition systems..." << endl;
 
@@ -117,7 +118,7 @@ TransitionSystem *MergeAndShrinkHeuristic::build_transition_system() {
         }
 
         TransitionSystem *new_transition_system = new CompositeTransitionSystem(
-            labels, transition_system, other_transition_system);
+            labels, transition_system, other_transition_system, debug_abstractions);
 
         transition_system->release_memory();
         other_transition_system->release_memory();
@@ -147,6 +148,7 @@ TransitionSystem *MergeAndShrinkHeuristic::build_transition_system() {
 
     final_transition_system->statistics(use_expensive_statistics);
     final_transition_system->release_memory();
+    cout << "Final transition system size: " << final_transition_system->get_size() << endl;
 
     // TODO: delete labels here?
 
@@ -309,6 +311,8 @@ static Heuristic *_parse(OptionParser &parser) {
         "terminate planner after heuristic computation finished (by reporting "
         "all states as dead ends)",
         "false");
+    parser.add_option<bool>("debug_abstractions", "store additional information "
+                            "in abstractions for debug output.", "False");
     Heuristic::add_options_to_parser(parser);
     Options opts = parser.parse();
 

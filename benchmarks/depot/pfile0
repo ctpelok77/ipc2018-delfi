@@ -1,0 +1,43 @@
+(define (problem depotprob1818) (:domain Depot)
+(:objects
+    place0 place1 place2 pallet0 pallet1 pallet2 hoist0 hoist1 hoist2 truck0 truck1 crate0 )
+(:init
+    (place place0)
+    (place place1)
+    (place place2)
+    
+    (surface pallet0)
+    (at pallet0 place0)
+    (clear pallet0)
+    (surface pallet1)
+    (at pallet1 place1)
+    (surface pallet2)
+    (at pallet2 place2)
+    (clear pallet2)
+
+    (hoist hoist0)
+    (at hoist0 place0)
+    (available hoist0)
+    (hoist hoist1)
+    (at hoist1 place1)
+    (available hoist1)
+    (hoist hoist2)
+    (at hoist2 place2)
+    (available hoist2)
+    
+    (truck truck0)
+    (at truck0 place2)
+    (truck truck1)
+    (at truck1 place0)
+    
+    (crate crate0)
+;   (surface crate0)
+    (clear crate0)
+    (at crate0 place1)
+    (on crate0 pallet1)
+)
+
+(:goal (and
+        (on crate0 pallet2)
+    )
+))

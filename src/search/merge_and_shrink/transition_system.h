@@ -6,6 +6,7 @@
 #include <ext/slist>
 #include <iostream>
 #include <list>
+#include <set>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -119,7 +120,6 @@ class TransitionSystem {
     void compute_distances_and_prune();
 
     // Methods related to the representation of transitions and labels
-    const std::vector<Transition> &get_const_transitions_for_label(int label_no) const;
     std::vector<Transition> &get_transitions_for_group(const std::list<int> &group);
     int get_transitions_index_for_group(const std::list<int> &group) const;
     void normalize_given_transitions(std::vector<Transition> &transitions) const;
@@ -132,22 +132,29 @@ class TransitionSystem {
 protected:
     std::vector<int> varset;
 
+    // for debugging: for each abstract state, store for all variables a set
+    // of values that each variable can take in that abstract state
+    std::vector<std::vector<std::set<int> > > abs_state_to_var_multi_vals;
+    bool debug;
+
     virtual AbstractStateRef get_abstract_state(const GlobalState &state) const = 0;
     virtual void apply_abstraction_to_lookup_table(
         const std::vector<AbstractStateRef> &abstraction_mapping) = 0;
     virtual int memory_estimate() const;
 public:
-    explicit TransitionSystem(Labels *labels);
+    TransitionSystem(Labels *labels, bool debug);
     virtual ~TransitionSystem();
 
     static void build_atomic_transition_systems(std::vector<TransitionSystem *> &result,
                                                 Labels *labels,
-                                                OperatorCost cost_type);
+                                                OperatorCost cost_type,
+                                                bool debug);
     void apply_abstraction(std::vector<__gnu_cxx::slist<AbstractStateRef> > &collapsed_groups);
     void apply_label_reduction(const std::vector<std::pair<int, std::vector<int> > > &label_mapping,
                                bool only_equivalent_labels);
     void release_memory();
 
+    const std::vector<Transition> &get_const_transitions_for_label(int label_no) const;
     const std::vector<Transition> &get_const_transitions_for_group(const std::list<int> &group) const;
     int get_cost_for_label_group(const std::list<int> &group) const;
     const std::list<std::list<int> > &get_grouped_labels() const {
@@ -171,6 +178,7 @@ public:
     int get_peak_memory_estimate() const;
     void dump_dot_graph() const;
     void dump_labels_and_transitions() const;
+    void dump_state() const;
     int get_size() const {
         return num_states;
     }
@@ -204,6 +212,11 @@ public:
     bool is_goal_relevant() const {
         return goal_relevant;
     }
+
+    // Only used by GraphCreator
+    const Labels *get_labels() const {
+        return labels;
+    }
 };
 
 
@@ -217,7 +230,7 @@ protected:
     virtual AbstractStateRef get_abstract_state(const GlobalState &state) const;
     virtual int memory_estimate() const;
 public:
-    AtomicTransitionSystem(Labels *labels, int variable);
+    AtomicTransitionSystem(Labels *labels, int variable, bool debug);
     virtual ~AtomicTransitionSystem();
 };
 
@@ -232,7 +245,7 @@ protected:
     virtual AbstractStateRef get_abstract_state(const GlobalState &state) const;
     virtual int memory_estimate() const;
 public:
-    CompositeTransitionSystem(Labels *labels, TransitionSystem *ts1, TransitionSystem *ts2);
+    CompositeTransitionSystem(Labels *labels, TransitionSystem *ts1, TransitionSystem *ts2, bool debug);
     virtual ~CompositeTransitionSystem();
 };
 
