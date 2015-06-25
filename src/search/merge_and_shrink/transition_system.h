@@ -6,6 +6,7 @@
 #include <forward_list>
 #include <iostream>
 #include <list>
+#include <set>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -213,16 +214,22 @@ class TransitionSystem {
     int unique_unlabeled_transitions() const;
     virtual std::string description() const = 0;
 protected:
+    // for debugging: for each abstract state, store for all variables a set
+    // of values that each variable can take in that abstract state
+    std::vector<std::vector<std::set<int> > > abs_state_to_var_multi_vals;
+    bool debug;
+
     virtual AbstractStateRef get_abstract_state(const GlobalState &state) const = 0;
     virtual void apply_abstraction_to_lookup_table(
         const std::vector<AbstractStateRef> &abstraction_mapping) = 0;
 public:
-    explicit TransitionSystem(Labels *labels);
+    TransitionSystem(Labels *labels, bool debug);
     virtual ~TransitionSystem();
 
     static void build_atomic_transition_systems(std::vector<TransitionSystem *> &result,
                                                 Labels *labels,
-                                                OperatorCost cost_type);
+                                                OperatorCost cost_type,
+                                                bool debug);
     bool apply_abstraction(const std::vector<std::forward_list<AbstractStateRef> > &collapsed_groups);
     void apply_label_reduction(const std::vector<std::pair<int, std::vector<int> > > &label_mapping,
                                bool only_equivalent_labels);
@@ -244,6 +251,7 @@ public:
     void statistics(bool include_expensive_statistics) const;
     void dump_dot_graph() const;
     void dump_labels_and_transitions() const;
+    void dump_state() const;
     int get_size() const {
         return num_states;
     }
@@ -277,6 +285,11 @@ public:
     bool is_goal_relevant() const {
         return goal_relevant;
     }
+
+    // Only used by GraphCreator
+    const Labels *get_labels() const {
+        return labels;
+    }
 };
 
 
@@ -289,7 +302,7 @@ protected:
     virtual std::string description() const;
     virtual AbstractStateRef get_abstract_state(const GlobalState &state) const;
 public:
-    AtomicTransitionSystem(Labels *labels, int variable);
+    AtomicTransitionSystem(Labels *labels, int variable, bool debug);
     virtual ~AtomicTransitionSystem();
 };
 
@@ -303,7 +316,7 @@ protected:
     virtual std::string description() const;
     virtual AbstractStateRef get_abstract_state(const GlobalState &state) const;
 public:
-    CompositeTransitionSystem(Labels *labels, TransitionSystem *ts1, TransitionSystem *ts2);
+    CompositeTransitionSystem(Labels *labels, TransitionSystem *ts1, TransitionSystem *ts2, bool debug);
     virtual ~CompositeTransitionSystem();
 };
 

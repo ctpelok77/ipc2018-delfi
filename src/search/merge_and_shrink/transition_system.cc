@@ -48,11 +48,12 @@ const int TransitionSystem::PRUNED_STATE;
 const int TransitionSystem::DISTANCE_UNKNOWN;
 
 
-TransitionSystem::TransitionSystem(Labels *labels_)
+TransitionSystem::TransitionSystem(Labels *labels_, bool debug_)
     : labels(labels_),
       transitions_of_groups(g_operators.empty() ? 0 : g_operators.size() * 2 - 1),
       label_to_positions(g_operators.empty() ? 0 : g_operators.size() * 2 - 1),
-      num_labels(labels->get_size()) {
+      num_labels(labels->get_size()),
+      debug(debug_) {
     clear_distances();
 }
 
@@ -383,14 +384,15 @@ void TransitionSystem::compute_locally_equivalent_labels() {
 
 void TransitionSystem::build_atomic_transition_systems(vector<TransitionSystem *> &result,
                                                        Labels *labels,
-                                                       OperatorCost cost_type) {
+                                                       OperatorCost cost_type,
+                                                       bool debug) {
     assert(result.empty());
     cout << "Building atomic transition systems... " << endl;
     int var_count = g_variable_domain.size();
 
     // Step 1: Create the transition system objects without transitions.
     for (int var_no = 0; var_no < var_count; ++var_no)
-        result.push_back(new AtomicTransitionSystem(labels, var_no));
+        result.push_back(new AtomicTransitionSystem(labels, var_no, debug));
 
     // Step 2: Add transitions.
     int op_count = g_operators.size();
@@ -531,6 +533,32 @@ bool TransitionSystem::apply_abstraction(
     }
 
     int new_num_states = collapsed_groups.size();
+
+    if (debug) {
+//        for (size_t i = 0; i < abstraction_mapping.size(); ++i) {
+//            cout << "State " << i << " mapped to state " << abstraction_mapping[i] << endl;
+//        }
+        vector<vector<set<int> > > new_abs_state_to_var_multi_vals(new_num_states, vector<set<int> >(g_variable_domain.size()));
+        for (int i = 0; i < num_states; ++i) {
+            if (abstraction_mapping[i] == PRUNED_STATE)
+                continue;
+            const vector<set<int> > &var_multi_vals = abs_state_to_var_multi_vals[i];
+            assert(var_multi_vals.size() == g_variable_domain.size());
+            vector<set<int> > &new_var_multi_vals = new_abs_state_to_var_multi_vals[abstraction_mapping[i]];
+            for (size_t var = 0; var < g_variable_domain.size(); ++var) {
+                const set<int> &multi_vals = var_multi_vals[var];
+                // when mapping several states to one, we need to take the union of the possibly non-empty set of values from a
+                // previous state mapping and the current set of values.
+                set<int> &new_multi_vals = new_var_multi_vals[var];
+                set_union(multi_vals.begin(), multi_vals.end(),
+                          new_multi_vals.begin(), new_multi_vals.end(),
+                          inserter(new_multi_vals, new_multi_vals.end()));
+            }
+        }
+        vector<vector<set<int> > >().swap(abs_state_to_var_multi_vals);
+        abs_state_to_var_multi_vals.swap(new_abs_state_to_var_multi_vals);
+    }
+
     vector<int> new_init_distances(new_num_states, INF);
     vector<int> new_goal_distances(new_num_states, INF);
     vector<bool> new_goal_states(new_num_states, false);
@@ -837,10 +865,36 @@ void TransitionSystem::dump_labels_and_transitions() const {
     }
 }
 
+void TransitionSystem::dump_state() const {
+    if (!debug)
+        return;
+    cout << "State dump for " << tag() << endl;
+    for (int i = 0; i < num_states; ++i) {
+        cout << "Abstract state " << i << ":" << endl;
+        const vector<set<int> > &var_multi_vals = abs_state_to_var_multi_vals[i];
+        assert(var_multi_vals.size() == g_variable_domain.size());
+        for (size_t var = 0; var < var_multi_vals.size(); ++var) {
+            const set<int> &multi_vals = var_multi_vals[var];
+            if (static_cast<int>(multi_vals.size()) == g_variable_domain[var]) {
+                for (int values = 0; values < g_variable_domain[var]; ++values) {
+                    assert(multi_vals.count(values) > 0);
+                }
+                cout << g_variable_name[var] << " has value -1 (can take all values): ";
+            } else {
+                cout << g_variable_name[var] << " can take the following value(s): ";
+            }
+            for (set<int>::const_iterator it = multi_vals.begin(); it != multi_vals.end(); ++it) {
+                cout << *it << " (" << g_fact_names[var][*it] << ") ";
+            }
+            cout << endl;
+        }
+    }
+}
 
 
-AtomicTransitionSystem::AtomicTransitionSystem(Labels *labels, int variable_)
-    : TransitionSystem(labels), variable(variable_) {
+
+AtomicTransitionSystem::AtomicTransitionSystem(Labels *labels, int variable_, bool debug)
+    : TransitionSystem(labels, debug), variable(variable_) {
     varset.push_back(variable);
     /*
       This generates the states of the atomic transition system, but not the
@@ -857,6 +911,27 @@ AtomicTransitionSystem::AtomicTransitionSystem(Labels *labels, int variable_)
             goal_relevant = true;
             assert(goal_value == -1);
             goal_value = g_goal[goal_no].second;
+        }
+    }
+
+    if (debug) {
+        for (int abs_state = 0; abs_state < range; ++abs_state) {
+            vector<set<int> > var_multi_vals;
+            for (int var = 0; var < static_cast<int>(g_variable_domain.size()); ++var) {
+                set<int> multi_vals;
+                if (var == variable) {
+                    // if var is the variable of the transition system, its value can only be the
+                    // value of the abstract state
+                    multi_vals.insert(abs_state);
+                } else {
+                    // all values of var are allowed (i.e. value = -1)
+                    for (int val = 0; val < g_variable_domain[var]; ++val) {
+                        multi_vals.insert(val);
+                    }
+                }
+                var_multi_vals.push_back(multi_vals);
+            }
+            abs_state_to_var_multi_vals.push_back(var_multi_vals);
         }
     }
 
@@ -913,8 +988,9 @@ AbstractStateRef AtomicTransitionSystem::get_abstract_state(const GlobalState &s
 
 CompositeTransitionSystem::CompositeTransitionSystem(Labels *labels,
                                                      TransitionSystem *ts1,
-                                                     TransitionSystem *ts2)
-    : TransitionSystem(labels) {
+                                                     TransitionSystem *ts2,
+                                                     bool debug)
+    : TransitionSystem(labels, debug) {
     cout << "Merging " << ts1->description() << " and "
          << ts2->description() << endl;
 
@@ -942,6 +1018,26 @@ CompositeTransitionSystem::CompositeTransitionSystem(Labels *labels,
                 goal_states[state] = true;
             if (s1 == ts1->init_state && s2 == ts2->init_state)
                 init_state = state;
+
+            if (debug) {
+                const vector<set<int> > &abs1_var_multi_vals = ts1->abs_state_to_var_multi_vals[s1];
+                const vector<set<int> > &abs2_var_multi_vals = ts2->abs_state_to_var_multi_vals[s2];
+                assert(abs1_var_multi_vals.size() == abs2_var_multi_vals.size());
+                assert(abs1_var_multi_vals.size() == g_variable_domain.size());
+                vector<set<int> > new_var_multi_vals;
+                // this assumes that the two transition system do no share any variables. otherwise,
+                // a more complex double-union should be computed, as in apply_abstraction()
+                for (size_t i = 0; i < abs1_var_multi_vals.size(); ++i) {
+                    const set<int> &abs1_multi_vals = abs1_var_multi_vals[i];
+                    const set<int> &abs2_multi_vals = abs2_var_multi_vals[i];
+                    set<int> new_multi_vals;
+                    set_intersection(abs1_multi_vals.begin(), abs1_multi_vals.end(),
+                                     abs2_multi_vals.begin(), abs2_multi_vals.end(),
+                                     inserter(new_multi_vals, new_multi_vals.begin()));
+                    new_var_multi_vals.push_back(new_multi_vals);
+                }
+                abs_state_to_var_multi_vals.push_back(new_var_multi_vals);
+            }
         }
     }
 

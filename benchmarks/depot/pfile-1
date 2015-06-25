@@ -1,0 +1,19 @@
+(define (problem depotprob1818) (:domain Depot)
+(:objects
+    place0 place1 place2 truck crate )
+(:init
+    (place place0)
+    (place place1)
+    (place place2)
+
+    (truck truck)
+    (at truck place0)
+
+    (crate crate)
+    (at crate place1)
+)
+
+(:goal (and
+        (at crate place2)
+    )
+))
