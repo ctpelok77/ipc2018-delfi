@@ -121,12 +121,18 @@ HEADERS += merge_and_shrink/labels.h \
            merge_and_shrink/merge_dfp.h \
            merge_and_shrink/merge_linear.h \
            merge_and_shrink/merge_strategy.h \
+           merge_and_shrink/merge_symmetries.h \
            merge_and_shrink/shrink_bisimulation.h \
            merge_and_shrink/shrink_bucket_based.h \
            merge_and_shrink/shrink_fh.h \
            merge_and_shrink/shrink_random.h \
            merge_and_shrink/shrink_strategy.h \
            merge_and_shrink/transition_system.h \
+
+HEADERS += merge_and_shrink/symmetries/ms_graph_creator.h \
+           merge_and_shrink/symmetries/scc.h \
+           merge_and_shrink/symmetries/symmetry_generator.h \
+           merge_and_shrink/symmetries/symmetry_group.h \
 
 HEADERS += landmarks/exploration.h \
            landmarks/h_m_landmarks.h \
@@ -164,7 +170,19 @@ HEADERS += pdbs/canonical_pdbs_heuristic.h \
            pdbs/util.h \
            pdbs/zero_one_pdbs_heuristic.h \
 
-SOURCES = planner.cc $(HEADERS:%.h=%.cc)
+BLISSHEADERS = bliss/bignum.hh \
+               bliss/defs.hh \
+               bliss/graph.hh \
+               bliss/heap.hh \
+               bliss/kqueue.hh \
+               bliss/kstack.hh \
+               bliss/orbit.hh \
+               bliss/partition.hh \
+               bliss/timer.hh \
+               bliss/uintseqhash.hh \
+               bliss/utils.hh \
+
+SOURCES = planner.cc $(HEADERS:%.h=%.cc) $(BLISSHEADERS:%.hh=%.cc)
 TARGET = downward
 
 default: release
