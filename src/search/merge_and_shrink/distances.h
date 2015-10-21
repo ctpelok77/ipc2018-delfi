@@ -61,11 +61,13 @@ class Distances {
     void compute_goal_distances_general_cost();
 public:
     explicit Distances(const TransitionSystem &transition_system);
+    Distances(const TransitionSystem &transition_system, const Distances &other);
+    Distances(const Distances &other) = delete;
     ~Distances();
 
     void clear_distances();
     bool are_distances_computed() const;
-    std::vector<bool> compute_distances();
+    std::vector<bool> compute_distances(bool silent);
 
     /*
       Update distances according to the given abstraction.
@@ -76,8 +78,8 @@ public:
       the method might fail to detect that the distance information is
       out of date.)
     */
-    bool apply_abstraction(
-        const std::vector<std::forward_list<int> > &collapsed_groups);
+    bool apply_abstraction(const std::vector<std::forward_list<int> > &collapsed_groups,
+                           bool silent);
 
     int get_max_f() const;
     int get_max_g() const;
@@ -89,6 +91,9 @@ public:
 
     int get_goal_distance(int state) const {
         return goal_distances[state];
+    }
+    bool operator==(const Distances &other) const {
+        return (init_distances == other.init_distances && goal_distances == other.goal_distances && max_f == other.max_f && max_g == other.max_g && max_h == other.max_h);
     }
 };
 

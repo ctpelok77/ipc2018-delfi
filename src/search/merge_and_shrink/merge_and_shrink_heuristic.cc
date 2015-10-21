@@ -101,6 +101,8 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
     }
     cout << endl;
 
+    vector<int> init_hvalue_increase;
+    int negative_improvement_counter = 0;
     vector<int> remaining_labels;
     remaining_labels.push_back(labels->compute_number_active_labels());
     if (!final_transition_system) { // All atomic transition system are solvable.
@@ -136,6 +138,9 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
                 remaining_labels.push_back(labels->compute_number_active_labels());
             }
 
+            int init_dist1 = transition_system1->get_init_state_goal_distance();
+            int init_dist2 = transition_system2->get_init_state_goal_distance();
+
             // Merging
             TransitionSystem *new_transition_system = new TransitionSystem(
                 task_proxy, labels, transition_system1, transition_system2);
@@ -150,6 +155,14 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
                 final_transition_system = new_transition_system;
                 break;
             }
+
+            int new_init_dist = new_transition_system->get_init_state_goal_distance();
+            int difference = new_init_dist - max(init_dist1, init_dist2);
+            cout << "Difference of init h values: " << difference << endl;
+            if (difference < 0) {
+                ++negative_improvement_counter;
+            }
+            init_hvalue_increase.push_back(difference);
 
             transition_system1->release_memory();
             transition_system2->release_memory();
@@ -180,6 +193,8 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
         final_transition_system->release_memory();
     }
 
+    cout << "Init h value improvements: " << init_hvalue_increase << endl;
+    cout << "Negative improvements: " << negative_improvement_counter << endl;
     cout << "Course of label reduction: " << remaining_labels << endl;
 
     labels = nullptr;
