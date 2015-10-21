@@ -21,7 +21,7 @@ bool compare_sccs_decreasing(const unordered_set<int> &lhs, const unordered_set<
 }
 
 MergeSCCs::MergeSCCs(const Options &options)
-    : MergeDFP(),
+    : MergeDFP(options),
       scc_order(SCCOrder(options.get_enum("scc_order"))),
       merge_order(MergeOrder(options.get_enum("merge_order"))),
       var_order_type(VariableOrderType(options.get_enum("variable_order"))),
@@ -292,6 +292,7 @@ static shared_ptr<MergeStrategy>_parse(OptionParser &parser) {
                            "choose a merge order: linear (specify "
                            "variable_order)  or dfp.",
                            "dfp");
+    // linear merge strategy option
     vector<string> variable_order;
     variable_order.push_back("CG_GOAL_LEVEL");
     variable_order.push_back("CG_GOAL_RANDOM");
@@ -304,6 +305,12 @@ static shared_ptr<MergeStrategy>_parse(OptionParser &parser) {
                            "option useful if merge_order = linear. "
                            "see VariableOrderFinder",
                            "reverse_level");
+    // dfp merge strategy option
+    vector<string> order;
+    order.push_back("DFP");
+    order.push_back("REGULAR");
+    order.push_back("INVERSE");
+    parser.add_enum_option("order", order, "order of transition systems", "DFP");
     Options options = parser.parse();
     if (parser.dry_run())
         return 0;
