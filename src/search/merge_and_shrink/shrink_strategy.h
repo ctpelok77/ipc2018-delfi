@@ -44,7 +44,9 @@ private:
       system, but it may attempt to e.g. shrink the transition system in an
       information preserving way.
     */
-    bool shrink_transition_system(TransitionSystem &ts, int new_size) const;
+    bool shrink_transition_system(TransitionSystem &ts,
+                                  int new_size,
+                                  bool silent) const;
     /*
       If max_states_before_merge is violated by any of the two transition
       systems or if the product transition system would exceed max_states,
@@ -54,6 +56,7 @@ private:
     std::pair<std::size_t, std::size_t> compute_shrink_sizes(
         std::size_t size1, std::size_t size2) const;
 protected:
+    mutable std::vector<double> miss_qualified_states_ratios;
     /*
       Compute an equivalence relation on the states that shrinks the given
       transition system down to at most size target. This method needs to be
@@ -74,7 +77,12 @@ public:
       merge-and-shrink computation.
     */
     std::pair<bool, bool> shrink(TransitionSystem &ts1,
-                                 TransitionSystem &ts2) const;
+                                 TransitionSystem &ts2,
+                                 bool silent = false) const;
+    const std::vector<double> &get_miss_qualified_states_ratios() const {
+        return miss_qualified_states_ratios;
+    }
+    int compute_size_after_perfect_shrink(const TransitionSystem &ts);
 
     void dump_options() const;
     std::string get_name() const;

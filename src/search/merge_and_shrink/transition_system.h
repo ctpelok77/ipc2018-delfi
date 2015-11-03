@@ -149,16 +149,18 @@ private:
     */
     bool is_valid() const;
 
-    void compute_distances_and_prune();
-    void discard_states(const std::vector<bool> &to_be_pruned_states);
+    void compute_distances_and_prune(bool silent = false);
+    void discard_states(const std::vector<bool> &to_be_pruned_states, bool silent);
 
     // Methods related to the representation of transitions and labels
     void normalize_given_transitions(std::vector<Transition> &transitions) const;
     bool are_transitions_sorted_unique() const;
     void compute_locally_equivalent_labels();
+public: // TODO: temporary access
     const std::vector<Transition> &get_transitions_for_group_id(int group_id) const {
         return transitions_by_group_id[group_id];
     }
+private:
     std::vector<Transition> &get_transitions_for_group_id(int group_id) {
         return transitions_by_group_id[group_id];
     }
@@ -176,7 +178,7 @@ public:
         const TaskProxy &task_proxy,
         const std::shared_ptr<Labels> labels,
         int var_id,
-        std::vector<std::vector<Transition>> &&transitions_by_label);
+        std::vector<std::vector<Transition> > && transitions_by_label);
 
     /*
       Constructor that merges two transition systems.
@@ -187,10 +189,16 @@ public:
     TransitionSystem(const TaskProxy &task_proxy,
                      const std::shared_ptr<Labels> labels,
                      TransitionSystem *ts1,
-                     TransitionSystem *ts2);
+                     TransitionSystem *ts2,
+                     bool silent = false);
+    TransitionSystem(const TransitionSystem &other,
+                     const std::shared_ptr<Labels> labels);
+    TransitionSystem(const TransitionSystem &other) = delete;
     ~TransitionSystem();
 
-    bool apply_abstraction(const std::vector<std::forward_list<AbstractStateRef>> &collapsed_groups);
+    bool apply_abstraction(
+            const std::vector<std::forward_list<AbstractStateRef>> &collapsed_groups,
+            bool silent = false);
     void apply_label_reduction(const std::vector<std::pair<int, std::vector<int>>> &label_mapping,
                                bool only_equivalent_labels);
     void release_memory();
@@ -248,6 +256,16 @@ public:
     bool is_goal_relevant() const {  // used by merge_dfp
         return goal_relevant;
     }
+    // Following methods are used by MergeDynamicWeighted
+    const std::vector<int> &get_incorporated_variables() const {
+        return incorporated_variables;
+    }
+    int get_init_state_goal_distance() const {
+        return get_goal_distance(init_state);
+    }
+    int get_group_id_for_label(int label_no) const;
+    const std::shared_ptr<Labels> get_labels() const;
+    bool operator==(const TransitionSystem &other) const;
 };
 
 #endif

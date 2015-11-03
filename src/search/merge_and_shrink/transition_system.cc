@@ -169,10 +169,13 @@ TransitionSystem::TransitionSystem(
 TransitionSystem::TransitionSystem(const TaskProxy &task_proxy,
                                    const shared_ptr<Labels> labels,
                                    TransitionSystem *ts1,
-                                   TransitionSystem *ts2)
+                                   TransitionSystem *ts2,
+                                   bool silent)
     : TransitionSystem(task_proxy, labels) {
-    cout << "Merging " << ts1->description() << " and "
-         << ts2->description() << endl;
+    if (!silent) {
+        cout << "Merging " << ts1->description() << " and "
+             << ts2->description() << endl;
+    }
 
     assert(ts1->is_solvable() && ts2->is_solvable());
     assert(ts1->is_valid() && ts2->is_valid());
@@ -276,8 +279,30 @@ TransitionSystem::TransitionSystem(const TaskProxy &task_proxy,
     }
 
     assert(are_transitions_sorted_unique());
-    compute_distances_and_prune();
+    compute_distances_and_prune(silent);
     assert(is_valid());
+}
+
+TransitionSystem::TransitionSystem(const TransitionSystem &other,
+                                   const shared_ptr<Labels> labels)
+    : num_variables(other.num_variables),
+      incorporated_variables(other.incorporated_variables),
+      label_equivalence_relation(make_shared<LabelEquivalenceRelation>(
+                                     *other.label_equivalence_relation.get(),
+                                     labels)),
+      transitions_by_group_id(other.transitions_by_group_id),
+      num_states(other.num_states),
+      heuristic_representation(nullptr),
+      distances(make_unique_ptr<Distances>(*this, *other.distances.get())),
+      goal_states(other.goal_states),
+      init_state(other.init_state),
+      goal_relevant(other.goal_relevant) {
+    if (dynamic_cast<HeuristicRepresentationLeaf *>(other.heuristic_representation.get())) {
+        heuristic_representation = make_unique_ptr<HeuristicRepresentationLeaf>(dynamic_cast<HeuristicRepresentationLeaf *>(other.heuristic_representation.get()));
+    } else {
+        heuristic_representation = make_unique_ptr<HeuristicRepresentationMerge>(dynamic_cast<HeuristicRepresentationMerge *>(other.heuristic_representation.get()));
+    }
+    assert(*this == other);
 }
 
 TransitionSystem::~TransitionSystem() {
@@ -288,7 +313,8 @@ bool TransitionSystem::is_valid() const {
            && are_transitions_sorted_unique();
 }
 
-void TransitionSystem::discard_states(const vector<bool> &to_be_pruned_states) {
+void TransitionSystem::discard_states(const vector<bool> &to_be_pruned_states,
+                                      bool silent) {
     assert(static_cast<int>(to_be_pruned_states.size()) == num_states);
     vector<forward_list<AbstractStateRef>> equivalence_relation;
     equivalence_relation.reserve(num_states);
@@ -299,17 +325,17 @@ void TransitionSystem::discard_states(const vector<bool> &to_be_pruned_states) {
             equivalence_relation.push_back(group);
         }
     }
-    apply_abstraction(equivalence_relation);
+    apply_abstraction(equivalence_relation, silent);
 }
 
-void TransitionSystem::compute_distances_and_prune() {
+void TransitionSystem::compute_distances_and_prune(bool silent) {
     /*
       This method does all that compute_distances does and
       additionally prunes all states that are unreachable (abstract g
       is infinite) or irrelevant (abstract h is infinite).
     */
     assert(are_transitions_sorted_unique());
-    discard_states(distances->compute_distances());
+    discard_states(distances->compute_distances(silent), silent);
 }
 
 void TransitionSystem::normalize_given_transitions(vector<Transition> &transitions) const {
@@ -350,16 +376,21 @@ void TransitionSystem::compute_locally_equivalent_labels() {
 }
 
 bool TransitionSystem::apply_abstraction(
-    const vector<forward_list<AbstractStateRef>> &collapsed_groups) {
+    const vector<forward_list<AbstractStateRef>> &collapsed_groups,
+    bool silent) {
     assert(is_valid());
 
     if (static_cast<int>(collapsed_groups.size()) == get_size()) {
-        cout << tag() << "not applying abstraction (same number of states)" << endl;
+        if (!silent) {
+            cout << tag() << "not applying abstraction (same number of states)" << endl;
+        }
         return false;
     }
 
-    cout << tag() << "applying abstraction (" << get_size()
-         << " to " << collapsed_groups.size() << " states)" << endl;
+    if (!silent) {
+        cout << tag() << "applying abstraction (" << get_size()
+             << " to " << collapsed_groups.size() << " states)" << endl;
+    }
 
     typedef forward_list<AbstractStateRef> Group;
 
@@ -412,11 +443,18 @@ bool TransitionSystem::apply_abstraction(
 
     num_states = new_num_states;
     init_state = abstraction_mapping[init_state];
-    if (init_state == PRUNED_STATE)
-        cout << tag() << "initial state pruned; task unsolvable" << endl;
 
-    if (!distances->apply_abstraction(collapsed_groups))
-        cout << tag() << "simplification was not f-preserving!" << endl;
+    if (init_state == PRUNED_STATE) {
+        if (!silent) {
+            cout << tag() << "initial state pruned; task unsolvable" << endl;
+        }
+    }
+
+    if (!distances->apply_abstraction(collapsed_groups, silent)) {
+        if (!silent) {
+            cout << tag() << "simplification was not f-preserving!" << endl;
+        }
+    }
     heuristic_representation->apply_abstraction_to_lookup_table(
         abstraction_mapping);
 
@@ -593,12 +631,12 @@ void TransitionSystem::dump_dot_graph() const {
         for (size_t i = 0; i < transitions.size(); ++i) {
             int src = transitions[i].src;
             int target = transitions[i].target;
-            cout << "    node" << src << " -> node" << target << " [labels = ";
+            cout << "    node" << src << " -> node" << target << " [label = ";
             for (LabelConstIter label_it = group_it.begin();
                  label_it != group_it.end(); ++label_it) {
                 if (label_it != group_it.begin())
-                    cout << ",";
-                cout << "l" << *label_it;
+                    cout << "_";
+                cout << "x" << *label_it;
             }
             cout << "];" << endl;
         }
@@ -655,4 +693,35 @@ int TransitionSystem::get_goal_distance(int state) const {
 
 int TransitionSystem::get_num_labels() const {
     return label_equivalence_relation->get_num_labels();
+}
+
+int TransitionSystem::get_group_id_for_label(int label_no) const {
+    return label_equivalence_relation->get_group_id(label_no);
+}
+
+const shared_ptr<Labels> TransitionSystem::get_labels() const {
+    return label_equivalence_relation->get_labels();
+}
+
+bool TransitionSystem::operator==(const TransitionSystem &other) const {
+    assert(num_variables == other.num_variables);
+    assert(incorporated_variables == other.incorporated_variables);
+    assert(*label_equivalence_relation.get() == *other.label_equivalence_relation.get());
+    assert(transitions_by_group_id == other.transitions_by_group_id);
+    assert(num_states == other.num_states);
+    assert(*heuristic_representation.get() == *other.heuristic_representation.get());
+    assert(*distances.get() == *other.distances.get());
+    assert(goal_states == other.goal_states);
+    assert(init_state == other.init_state);
+    assert(goal_relevant == other.goal_relevant);
+    return (num_variables == other.num_variables &&
+            incorporated_variables == other.incorporated_variables &&
+            *label_equivalence_relation.get() == *other.label_equivalence_relation.get() &&
+            transitions_by_group_id == other.transitions_by_group_id &&
+            num_states == other.num_states &&
+            *heuristic_representation.get() == *other.heuristic_representation.get() &&
+            *distances.get() == *other.distances.get() &&
+            goal_states == other.goal_states &&
+            init_state == other.init_state &&
+            goal_relevant == other.goal_relevant);
 }
