@@ -94,6 +94,12 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
     fts = make_shared<FactoredTransitionSystem>(create_factored_transition_system(task_proxy, labels));
     cout << endl;
 
+    vector<int> init_hvalue_increase;
+    int negative_improvement_counter = 0;
+    vector<int> remaining_labels;
+    remaining_labels.push_back(labels->compute_number_active_labels());
+    int iteration_counter = 0;
+    bool still_perfect = true;
     int final_index = -1; // TODO: get rid of this
     if (fts->is_solvable()) { // All atomic transition system are solvable.
         while (!merge_strategy->done()) {
@@ -107,6 +113,7 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
 
             if (labels->reduce_before_shrinking()) {
                 labels->reduce(merge_indices, fts);
+                remaining_labels.push_back(labels->compute_number_active_labels());
             }
 
             // Shrinking
@@ -117,9 +124,22 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
             if (shrunk.second)
                 fts->statistics(merge_index2, timer);
 
+            const vector<double> &miss_qualified_states_ratios =
+                shrink_strategy->get_miss_qualified_states_ratios();
+            int size = miss_qualified_states_ratios.size();
+            assert(size >= 2);
+            if (still_perfect && (miss_qualified_states_ratios[size-1] || miss_qualified_states_ratios[size-2])) {
+                cout << "not perfect anymore in iteration " << iteration_counter << endl;
+                still_perfect = false;
+            }
+
             if (labels->reduce_before_merging()) {
                 labels->reduce(merge_indices, fts);
+                remaining_labels.push_back(labels->compute_number_active_labels());
             }
+
+            int init_dist1 = transition_system1->get_init_state_goal_distance();
+            int init_dist2 = transition_system2->get_init_state_goal_distance();
 
             // Merging
             final_index = fts->merge(task_proxy, merge_index1, merge_index2);
@@ -130,10 +150,20 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
             if (!fts->is_solvable()) {
                 break;
             }
+
+            int new_init_dist = new_transition_system->get_init_state_goal_distance();
+            int difference = new_init_dist - max(init_dist1, init_dist2);
+            cout << "Difference of init h values: " << difference << endl;
+            if (difference < 0) {
+                ++negative_improvement_counter;
+            }
+            init_hvalue_increase.push_back(difference);
+
             fts->statistics(final_index, timer);
 
             report_peak_memory_delta();
             cout << endl;
+            ++iteration_counter;
         }
     }
 
@@ -151,6 +181,10 @@ void MergeAndShrinkHeuristic::build_transition_system(const Timer &timer) {
         cout << "Abstract problem is unsolvable!" << endl;
     }
 
+    cout << "Init h value improvements: " << init_hvalue_increase << endl;
+    cout << "Negative improvements: " << negative_improvement_counter << endl;
+    cout << "Course of label reduction: " << remaining_labels << endl;
+
     labels = nullptr;
 }
 
@@ -164,6 +198,20 @@ void MergeAndShrinkHeuristic::initialize() {
     cout << endl;
 
     build_transition_system(timer);
+    const vector<double> &miss_qualified_states_ratios =
+        shrink_strategy->get_miss_qualified_states_ratios();
+    cout << "Course of miss qualified states shrinking: "
+         << miss_qualified_states_ratios << endl;
+    double summed_values = 0;
+    for (double value : miss_qualified_states_ratios) {
+        summed_values += value;
+    }
+    size_t number_of_shrinks = miss_qualified_states_ratios.size();
+    double average_imperfect_shrinking = 0;
+    if (number_of_shrinks) {
+        average_imperfect_shrinking = summed_values / static_cast<double>(number_of_shrinks);
+    }
+    cout << "Average imperfect shrinking: " << average_imperfect_shrinking << endl;
     report_peak_memory_delta(true);
     cout << "Done initializing merge-and-shrink heuristic [" << timer << "]"
          << endl;

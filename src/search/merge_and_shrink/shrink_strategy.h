@@ -47,7 +47,8 @@ private:
       information preserving way.
     */
     bool shrink_transition_system(std::shared_ptr<FactoredTransitionSystem> fts,
-                                  int index, int new_size) const;
+                                  int index, int new_size,
+                                  bool silent) const;
     /*
       If max_states_before_merge is violated by any of the two transition
       systems or if the product transition system would exceed max_states,
@@ -57,6 +58,7 @@ private:
     std::pair<std::size_t, std::size_t> compute_shrink_sizes(
         std::size_t size1, std::size_t size2) const;
 protected:
+    mutable std::vector<double> miss_qualified_states_ratios;
     /*
       Compute an equivalence relation on the states that shrinks the given
       transition system down to at most size target. This method needs to be
@@ -79,7 +81,12 @@ public:
     */
     std::pair<bool, bool> shrink(std::shared_ptr<FactoredTransitionSystem> fts,
                                  int index1,
-                                 int index2) const;
+                                 int index2,
+                                 bool silent = false) const;
+    const std::vector<double> &get_miss_qualified_states_ratios() const {
+        return miss_qualified_states_ratios;
+    }
+    int compute_size_after_perfect_shrink(const TransitionSystem &ts);
 
     void dump_options() const;
     std::string get_name() const;

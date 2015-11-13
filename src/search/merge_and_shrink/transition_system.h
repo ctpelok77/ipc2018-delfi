@@ -134,9 +134,11 @@ private:
     // Methods related to the representation of transitions and labels
     void normalize_given_transitions(std::vector<Transition> &transitions) const;
     void compute_locally_equivalent_labels();
+public: // TODO: temporary access
     const std::vector<Transition> &get_transitions_for_group_id(int group_id) const {
         return transitions_by_group_id[group_id];
     }
+private:
     std::vector<Transition> &get_transitions_for_group_id(int group_id) {
         return transitions_by_group_id[group_id];
     }
@@ -164,12 +166,17 @@ public:
     TransitionSystem(const TaskProxy &task_proxy,
                      const std::shared_ptr<Labels> labels,
                      TransitionSystem *ts1,
-                     TransitionSystem *ts2);
+                     TransitionSystem *ts2,
+                     bool silent = false);
+    TransitionSystem(const TransitionSystem &other,
+                     const std::shared_ptr<Labels> labels);
+    TransitionSystem(const TransitionSystem &other) = delete;
     ~TransitionSystem();
 
     bool apply_abstraction(
         const std::vector<std::forward_list<AbstractStateRef>> &collapsed_groups,
-        const std::vector<int> &abstraction_mapping);
+        const std::vector<int> &abstraction_mapping,
+        bool silent = false);
     void apply_label_reduction(const std::vector<std::pair<int, std::vector<int>>> &label_mapping,
                                bool only_equivalent_labels);
 
@@ -210,6 +217,16 @@ public:
     bool is_goal_relevant() const {  // used by merge_dfp
         return goal_relevant;
     }
+    // Following methods are used by MergeDynamicWeighted
+    const std::vector<int> &get_incorporated_variables() const {
+        return incorporated_variables;
+    }
+    int get_init_state_goal_distance() const {
+        return get_goal_distance(init_state);
+    }
+    int get_group_id_for_label(int label_no) const;
+    const std::shared_ptr<Labels> get_labels() const;
+    bool operator==(const TransitionSystem &other) const;
 };
 
 #endif

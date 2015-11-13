@@ -30,22 +30,28 @@ ShrinkStrategy::~ShrinkStrategy() {
 bool ShrinkStrategy::shrink_transition_system(
     std::shared_ptr<FactoredTransitionSystem> fts,
     int index,
-    int new_size) const {
+    int new_size,
+    bool silent) const {
     const TransitionSystem &ts = fts->get_ts(index);
     assert(ts.is_solvable());
     int num_states = ts.get_size();
     if (num_states > min(new_size, shrink_threshold_before_merge)) {
-        cout << ts.tag() << "current size: " << num_states;
-        if (new_size < num_states)
-            cout << " (new size limit: " << new_size;
-        else
-            cout << " (shrink threshold: " << shrink_threshold_before_merge;
-        cout << ")" << endl;
+        if (!silent) {
+            cout << ts.tag() << "current size: " << num_states;
+            if (new_size < num_states)
+                cout << " (new size limit: " << new_size;
+            else
+                cout << " (shrink threshold: " << shrink_threshold_before_merge;
+            cout << ")" << endl;
+        }
         StateEquivalenceRelation equivalence_relation;
+        // NOTE: subclasses must push a number into miss_qualified_states_ratios
         compute_equivalence_relation(fts, index, new_size, equivalence_relation);
         // TODO: We currently violate this; see issue250
         //assert(equivalence_relation.size() <= new_size);
         return fts->apply_abstraction(index, equivalence_relation);
+    } else {
+        miss_qualified_states_ratios.push_back(0);
     }
     return false;
 }
@@ -88,7 +94,8 @@ pair<size_t, size_t> ShrinkStrategy::compute_shrink_sizes(
 
 pair<bool, bool> ShrinkStrategy::shrink(shared_ptr<FactoredTransitionSystem> fts,
                                         int index1,
-                                        int index2) const {
+                                        int index2, 
+                                        bool silent) const {
     const TransitionSystem &ts1 = fts->get_ts(index1);
     const TransitionSystem &ts2 = fts->get_ts(index2);
     /*
@@ -103,9 +110,15 @@ pair<bool, bool> ShrinkStrategy::shrink(shared_ptr<FactoredTransitionSystem> fts
       abstraction.
     */
     // TODO: swap
-    bool shrunk2 = shrink_transition_system(fts, index2, new_sizes.second);
-    bool shrunk1 = shrink_transition_system(fts, index1, new_sizes.first);
+    bool shrunk2 = shrink_transition_system(fts, index2, new_sizes.second, silent);
+    bool shrunk1 = shrink_transition_system(fts, index1, new_sizes.first, silent);
     return make_pair(shrunk1, shrunk2);
+}
+
+int ShrinkStrategy::compute_size_after_perfect_shrink(const TransitionSystem &ts) {
+    StateEquivalenceRelation equivalence_relation;
+    compute_equivalence_relation(ts, ts.get_size(), equivalence_relation);
+    return equivalence_relation.size();
 }
 
 void ShrinkStrategy::dump_options() const {
