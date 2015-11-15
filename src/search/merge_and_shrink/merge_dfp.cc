@@ -5,6 +5,7 @@
 #include "transition_system.h"
 
 #include "../option_parser.h"
+#include "../option_parser_util.h"
 #include "../plugin.h"
 #include "../task_proxy.h"
 
@@ -15,8 +16,8 @@
 using namespace std;
 
 
-MergeDFP::MergeDFP()
-    : MergeStrategy() {
+MergeDFP::MergeDFP(const Options &options)
+    : MergeStrategy(), order(Order(options.get_enum("order"))) {
 }
 
 void MergeDFP::initialize(const shared_ptr<AbstractTask> task) {
@@ -178,6 +179,13 @@ pair<int, int> MergeDFP::get_next(shared_ptr<FactoredTransitionSystem> fts) {
       assuming that the global goal specification is non-empty. Hence at
       this point, we must have found a pair of transition systems to merge.
     */
+    // NOT true if used on a subset of transitions!
+    if (next_index1 == -1 || next_index2 == -1) {
+        assert(next_index1 == -1 && next_index2 == -1);
+        assert(minimum_weight == INF);
+        next_index1 = sorted_active_ts_indices[0];
+        next_index2 = sorted_active_ts_indices[1];
+    }
     assert(next_index1 != -1);
     assert(next_index2 != -1);
     --remaining_merges;
@@ -189,6 +197,12 @@ string MergeDFP::name() const {
 }
 
 static shared_ptr<MergeStrategy>_parse(OptionParser &parser) {
+    vector<string> order;
+    order.push_back("DFP");
+    order.push_back("REGULAR");
+    order.push_back("INVERSE");
+    parser.add_enum_option("order", order, "order of transition systems", "DFP");
+    Options options = parser.parse();
     parser.document_synopsis(
         "Merge strategy DFP",
         "This merge strategy implements the algorithm originally described in the "
@@ -203,7 +217,7 @@ static shared_ptr<MergeStrategy>_parse(OptionParser &parser) {
     if (parser.dry_run())
         return nullptr;
     else
-        return make_shared<MergeDFP>();
+        return make_shared<MergeDFP>(options);
 }
 
 static PluginShared<MergeStrategy> _plugin("merge_dfp", _parse);
