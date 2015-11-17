@@ -18,6 +18,15 @@ Distances::Distances(const TransitionSystem &transition_system)
     clear_distances();
 }
 
+Distances::Distances(const TransitionSystem &transition_system, const Distances &other)
+    : transition_system(transition_system),
+      init_distances(other.init_distances),
+      goal_distances(other.goal_distances),
+      max_f(other.max_f),
+      max_g(other.max_g),
+      max_h(other.max_h) {
+}
+
 Distances::~Distances() {
 }
 
@@ -196,7 +205,7 @@ bool Distances::are_distances_computed() const {
     return true;
 }
 
-vector<bool> Distances::compute_distances() {
+vector<bool> Distances::compute_distances(bool silent) {
     /*
       This method does the following:
       - Computes the distances of abstract states from the abstract
@@ -210,14 +219,18 @@ vector<bool> Distances::compute_distances() {
         and irrelevant states.
     */
 
-    cout << transition_system.tag() << flush;
+    if (!silent) {
+        cout << transition_system.tag() << flush;
+    }
     assert(!are_distances_computed());
     assert(init_distances.empty() && goal_distances.empty());
 
     int num_states = get_num_states();
 
     if (num_states == 0) {
-        cout << "empty transition system, no distances to compute" << endl;
+        if (!silent) {
+            cout << "empty transition system, no distances to compute" << endl;
+        }
         max_f = max_g = max_h = INF;
         return vector<bool>();
     }
@@ -225,11 +238,15 @@ vector<bool> Distances::compute_distances() {
     init_distances.resize(num_states, INF);
     goal_distances.resize(num_states, INF);
     if (is_unit_cost()) {
-        cout << "computing distances using unit-cost algorithm" << endl;
+        if (!silent) {
+            cout << "computing distances using unit-cost algorithm" << endl;
+        }
         compute_init_distances_unit_cost();
         compute_goal_distances_unit_cost();
     } else {
-        cout << "computing distances using general-cost algorithm" << endl;
+        if (!silent) {
+            cout << "computing distances using general-cost algorithm" << endl;
+        }
         compute_init_distances_general_cost();
         compute_goal_distances_general_cost();
     }
@@ -259,16 +276,19 @@ vector<bool> Distances::compute_distances() {
         }
     }
     if (unreachable_count || irrelevant_count) {
-        cout << transition_system.tag()
-             << "unreachable: " << unreachable_count << " states, "
-             << "irrelevant: " << irrelevant_count << " states" << endl;
+        if (!silent) {
+            cout << transition_system.tag()
+                 << "unreachable: " << unreachable_count << " states, "
+                 << "irrelevant: " << irrelevant_count << " states" << endl;
+        }
     }
     assert(are_distances_computed());
     return prunable_states;
 }
 
 bool Distances::apply_abstraction(
-    const vector<forward_list<int>> &collapsed_groups) {
+    const vector<forward_list<int>> &collapsed_groups,
+    bool silent) {
     assert(are_distances_computed());
     assert(collapsed_groups.size() < init_distances.size());
     assert(collapsed_groups.size() < goal_distances.size());
@@ -314,7 +334,7 @@ bool Distances::apply_abstraction(
 
     if (must_recompute) {
         clear_distances();
-        compute_distances();
+        compute_distances(silent);
         return false;
     } else {
         init_distances = move(new_init_distances);
