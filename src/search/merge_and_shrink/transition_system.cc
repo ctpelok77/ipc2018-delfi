@@ -157,10 +157,13 @@ TransitionSystem::TransitionSystem(
 // constructor for merges
 TransitionSystem::TransitionSystem(const shared_ptr<Labels> labels,
                                    TransitionSystem *ts1,
-                                   TransitionSystem *ts2)
+                                   TransitionSystem *ts2,
+                                   bool silent)
     : TransitionSystem(ts1->num_variables, labels) {
-    cout << "Merging " << ts1->description() << " and "
-         << ts2->description() << endl;
+    if (!silent) {
+        cout << "Merging " << ts1->description() << " and "
+             << ts2->description() << endl;
+    }
 
     assert(ts1->is_solvable() && ts2->is_solvable());
     assert(ts1->are_transitions_sorted_unique() && ts2->are_transitions_sorted_unique());
@@ -262,6 +265,22 @@ TransitionSystem::TransitionSystem(const shared_ptr<Labels> labels,
     assert(are_transitions_sorted_unique());
 }
 
+// TODO: fix this
+TransitionSystem::TransitionSystem(const TransitionSystem &other,
+                                   const shared_ptr<Labels> labels)
+    : num_variables(other.num_variables),
+      incorporated_variables(other.incorporated_variables),
+      label_equivalence_relation(make_shared<LabelEquivalenceRelation>(
+                                     *other.label_equivalence_relation.get(),
+                                     labels)),
+      transitions_by_group_id(other.transitions_by_group_id),
+      num_states(other.num_states),
+      goal_states(other.goal_states),
+      init_state(other.init_state),
+      goal_relevant(other.goal_relevant) {
+    assert(*this == other);
+}
+
 TransitionSystem::~TransitionSystem() {
 }
 
@@ -295,16 +314,21 @@ void TransitionSystem::compute_locally_equivalent_labels() {
 
 bool TransitionSystem::apply_abstraction(
     const vector<forward_list<int>> &collapsed_groups,
-    const vector<int> &abstraction_mapping) {
+    const vector<int> &abstraction_mapping,
+    bool silent) {
     assert(are_transitions_sorted_unique());
 
     if (static_cast<int>(collapsed_groups.size()) == get_size()) {
-        cout << tag() << "not applying abstraction (same number of states)" << endl;
+        if (!silent) {
+            cout << tag() << "not applying abstraction (same number of states)" << endl;
+        }
         return false;
     }
 
-    cout << tag() << "applying abstraction (" << get_size()
-         << " to " << collapsed_groups.size() << " states)" << endl;
+    if (!silent) {
+        cout << tag() << "applying abstraction (" << get_size()
+             << " to " << collapsed_groups.size() << " states)" << endl;
+    }
 
     typedef forward_list<int> Group;
 
@@ -346,8 +370,11 @@ bool TransitionSystem::apply_abstraction(
 
     num_states = new_num_states;
     init_state = abstraction_mapping[init_state];
-    if (init_state == PRUNED_STATE)
-        cout << tag() << "initial state pruned; task unsolvable" << endl;
+    if (init_state == PRUNED_STATE) {
+        if (!silent) {
+            cout << tag() << "initial state pruned; task unsolvable" << endl;
+        }
+    }
 
     assert(are_transitions_sorted_unique());
     return true;
@@ -524,4 +551,31 @@ void TransitionSystem::dump_labels_and_transitions() const {
 void TransitionSystem::statistics() const {
     cout << tag() << get_size() << " states, "
          << total_transitions() << " arcs " << endl;
+}
+
+int TransitionSystem::get_group_id_for_label(int label_no) const {
+    return label_equivalence_relation->get_group_id(label_no);
+}
+
+const shared_ptr<Labels> TransitionSystem::get_labels() const {
+    return label_equivalence_relation->get_labels();
+}
+
+bool TransitionSystem::operator==(const TransitionSystem &other) const {
+    assert(num_variables == other.num_variables);
+    assert(incorporated_variables == other.incorporated_variables);
+    assert(*label_equivalence_relation.get() == *other.label_equivalence_relation.get());
+    assert(transitions_by_group_id == other.transitions_by_group_id);
+    assert(num_states == other.num_states);
+    assert(goal_states == other.goal_states);
+    assert(init_state == other.init_state);
+    assert(goal_relevant == other.goal_relevant);
+    return num_variables == other.num_variables &&
+           incorporated_variables == other.incorporated_variables &&
+           *label_equivalence_relation.get() == *other.label_equivalence_relation.get() &&
+           transitions_by_group_id == other.transitions_by_group_id &&
+           num_states == other.num_states &&
+           goal_states == other.goal_states &&
+           init_state == other.init_state &&
+           goal_relevant == other.goal_relevant;
 }

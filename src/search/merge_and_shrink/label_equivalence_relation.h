@@ -24,6 +24,12 @@ public:
     // TODO: duplication of INF in transition_system.h
         : cost(std::numeric_limits<int>::max()) {
     }
+    explicit LabelGroup(const LabelGroup &other)
+        : cost(other.cost) {
+        for (int label : other.labels) {
+            insert(label);
+        }
+    }
     void set_cost(int cost_) {
         cost = cost_;
     }
@@ -57,6 +63,9 @@ public:
     int get_cost() const {
         return cost;
     }
+    bool operator==(const LabelGroup &other) const {
+        return labels == other.labels && cost == other.cost;
+    }
 };
 
 class LabelEquivalenceRelation {
@@ -79,6 +88,9 @@ class LabelEquivalenceRelation {
     void add_label_to_group(int group_id, int label_no);
 public:
     explicit LabelEquivalenceRelation(const std::shared_ptr<Labels> labels);
+    LabelEquivalenceRelation(const LabelEquivalenceRelation &other,
+                             const std::shared_ptr<Labels> labels);
+    LabelEquivalenceRelation(const LabelEquivalenceRelation &other) = delete;
     virtual ~LabelEquivalenceRelation() = default;
 
     void recompute_group_cost();
@@ -96,6 +108,12 @@ public:
     const LabelGroup &operator[](int group_id) {
         return grouped_labels[group_id];
     }
+    const std::shared_ptr<Labels> get_labels() const { // for MergeDynamicWeighted
+        return labels;
+    }
+    bool consistent();
+    bool operator==(const LabelEquivalenceRelation &other) const;
+    void dump() const;
 };
 
 #endif
