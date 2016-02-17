@@ -21,6 +21,13 @@ public:
     LabelGroup() : cost(INF) {
     }
 
+    explicit LabelGroup(const LabelGroup &other)
+        : cost(other.cost) {
+        for (int label : other.labels) {
+            insert(label);
+        }
+    }
+
     void set_cost(int cost_) {
         cost = cost_;
     }
@@ -45,12 +52,25 @@ public:
         return labels.end();
     }
 
+    // TODO: get rid of
+    LabelIter begin() {
+        return labels.begin();
+    }
+
+    LabelIter end() {
+        return labels.end();
+    }
+
     bool empty() const {
         return labels.empty();
     }
 
     int get_cost() const {
         return cost;
+    }
+
+    bool operator==(const LabelGroup &other) const {
+        return labels == other.labels && cost == other.cost;
     }
 };
 
@@ -81,6 +101,7 @@ public:
       the public add_label_group method below.
     */
     explicit LabelEquivalenceRelation(const Labels &labels);
+    LabelEquivalenceRelation(const LabelEquivalenceRelation &other);
     ~LabelEquivalenceRelation() = default;
 
     /*
@@ -115,6 +136,12 @@ public:
     const LabelGroup &get_group(int group_id) const {
         return grouped_labels.at(group_id);
     }
+    const Labels &get_labels() const { // for MergeDynamicWeighted
+        return labels;
+    }
+    bool consistent();
+    bool operator==(const LabelEquivalenceRelation &other) const;
+    void dump() const;
 };
 }
 
