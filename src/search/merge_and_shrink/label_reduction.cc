@@ -59,7 +59,8 @@ void LabelReduction::initialize(const TaskProxy &task_proxy) {
 void LabelReduction::compute_label_mapping(
     const EquivalenceRelation *relation,
     const FactoredTransitionSystem &fts,
-    vector<pair<int, vector<int>>> &label_mapping) {
+    vector<pair<int, vector<int>>> &label_mapping,
+    bool silent) {
     const Labels &labels = fts.get_labels();
     int next_new_label_no = labels.get_size();
     int num_labels = 0;
@@ -92,7 +93,7 @@ void LabelReduction::compute_label_mapping(
         }
     }
     int number_reduced_labels = num_labels - num_labels_after_reduction;
-    if (number_reduced_labels > 0) {
+    if (number_reduced_labels > 0 && !silent) {
         cout << "Label reduction: "
              << num_labels << " labels, "
              << num_labels_after_reduction << " after reduction"
@@ -137,12 +138,14 @@ EquivalenceRelation *LabelReduction::compute_combinable_equivalence_relation(
 }
 
 void LabelReduction::reduce(pair<int, int> next_merge,
-                            FactoredTransitionSystem &fts) {
+                            FactoredTransitionSystem &fts,
+                            bool partial) {
     assert(initialized());
     assert(reduce_before_shrinking() || reduce_before_merging());
     int num_transition_systems = fts.get_size();
 
     if (lr_method == TWO_TRANSITION_SYSTEMS) {
+        assert(!partial);
         /* Note:
            We compute the combinable relation for labels for the two transition systems
            in the order given by the merge strategy. We conducted experiments
@@ -157,7 +160,7 @@ void LabelReduction::reduce(pair<int, int> next_merge,
             next_merge.first,
             fts);
         vector<pair<int, vector<int>>> label_mapping;
-        compute_label_mapping(relation, fts, label_mapping);
+        compute_label_mapping(relation, fts, label_mapping, partial);
         if (!label_mapping.empty()) {
             fts.apply_label_reduction(label_mapping,
                                       next_merge.first);
@@ -169,7 +172,7 @@ void LabelReduction::reduce(pair<int, int> next_merge,
         relation = compute_combinable_equivalence_relation(
             next_merge.second,
             fts);
-        compute_label_mapping(relation, fts, label_mapping);
+        compute_label_mapping(relation, fts, label_mapping, partial);
         if (!label_mapping.empty()) {
             fts.apply_label_reduction(label_mapping,
                                       next_merge.second);
@@ -206,7 +209,7 @@ void LabelReduction::reduce(pair<int, int> next_merge,
             EquivalenceRelation *relation =
                 compute_combinable_equivalence_relation(ts_index,
                                                         fts);
-            compute_label_mapping(relation, fts, label_mapping);
+            compute_label_mapping(relation, fts, label_mapping, partial);
             delete relation;
         }
 
@@ -217,6 +220,17 @@ void LabelReduction::reduce(pair<int, int> next_merge,
         } else {
             num_unsuccessful_iterations = 0;
             fts.apply_label_reduction(label_mapping, ts_index);
+            // TODO: fix
+//            if (partial) {
+//                all_transition_systems[next_merge.first]->
+//                    apply_label_reduction(label_mapping, next_merge.first != ts_index);
+//                all_transition_systems[next_merge.second]->
+//                    apply_label_reduction(label_mapping, next_merge.second != ts_index);
+//            } else {
+//                notify_transition_systems(ts_index,
+//                                          all_transition_systems,
+//                                          label_mapping);
+//            }
         }
         if (num_unsuccessful_iterations == num_transition_systems - 1)
             break;
