@@ -134,11 +134,13 @@ private:
     */
     void compute_locally_equivalent_labels();
 
+public: // TODO: temporary access
     // TODO: make private or remove
     const std::vector<Transition> &get_transitions_for_group_id(int group_id) const {
         return transitions_by_group_id[group_id];
     }
 
+private:
     std::vector<Transition> &get_transitions_for_group_id(int group_id) {
         return transitions_by_group_id[group_id];
     }
@@ -157,6 +159,8 @@ public:
         int init_state,
         bool goal_relevant,
         bool compute_label_equivalence_relation);
+    // Copy constructor
+    TransitionSystem(const TransitionSystem &other);
     ~TransitionSystem();
     /*
       Factory method to construct the merge of two transition systems.
@@ -166,7 +170,8 @@ public:
     */
     static std::unique_ptr<TransitionSystem> merge(const Labels &labels,
                                                    const TransitionSystem &ts1,
-                                                   const TransitionSystem &ts2);
+                                                   const TransitionSystem &ts2,
+                                                   bool silent = false);
 
     /*
       Applies the given state equivalence relation to the transition system.
@@ -177,7 +182,8 @@ public:
     */
     bool apply_abstraction(
         const StateEquivalenceRelation &state_equivalence_relation,
-        const std::vector<int> &abstraction_mapping);
+        const std::vector<int> &abstraction_mapping,
+        bool silent = false);
 
     /*
       Applies the given label mapping, mapping old to new label numbers. This
@@ -235,6 +241,14 @@ public:
     bool is_goal_relevant() const {  // used by merge_dfp
         return goal_relevant;
     }
+
+    // Following methods are used by MergeDynamicWeighted
+    const std::vector<int> &get_incorporated_variables() const {
+        return incorporated_variables;
+    }
+
+    int get_group_id_for_label(int label_no) const;
+    bool operator==(const TransitionSystem &other) const;
 };
 }
 
