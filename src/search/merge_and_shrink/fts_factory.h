@@ -17,7 +17,7 @@ namespace merge_and_shrink {
 class FactoredTransitionSystem;
 
 extern FactoredTransitionSystem create_factored_transition_system(
-    const TaskProxy &task_proxy);
+    const TaskProxy &task_proxy, bool debug_transition_system);
 }
 
 #endif
