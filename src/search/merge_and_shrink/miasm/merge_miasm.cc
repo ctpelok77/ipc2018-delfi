@@ -1,13 +1,12 @@
 #include "merge_miasm.h"
 
-//#include "labels.h"
-//#include "transition_system.h"
-//#include "merge_and_shrink_heuristic.h"
 #include "sink_set_search.h"
 #include "miasm_mas.h"
 #include "merge_tree.h"
 
-#include "../plugin.h"
+#include "../factored_transition_system.h"
+
+#include "../../plugin.h"
 
 #include <iostream>
 #include <algorithm>
@@ -32,7 +31,8 @@ DEFINE_ENUM_OPT(EnumPrune, "prune", NONE)
 
 #undef X
 
-static MergeStrategy *_parse(OptionParser &parser) {
+namespace merge_and_shrink {
+static shared_ptr<MergeStrategy>_parse(OptionParser &parser) {
     parser.add_enum_option(MiasmInternal::option_key(),
                            MiasmInternal::S(),
                            "",
@@ -86,12 +86,12 @@ static MergeStrategy *_parse(OptionParser &parser) {
     Options opts = parser.parse();
 
     if (parser.dry_run())
-        return 0;
+        return nullptr;
 
-    return new MergeMiasm(opts);
+    return make_shared<MergeMiasm>(opts);
 }
 
-static Plugin<MergeStrategy> _plugin("merge_miasm", _parse);
+static PluginShared<MergeStrategy> _plugin("merge_miasm", _parse);
 
 MergeMiasm::MergeMiasm(const Options &opts)
     : MergeStrategy(),
@@ -105,18 +105,15 @@ MergeMiasm::~MergeMiasm() {
 }
 
 
-pair<int, int> MergeMiasm::get_next(
-    const vector<TransitionSystem *> &all_transition_systems) {
+pair<int, int> MergeMiasm::get_next(FactoredTransitionSystem &fts) {
     /* TODO: in fact, for MIASM all work has been done
      * in the preprocess phase, including a complete merge order.
      * Thus, the transition system set is not even needed here
      * to compute a merge order. The following lines
      * (before "remaining_merge--")
      * are just for avoiding "unused variable" compiler error */
-    int bound = (int)all_transition_systems.size();
-
-    if (miasm_next[merge_count].first >= bound ||
-        miasm_next[merge_count].second >= bound ) {
+    if (!fts.is_active(miasm_next[merge_count].first) ||
+        !fts.is_active(miasm_next[merge_count].second)) {
         ABORT("Invalid next merge index");
     }
 
@@ -178,4 +175,5 @@ void MergeMiasm::greedy_max_set_packing() {
             }
         }
     }
+}
 }

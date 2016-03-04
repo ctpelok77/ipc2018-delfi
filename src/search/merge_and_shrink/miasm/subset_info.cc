@@ -7,10 +7,13 @@
 
 #include "sink_set_search.h"
 
-#include "../utilities.h"
-#include "transition_system.h"
+#include "../transition_system.h"
+
+//#include "../../utilities.h"
 
 using namespace std;
+
+namespace merge_and_shrink {
 using namespace mst;
 
 size_t combinatorial_size(const set<int> &varset, const TaskProxy &task_proxy) {
@@ -165,4 +168,5 @@ bool ComparatorVarSet::operator()(const size_t i, const size_t j) const {
     }
 
     return i < j;
+}
 }

@@ -12,6 +12,7 @@
 #include "../plugin.h"
 #include "../task_tools.h"
 
+#include "../utils/logging.h"
 #include "../utils/markup.h"
 #include "../utils/memory.h"
 #include "../utils/system.h"
@@ -107,7 +108,20 @@ void MergeAndShrinkHeuristic::build_transition_system(const utils::Timer &timer)
     fts = utils::make_unique_ptr<FactoredTransitionSystem>(
         create_factored_transition_system(task_proxy));
     cout << endl;
+    int maximum_intermediate_size = 0;
+    for (int i = 0; i < fts->get_size(); ++i) {
+        int size = fts->get_ts(i).get_size();
+        if (size > maximum_intermediate_size) {
+            maximum_intermediate_size = size;
+        }
+    }
 
+    vector<int> init_hvalue_increase;
+    vector<int> remaining_labels;
+    remaining_labels.push_back(fts->get_labels().compute_number_active_labels());
+    int iteration_counter = 0;
+    bool still_perfect = true;
+    vector<pair<int, int>> merge_order;
     int final_index = -1; // TODO: get rid of this
     if (fts->is_solvable()) { // All atomic transition system are solvable.
         while (!merge_strategy->done()) {
@@ -117,11 +131,13 @@ void MergeAndShrinkHeuristic::build_transition_system(const utils::Timer &timer)
             int merge_index2 = merge_indices.second;
             cout << "Next pair of indices: (" << merge_index1 << ", " << merge_index2 << ")" << endl;
             assert(merge_index1 != merge_index2);
+            merge_order.push_back(merge_indices);
             fts->statistics(merge_index1, timer);
             fts->statistics(merge_index2, timer);
 
             if (label_reduction && label_reduction->reduce_before_shrinking()) {
                 label_reduction->reduce(merge_indices, *fts);
+                remaining_labels.push_back(fts->get_labels().compute_number_active_labels());
             }
 
             // Shrinking
@@ -132,12 +148,33 @@ void MergeAndShrinkHeuristic::build_transition_system(const utils::Timer &timer)
             if (shrunk.second)
                 fts->statistics(merge_index2, timer);
 
+            const vector<double> &miss_qualified_states_ratios =
+                shrink_strategy->get_miss_qualified_states_ratios();
+            int size = miss_qualified_states_ratios.size();
+            if (size >= 2 && still_perfect &&
+                (miss_qualified_states_ratios[size - 1]
+                 || miss_qualified_states_ratios[size - 2])) {
+                // The test for size >= 2 is to ensure we actually record
+                // this kind of statistics -- currently only with bisimulation
+                // shrinking.
+                cout << "not perfect anymore in iteration " << iteration_counter << endl;
+                still_perfect = false;
+            }
+
             if (label_reduction && label_reduction->reduce_before_merging()) {
                 label_reduction->reduce(merge_indices, *fts);
+                remaining_labels.push_back(fts->get_labels().compute_number_active_labels());
             }
+
+            int init_dist1 = fts->get_init_state_goal_distance(merge_index1);
+            int init_dist2 = fts->get_init_state_goal_distance(merge_index2);
 
             // Merging
             final_index = fts->merge(merge_index1, merge_index2);
+            int abs_size = fts->get_ts(final_index).get_size();
+            if (abs_size > maximum_intermediate_size) {
+                maximum_intermediate_size = abs_size;
+            }
             /*
               NOTE: both the shrinking strategy classes and the construction of
               the composite require input transition systems to be solvable.
@@ -145,10 +182,17 @@ void MergeAndShrinkHeuristic::build_transition_system(const utils::Timer &timer)
             if (!fts->is_solvable()) {
                 break;
             }
+
             fts->statistics(final_index, timer);
+
+            int new_init_dist = fts->get_init_state_goal_distance(final_index);
+            int difference = new_init_dist - max(init_dist1, init_dist2);
+            cout << "Difference of init h values: " << difference << endl;
+            init_hvalue_increase.push_back(difference);
 
             report_peak_memory_delta();
             cout << endl;
+            ++iteration_counter;
         }
     }
 
@@ -165,6 +209,64 @@ void MergeAndShrinkHeuristic::build_transition_system(const utils::Timer &timer)
     } else {
         cout << "Abstract problem is unsolvable!" << endl;
     }
+
+    cout << "Maximum intermediate abstraction size: "
+         << maximum_intermediate_size << endl;
+    cout << "Init h value improvements: " << init_hvalue_increase << endl;
+    cout << "Course of label reduction: " << remaining_labels << endl;
+    const vector<double> &miss_qualified_states_ratios =
+        shrink_strategy->get_miss_qualified_states_ratios();
+    cout << "Course of miss qualified states shrinking: "
+         << miss_qualified_states_ratios << endl;
+    double summed_values = 0;
+    for (double value : miss_qualified_states_ratios) {
+        summed_values += value;
+    }
+    size_t number_of_shrinks = miss_qualified_states_ratios.size();
+    double average_imperfect_shrinking = 0;
+    if (number_of_shrinks) {
+        average_imperfect_shrinking = summed_values / static_cast<double>(number_of_shrinks);
+    }
+    cout << "Average imperfect shrinking: " << average_imperfect_shrinking << endl;
+    cout << "Merge order: [";
+    bool linear_order = true;
+    int next_index = task_proxy.get_variables().size();
+    for (size_t i = 0; i < merge_order.size(); ++i) {
+        pair<int, int> merge = merge_order[i];
+        cout << "(" << merge.first << ", " << merge.second << ")";
+        if (i != merge_order.size() - 1) {
+            cout << ", ";
+        }
+        if (linear_order && i != 0) {
+            if (merge.first != next_index && merge.second != next_index) {
+                linear_order = false;
+            }
+            ++next_index;
+        }
+    }
+    cout << "]" << endl;
+    if (linear_order) {
+        cout << "Linear merge order" << endl;
+    } else {
+         cout << "Non-linear merge order" << endl;
+    }
+    const vector<double> &pruning_statistics = fts->get_pruning_statistics();
+    cout << "Relative pruning per iteration: " << pruning_statistics << endl;
+    double summed_pruning = 0;
+    for (double pruning : pruning_statistics) {
+        summed_pruning += pruning;
+    }
+    // If pruning statistics are empty, then because the instance is unsolvable.
+    // In this case, we return 0, which is the worst value possible for pruning.
+    double average_pruning = 0;
+    if (!pruning_statistics.empty()) {
+        average_pruning =  summed_pruning / static_cast<double>(pruning_statistics.size());
+    }
+    cout << "Average relative pruning: " << average_pruning << endl;
+    cout << "Iterations with merge tiebreaking: "
+         << merge_strategy->get_iterations_with_tiebreaking() << endl;
+    cout << "Total tiebreaking merge candidates: "
+         << merge_strategy->get_total_tiebreaking_pair_count() << endl;
 
     merge_strategy = nullptr;
     shrink_strategy = nullptr;

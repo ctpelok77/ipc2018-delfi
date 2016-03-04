@@ -3,16 +3,21 @@
 
 #include "types.h"
 
-#include "../task_proxy.h"
+#include "../../task_proxy.h"
 
 #include <memory>
 #include <string>
 #include <vector>
 #include <map>
 
-class Labels;
-class MergeStrategy;
+namespace options {
 class Options;
+}
+
+namespace merge_and_shrink {
+class FactoredTransitionSystem;
+class LabelReduction;
+class MergeStrategy;
 class ShrinkStrategy;
 class TransitionSystem;
 class VarSetInfoRegistry;
@@ -20,28 +25,27 @@ class VarSetInfoRegistry;
 class MiasmAbstraction {
     const std::shared_ptr<AbstractTask> task;
     TaskProxy task_proxy;
-    MergeStrategy *const merge_strategy;
-    ShrinkStrategy *const shrink_strategy;
-    /** @brief the transition labels */
-    Labels *labels;
+    std::shared_ptr<MergeStrategy> merge_strategy;
+    std::shared_ptr<ShrinkStrategy> shrink_strategy;
+    std::shared_ptr<LabelReduction> label_reduction;
     bool built_atomics;
 public:
-    MiasmAbstraction(const Options &opts);
-    virtual ~MiasmAbstraction();
+    MiasmAbstraction(const options::Options &opts);
     static std::string option_key();
     static std::string plugin_key();
 
 
-
-    std::map<mst::var_set_t, TransitionSystem *> cache;
+    std::shared_ptr<FactoredTransitionSystem> fts;
+    std::map<mst::var_set_t, int> cache;
     void release_cache();
     void release_cache(const mst::var_set_t &var_set);
 
-    TransitionSystem *build_transition_system(
+    int build_transition_system(
         const mst::var_set_t &G,
         std::vector<mst::var_set_t> &newly_built,
         const VarSetInfoRegistry &vsir);
 
 };
+}
 
 #endif // MIASM_MERGE_AND_SHRINK_ABSTRACTION_H

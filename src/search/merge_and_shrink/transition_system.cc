@@ -106,15 +106,31 @@ TransitionSystem::TransitionSystem(
     assert(are_transitions_sorted_unique());
 }
 
+TransitionSystem::TransitionSystem(const TransitionSystem &other)
+    : num_variables(other.num_variables),
+      incorporated_variables(other.incorporated_variables),
+      label_equivalence_relation(utils::make_unique_ptr<LabelEquivalenceRelation>(
+                                     *other.label_equivalence_relation.get())),
+      transitions_by_group_id(other.transitions_by_group_id),
+      num_states(other.num_states),
+      goal_states(other.goal_states),
+      init_state(other.init_state),
+      goal_relevant(other.goal_relevant) {
+    assert(*this == other);
+}
+
 TransitionSystem::~TransitionSystem() {
 }
 
 unique_ptr<TransitionSystem> TransitionSystem::merge(
     const Labels &labels,
     const TransitionSystem &ts1,
-    const TransitionSystem &ts2) {
-    cout << "Merging " << ts1.get_description() << " and "
-         << ts2.get_description() << endl;
+    const TransitionSystem &ts2,
+    bool silent) {
+    if (!silent) {
+        cout << "Merging " << ts1.get_description() << " and "
+             << ts2.get_description() << endl;
+    }
 
     assert(ts1.is_solvable() && ts2.is_solvable());
     assert(ts1.are_transitions_sorted_unique() && ts2.are_transitions_sorted_unique());
@@ -259,17 +275,22 @@ void TransitionSystem::compute_locally_equivalent_labels() {
 
 bool TransitionSystem::apply_abstraction(
     const StateEquivalenceRelation &state_equivalence_relation,
-    const vector<int> &abstraction_mapping) {
+    const vector<int> &abstraction_mapping,
+    bool silent) {
     assert(are_transitions_sorted_unique());
 
     int new_num_states = state_equivalence_relation.size();
     if (new_num_states == get_size()) {
-        cout << tag() << "not applying abstraction (same number of states)" << endl;
+        if (!silent) {
+            cout << tag() << "not applying abstraction (same number of states)" << endl;
+        }
         return false;
     }
 
-    cout << tag() << "applying abstraction (" << get_size()
-         << " to " << new_num_states << " states)" << endl;
+    if (!silent) {
+        cout << tag() << "applying abstraction (" << get_size()
+             << " to " << new_num_states << " states)" << endl;
+    }
 
     vector<bool> new_goal_states(new_num_states, false);
 
@@ -318,8 +339,11 @@ bool TransitionSystem::apply_abstraction(
 
     num_states = new_num_states;
     init_state = abstraction_mapping[init_state];
-    if (init_state == PRUNED_STATE)
-        cout << tag() << "initial state pruned; task unsolvable" << endl;
+    if (init_state == PRUNED_STATE) {
+        if (!silent) {
+            cout << tag() << "initial state pruned; task unsolvable" << endl;
+        }
+    }
 
     assert(are_transitions_sorted_unique());
     return true;
@@ -516,5 +540,28 @@ void TransitionSystem::dump_labels_and_transitions() const {
 void TransitionSystem::statistics() const {
     cout << tag() << get_size() << " states, "
          << compute_total_transitions() << " arcs " << endl;
+}
+
+int TransitionSystem::get_group_id_for_label(int label_no) const {
+    return label_equivalence_relation->get_group_id(label_no);
+}
+
+bool TransitionSystem::operator==(const TransitionSystem &other) const {
+    assert(num_variables == other.num_variables);
+    assert(incorporated_variables == other.incorporated_variables);
+    assert(*label_equivalence_relation.get() == *other.label_equivalence_relation.get());
+    assert(transitions_by_group_id == other.transitions_by_group_id);
+    assert(num_states == other.num_states);
+    assert(goal_states == other.goal_states);
+    assert(init_state == other.init_state);
+    assert(goal_relevant == other.goal_relevant);
+    return num_variables == other.num_variables &&
+           incorporated_variables == other.incorporated_variables &&
+           *label_equivalence_relation.get() == *other.label_equivalence_relation.get() &&
+           transitions_by_group_id == other.transitions_by_group_id &&
+           num_states == other.num_states &&
+           goal_states == other.goal_states &&
+           init_state == other.init_state &&
+           goal_relevant == other.goal_relevant;
 }
 }

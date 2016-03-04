@@ -57,7 +57,8 @@ class LabelReduction {
     void compute_label_mapping(
         const EquivalenceRelation *relation,
         const FactoredTransitionSystem &fts,
-        std::vector<std::pair<int, std::vector<int>>> &label_mapping);
+        std::vector<std::pair<int, std::vector<int>>> &label_mapping,
+        bool silent);
     EquivalenceRelation *compute_combinable_equivalence_relation(
         int ts_index,
         const FactoredTransitionSystem &fts) const;
@@ -65,7 +66,8 @@ public:
     explicit LabelReduction(const options::Options &options);
     void initialize(const TaskProxy &task_proxy);
     void reduce(std::pair<int, int> next_merge,
-                FactoredTransitionSystem &fts);
+                FactoredTransitionSystem &fts,
+                bool partial = false);
     void dump_options() const;
     bool reduce_before_shrinking() const {
         return lr_before_shrinking;
