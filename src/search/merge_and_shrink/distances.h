@@ -54,7 +54,9 @@ class Distances {
     int max_h;
 
     void clear_distances();
+public: // for MergeDynamicWeighted
     int get_num_states() const;
+private:
     bool is_unit_cost() const;
 
     void compute_init_distances_unit_cost();
@@ -63,10 +65,12 @@ class Distances {
     void compute_goal_distances_general_cost();
 public:
     explicit Distances(const TransitionSystem &transition_system);
+    Distances(const TransitionSystem &transition_system, const Distances &other);
+    Distances(const Distances &other) = delete;
     ~Distances();
 
     bool are_distances_computed() const;
-    std::vector<bool> compute_distances();
+    std::vector<bool> compute_distances(bool silent);
 
     /*
       Update distances according to the given abstraction.
@@ -78,7 +82,8 @@ public:
       out of date.)
     */
     bool apply_abstraction(
-        const StateEquivalenceRelation &state_equivalence_relation);
+        const StateEquivalenceRelation &state_equivalence_relation,
+        bool silent);
 
     int get_max_f() const { // used by shrink_fh
         return max_f;
@@ -94,6 +99,9 @@ public:
     }
     int get_goal_distance(int state) const { // used by shrink strategies and merge_dfp
         return goal_distances[state];
+    }
+    bool operator==(const Distances &other) const {
+        return init_distances == other.init_distances && goal_distances == other.goal_distances && max_f == other.max_f && max_g == other.max_g && max_h == other.max_h;
     }
     void dump() const;
 };
