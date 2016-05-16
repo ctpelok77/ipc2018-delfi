@@ -7,6 +7,7 @@
 
 namespace options {
 class Options;
+class OptionParser;
 }
 
 namespace merge_and_shrink {
@@ -24,6 +25,7 @@ public:
 
     virtual std::pair<int, int> get_next(FactoredTransitionSystem &fts) override;
     virtual std::string name() const override;
+    static void add_options_to_parser(options::OptionParser &parser);
 };
 }
 

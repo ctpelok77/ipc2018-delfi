@@ -51,8 +51,10 @@ public:
     virtual void initialize(const std::shared_ptr<AbstractTask> task) override;
 
     virtual std::pair<int, int> get_next(FactoredTransitionSystem &fts) override;
+    std::pair<int, int> get_next(FactoredTransitionSystem &fts,
+                                 const std::vector<int> &sorted_indices);
     virtual std::string name() const override;
-    static void add_options_to_parser(options::OptionParser &parser);
+    static void add_options_to_parser(options::OptionParser &parser, bool dfp_defaults = true);
 };
 }
 

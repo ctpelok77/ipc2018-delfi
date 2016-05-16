@@ -30,8 +30,10 @@ class Labels {
     int max_size; // the maximum number of labels that can be created
 public:
     explicit Labels(std::vector<std::unique_ptr<Label>> &&labels);
+    explicit Labels(const Labels &other);
     ~Labels() = default;
     void reduce_labels(const std::vector<int> &old_label_nos);
+    int compute_number_active_labels() const;
     bool is_current_label(int label_no) const;
     int get_label_cost(int label_no) const;
     void dump_labels() const;
@@ -41,6 +43,7 @@ public:
     int get_max_size() const {
         return max_size;
     }
+    bool operator==(const Labels &other) const;
 };
 }
 

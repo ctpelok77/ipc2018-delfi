@@ -35,6 +35,8 @@ class MergeAndShrinkHeuristic : public Heuristic {
     */
     const int shrink_threshold_before_merge;
 
+    bool debug_transition_systems;
+
     std::unique_ptr<FactoredTransitionSystem> fts;
     void build_transition_system(const utils::Timer &timer);
 

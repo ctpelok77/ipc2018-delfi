@@ -27,6 +27,14 @@ bool ShrinkStrategy::shrink(
     return fts.apply_abstraction(index, equivalence_relation);
 }
 
+int ShrinkStrategy::compute_size_after_perfect_shrink(
+    const FactoredTransitionSystem &fts,
+    int index) {
+    StateEquivalenceRelation equivalence_relation;
+    compute_equivalence_relation(fts, index, fts.get_ts(index).get_size(), equivalence_relation);
+    return equivalence_relation.size();
+}
+
 void ShrinkStrategy::dump_options() const {
     cout << "Shrink strategy options: " << endl;
     cout << "Type: " << name() << endl;
