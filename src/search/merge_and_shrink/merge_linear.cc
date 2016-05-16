@@ -64,6 +64,19 @@ string MergeLinear::name() const {
     return "linear";
 }
 
+void MergeLinear::add_options_to_parser(OptionParser &parser) {
+    vector<string> merge_strategies;
+    merge_strategies.push_back("CG_GOAL_LEVEL");
+    merge_strategies.push_back("CG_GOAL_RANDOM");
+    merge_strategies.push_back("GOAL_CG_LEVEL");
+    merge_strategies.push_back("RANDOM");
+    merge_strategies.push_back("LEVEL");
+    merge_strategies.push_back("REVERSE_LEVEL");
+    parser.add_enum_option("variable_order", merge_strategies,
+                           "the order in which atomic transition systems are merged",
+                           "CG_GOAL_LEVEL");
+}
+
 static shared_ptr<MergeStrategy>_parse(OptionParser &parser) {
     parser.document_synopsis(
         "Linear merge strategies",
@@ -76,17 +89,7 @@ static shared_ptr<MergeStrategy>_parse(OptionParser &parser) {
             " Automated Planning and Scheduling (ICAPS 2007)",
             "176-183",
             "2007"));
-    vector<string> merge_strategies;
-    merge_strategies.push_back("CG_GOAL_LEVEL");
-    merge_strategies.push_back("CG_GOAL_RANDOM");
-    merge_strategies.push_back("GOAL_CG_LEVEL");
-    merge_strategies.push_back("RANDOM");
-    merge_strategies.push_back("LEVEL");
-    merge_strategies.push_back("REVERSE_LEVEL");
-    parser.add_enum_option("variable_order", merge_strategies,
-                           "the order in which atomic transition systems are merged",
-                           "CG_GOAL_LEVEL");
-
+    MergeLinear::add_options_to_parser(parser);
     Options opts = parser.parse();
     if (parser.dry_run())
         return nullptr;
