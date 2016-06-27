@@ -15,6 +15,8 @@ class RandomNumberGenerator;
 }
 
 namespace merge_and_shrink {
+class MergeDFP;
+
 enum class AtomicTSOrder {
     REGULAR,
     INVERSE,
@@ -43,8 +45,12 @@ public:
     virtual std::unique_ptr<MergeStrategy> compute_merge_strategy(
         std::shared_ptr<AbstractTask> task,
         FactoredTransitionSystem &fts) override;
+    std::unique_ptr<MergeDFP> compute_merge_strategy_dfp(
+        std::shared_ptr<AbstractTask> task,
+        FactoredTransitionSystem &fts);
     virtual std::string name() const override;
-    static void add_options_to_parser(options::OptionParser &parser);
+    static void add_options_to_parser(options::OptionParser &parser,
+                                      bool dfp_defaults = true);
 };
 }
 

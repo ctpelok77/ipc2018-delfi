@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <unordered_map>
 
 using namespace std;
 
@@ -90,6 +91,7 @@ pair<int, int> MergeDFP::compute_next_pair(
     int first_valid_pair_index2 = -1;
     int minimum_weight = INF;
     vector<vector<int>> transition_system_label_ranks(sorted_active_ts_indices.size());
+    unordered_map<int, int> weight_to_count;
     // Go over all pairs of transition systems and compute their weight.
     for (size_t i = 0; i < sorted_active_ts_indices.size(); ++i) {
         int ts_index1 = sorted_active_ts_indices[i];
@@ -125,6 +127,11 @@ pair<int, int> MergeDFP::compute_next_pair(
                         pair_weight = min(pair_weight, max_label_rank);
                     }
                 }
+                if (!weight_to_count.count(pair_weight)) {
+                    weight_to_count[pair_weight] = 1;
+                } else {
+                    weight_to_count[pair_weight] += 1;
+                }
                 if (pair_weight < minimum_weight) {
                     minimum_weight = pair_weight;
                     next_index1 = ts_index1;
@@ -152,11 +159,25 @@ pair<int, int> MergeDFP::compute_next_pair(
             next_index1 = sorted_active_ts_indices[0];
             next_index2 = sorted_active_ts_indices[1];
             cout << "found no goal relevant pair" << endl;
+            if (sorted_active_ts_indices.size() == 2) {
+                weight_to_count[minimum_weight] = 1;
+            } else {
+                // HACK: make sure that such a chosen pair counts as one
+                // where tiebreaking played a role.
+                weight_to_count[minimum_weight] = 2;
+            }
         } else {
             assert(first_valid_pair_index2 != -1);
             next_index1 = first_valid_pair_index1;
             next_index2 = first_valid_pair_index2;
         }
+    }
+
+    int minimum_weight_pair_count = weight_to_count[minimum_weight];
+    assert(minimum_weight_pair_count >= 1);
+    if (minimum_weight_pair_count > 1) {
+        ++iterations_with_tiebreaking;
+        total_tiebreaking_pair_count += minimum_weight_pair_count;
     }
 
     assert(next_index1 != -1);
@@ -174,6 +195,27 @@ pair<int, int> MergeDFP::get_next() {
     for (int ts_index : transition_system_order) {
         if (fts.is_active(ts_index)) {
             sorted_active_ts_indices.push_back(ts_index);
+        }
+    }
+
+    pair<int, int> next_merge = compute_next_pair(sorted_active_ts_indices);
+    return next_merge;
+}
+
+pair<int, int> MergeDFP::get_next(const vector<int> &ts_indices) {
+    /*
+      Precompute a vector sorted_active_ts_indices which contains all given
+      transition system indices in the correct order.
+    */
+    assert(!transition_system_order.empty());
+    vector<int> sorted_active_ts_indices;
+    for (int ts_index : transition_system_order) {
+        for (int given_index : ts_indices) {
+            if (ts_index == given_index) {
+                assert(fts.is_active(ts_index));
+                sorted_active_ts_indices.push_back(ts_index);
+                break;
+            }
         }
     }
 

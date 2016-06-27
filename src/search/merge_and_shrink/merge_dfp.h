@@ -20,6 +20,7 @@ public:
              std::vector<int> transition_system_order);
     virtual ~MergeDFP() override = default;
     virtual std::pair<int, int> get_next() override;
+    std::pair<int, int> get_next(const std::vector<int> &sorted_indices);
 };
 }
 

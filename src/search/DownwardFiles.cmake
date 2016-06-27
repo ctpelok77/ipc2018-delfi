@@ -397,6 +397,13 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME SCC
+    HELP "Tarjan's algorithm for finding maximal SCCs"
+    SOURCES
+        scc.cc
+)
+
+fast_downward_plugin(
     NAME MAS_HEURISTIC
     HELP "The Merge-and-Shrink heuristic"
     SOURCES
@@ -409,11 +416,27 @@ fast_downward_plugin(
         merge_and_shrink/labels.cc
         merge_and_shrink/merge_and_shrink_heuristic.cc
         merge_and_shrink/merge_dfp.cc
+        merge_and_shrink/merge_dynamic_weighted.cc
         merge_and_shrink/merge_linear.cc
+        merge_and_shrink/merge_miasm.cc
+        merge_and_shrink/merge_predefined.cc
+        merge_and_shrink/merge_random.cc
+        merge_and_shrink/merge_random_linear.cc
+        merge_and_shrink/merge_random_non_linear.cc
+        merge_and_shrink/merge_sccs.cc
         merge_and_shrink/merge_strategy.cc
         merge_and_shrink/merge_strategy_factory.cc
         merge_and_shrink/merge_strategy_factory_dfp.cc
+        merge_and_shrink/merge_strategy_factory_dynamic_weighted.cc
         merge_and_shrink/merge_strategy_factory_linear.cc
+        merge_and_shrink/merge_strategy_factory_miasm.cc
+        merge_and_shrink/merge_strategy_factory_predefined.cc
+        merge_and_shrink/merge_strategy_factory_random.cc
+        merge_and_shrink/merge_strategy_factory_random_linear.cc
+        merge_and_shrink/merge_strategy_factory_random_non_linear.cc
+        merge_and_shrink/merge_strategy_factory_sccs.cc
+        merge_and_shrink/merge_strategy_factory_symmetries.cc
+        merge_and_shrink/merge_symmetries.cc
         merge_and_shrink/shrink_bisimulation.cc
         merge_and_shrink/shrink_bucket_based.cc
         merge_and_shrink/shrink_fh.cc
@@ -421,6 +444,12 @@ fast_downward_plugin(
         merge_and_shrink/shrink_strategy.cc
         merge_and_shrink/transition_system.cc
         merge_and_shrink/types.cc
+        merge_and_shrink/miasm/merge_tree.cc
+        merge_and_shrink/miasm/miasm_mas.cc
+        merge_and_shrink/miasm/sink_set_search.cc
+        merge_and_shrink/miasm/subset_info.cc
+        merge_and_shrink/miasm/types.cc
+    DEPENDS SCC
 )
 
 fast_downward_plugin(
@@ -496,6 +525,33 @@ fast_downward_plugin(
         potentials/single_potential_heuristics.cc
         potentials/util.cc
     DEPENDS LP_SOLVER
+)
+
+fast_downward_plugin(
+    NAME BLISS
+    HELP "Pluging containing the code for computing symmetries with Bliss"
+    SOURCES
+        bliss/bignum.cc
+        bliss/defs.cc
+        bliss/graph.cc
+        bliss/heap.cc
+        bliss/kqueue.cc
+        bliss/kstack.cc
+        bliss/orbit.cc
+        bliss/partition.cc
+        bliss/timer.cc
+        bliss/uintseqhash.cc
+        bliss/utils.cc
+)
+
+fast_downward_plugin(
+    NAME SYMMETRIES
+    HELP "Plugin containing the code for symmetries"
+    SOURCES
+        merge_and_shrink/symmetries/ms_graph_creator.cc
+        merge_and_shrink/symmetries/symmetry_generator.cc
+        merge_and_shrink/symmetries/symmetry_group.cc
+    DEPENDS BLISS SCC
 )
 
 fast_downward_add_plugin_sources(PLANNER_SOURCES)

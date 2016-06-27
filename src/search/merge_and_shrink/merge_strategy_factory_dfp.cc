@@ -34,6 +34,13 @@ unique_ptr<MergeStrategy> MergeStrategyFactoryDFP::compute_merge_strategy(
     return utils::make_unique_ptr<MergeDFP>(fts, move(transition_system_order));
 }
 
+unique_ptr<MergeDFP> MergeStrategyFactoryDFP::compute_merge_strategy_dfp(
+    shared_ptr<AbstractTask> task,
+    FactoredTransitionSystem &fts) {
+    vector<int> transition_system_order = compute_ts_order(task);
+    return utils::make_unique_ptr<MergeDFP>(fts, move(transition_system_order));
+}
+
 vector<int> MergeStrategyFactoryDFP::compute_ts_order(
     shared_ptr<AbstractTask> task) {
     TaskProxy task_proxy(*task);
@@ -131,7 +138,8 @@ string MergeStrategyFactoryDFP::name() const {
     return "dfp";
 }
 
-void MergeStrategyFactoryDFP::add_options_to_parser(options::OptionParser &parser) {
+void MergeStrategyFactoryDFP::add_options_to_parser(options::OptionParser &parser,
+                                                    bool dfp_defaults) {
     vector<string> atomic_ts_order;
     vector<string> atomic_ts_order_documentation;
     atomic_ts_order.push_back("regular");
@@ -163,13 +171,13 @@ void MergeStrategyFactoryDFP::add_options_to_parser(options::OptionParser &parse
         product_ts_order,
         "The order in which product transition systems are considered when "
         "considering pairs of potential merges.",
-        "new_to_old",
+        (dfp_defaults ? "new_to_old" : "old_to_new"),
         product_ts_order_documentation);
 
     parser.add_option<bool>(
         "atomic_before_product",
         "Consider atomic transition systems before composite ones iff true.",
-        "false");
+        (dfp_defaults ? "false" : "true"));
 
     parser.add_option<bool>(
         "randomized_order",
