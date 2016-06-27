@@ -5,6 +5,10 @@
 
 #include "../variable_order_finder.h"
 
+namespace options {
+class OptionParser;
+}
+
 namespace merge_and_shrink {
 class MergeStrategyFactoryLinear : public MergeStrategyFactory {
     VariableOrderType variable_order_type;
@@ -17,6 +21,7 @@ public:
         std::shared_ptr<AbstractTask> task,
         FactoredTransitionSystem &fts) override;
     virtual std::string name() const override;
+    static void add_options_to_parser(options::OptionParser &parser);
 };
 }
 
