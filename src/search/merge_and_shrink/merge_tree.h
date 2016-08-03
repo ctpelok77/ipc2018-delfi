@@ -25,6 +25,7 @@ struct MergeTreeNode {
     MergeTreeNode() = delete;
     MergeTreeNode(int ts_index);
     MergeTreeNode(MergeTreeNode *left_child, MergeTreeNode*right_child);
+    MergeTreeNode(std::string tree_string);
     ~MergeTreeNode();
 
     MergeTreeNode *get_left_most_sibling();
