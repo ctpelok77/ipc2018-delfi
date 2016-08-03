@@ -11,7 +11,9 @@ class FactoredTransitionSystem;
 class MergeScoringFunction {
 protected:
     bool initialized;
+public: // for statistics
     virtual std::string name() const = 0;
+protected:
     virtual void dump_function_specific_options() const {}
 public:
     MergeScoringFunction();

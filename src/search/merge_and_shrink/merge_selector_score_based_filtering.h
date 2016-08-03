@@ -14,6 +14,8 @@ class Options;
 namespace merge_and_shrink {
 class MergeSelectorScoreBasedFiltering : public MergeSelector {
     std::vector<std::shared_ptr<MergeScoringFunction>> merge_scoring_functions;
+    mutable int iterations_with_tiebreaking;
+    mutable int total_tiebreaking_pair_count;
 
     std::vector<std::pair<int, int>> get_remaining_candidates(
         const std::vector<std::pair<int, int>> &merge_candidates,
@@ -29,7 +31,14 @@ public:
         std::vector<std::shared_ptr<MergeScoringFunction>> scoring_functions);
     virtual std::pair<int, int> select_merge(
         FactoredTransitionSystem &fts) const override;
+    std::pair<int, int> select_merge_dfp_sccs(
+        FactoredTransitionSystem &fts,
+        const std::vector<int> &indices_subset);
     virtual void initialize(std::shared_ptr<AbstractTask> task) override;
+    std::pair<int, int> get_dfp_tiebreaking_statistics() const {
+        return std::make_pair(iterations_with_tiebreaking,
+                              total_tiebreaking_pair_count);
+    }
 };
 }
 
