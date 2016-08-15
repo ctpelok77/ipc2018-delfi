@@ -25,8 +25,12 @@ class FactoredTransitionSystem {
     bool solvable;
     // TODO: add something like "current_index"? for shrink classes e.g.
 
-    void compute_distances_and_prune(int index);
-    void discard_states(int index, const std::vector<bool> &to_be_pruned_states);
+    // Statistics
+    std::vector<double> relative_pruning_per_iteration;
+
+    void compute_distances_and_prune(int index, bool silent = false);
+    void discard_states(int index, const std::vector<bool> &to_be_pruned_states,
+                        bool silent);
 
     bool is_index_valid(int index) const;
     bool is_component_valid(int index) const;
@@ -38,7 +42,8 @@ public:
         std::unique_ptr<Labels> labels,
         std::vector<std::unique_ptr<TransitionSystem>> &&transition_systems,
         std::vector<std::unique_ptr<HeuristicRepresentation>> &&heuristic_representations,
-        std::vector<std::unique_ptr<Distances>> &&distances);
+        std::vector<std::unique_ptr<Distances>> &&distances,
+        bool finalize_if_unsolvable);
     FactoredTransitionSystem(FactoredTransitionSystem &&other);
     ~FactoredTransitionSystem();
 
@@ -60,8 +65,10 @@ public:
         int combinable_index);
     bool apply_abstraction(
         int index,
-        const StateEquivalenceRelation &state_equivalence_relation);
-    int merge(int index1, int index2);
+        const StateEquivalenceRelation &state_equivalence_relation,
+        bool silent = false);
+    int merge(int index1, int index2, bool invalidating_merge = true,
+              bool finalize_if_unsolvable = true);
     void finalize(int index = -1);
     bool is_solvable() const {
         return solvable;
@@ -82,8 +89,15 @@ public:
     }
     // TODO: remove the following method and let DFP use get_labels?
     int get_num_labels() const; // used by merge_dfp
-    const Labels &get_labels() const { // used by label_reduction
+    int get_init_state_goal_distance(int index) const;
+    const Labels &get_labels() const { // used by label_reduction // for MergeDynamicWeighted
         return *labels;
+    }
+    int copy(int index);
+    void release_copies();
+    void remove(int index);
+    const std::vector<double> &get_pruning_statistics() const {
+        return relative_pruning_per_iteration;
     }
 };
 }

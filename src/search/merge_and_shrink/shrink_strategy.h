@@ -12,6 +12,7 @@ class TransitionSystem;
 
 class ShrinkStrategy {
 protected:
+    mutable std::vector<double> miss_qualified_states_ratios;
     /*
       Compute an equivalence relation on the states of the given transition
       system (index in fts) which has a size of at most target (currently
@@ -38,7 +39,14 @@ public:
       system. However, it may attempt to e.g. shrink the transition system in
       an information preserving way.
     */
-    bool shrink(FactoredTransitionSystem &fts, int index, int target);
+    bool shrink(FactoredTransitionSystem &fts, int index, int target,
+                bool silent = false);
+
+    std::vector<double> &get_miss_qualified_states_ratios() {
+        return miss_qualified_states_ratios;
+    }
+    int compute_size_after_perfect_shrink(const FactoredTransitionSystem &fts,
+                                          int index);
 
     void dump_options() const;
     std::string get_name() const;
