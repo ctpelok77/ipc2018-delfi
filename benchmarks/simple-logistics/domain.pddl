@@ -1,4 +1,4 @@
-(define (domain depot)
+(define (domain simple-logistics)
 (:predicates
      (at ?x ?y) (in ?x ?y) (place ?x) (truck ?x) (crate ?x) )
 (:action drive
