@@ -1,4 +1,4 @@
-(define (problem depotprob1818) (:domain Depot)
+(define (problem twotrucks-twocrates-symmetry) (:domain simple-logistics)
 (:objects
     place0 place1 place2 truck0 truck1 crate0 crate1 )
 (:init
