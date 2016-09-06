@@ -53,6 +53,9 @@ class FactoredTransitionSystem {
     bool solvable;
     // TODO: add something like "current_index"? for shrink classes e.g.
 
+    // Statistics
+    std::vector<double> relative_pruning_per_iteration;
+
     void compute_distances_and_prune(
         int index,
         Verbosity verbosity);
@@ -72,7 +75,8 @@ public:
         std::vector<std::unique_ptr<TransitionSystem>> &&transition_systems,
         std::vector<std::unique_ptr<HeuristicRepresentation>> &&heuristic_representations,
         std::vector<std::unique_ptr<Distances>> &&distances,
-        Verbosity verbosity);
+        Verbosity verbosity,
+        bool finalize_if_unsolvable);
     FactoredTransitionSystem(FactoredTransitionSystem &&other);
     ~FactoredTransitionSystem();
 
@@ -97,7 +101,12 @@ public:
         int index,
         const StateEquivalenceRelation &state_equivalence_relation,
         Verbosity verbosity);
-    int merge(int index1, int index2, Verbosity verbosity);
+    int merge(
+        int index1, 
+        int index2, 
+        Verbosity verbosity, 
+        bool invalidating_merge = true, 
+        bool finalize_if_unsolvable = true);
     void finalize(int index = -1);
 
     bool is_solvable() const {
@@ -128,6 +137,15 @@ public:
 
     bool is_active(int index) const {
         return is_index_valid(index);
+    }
+
+    int get_init_state_goal_distance(int index) const;
+    int copy(int index);
+    void release_copies();
+    void remove(int index);
+
+    const std::vector<double> &get_pruning_statistics() const {
+        return relative_pruning_per_iteration;
     }
 };
 }
