@@ -3,6 +3,7 @@
 
 #include <iosfwd>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -73,6 +74,9 @@ extern bool g_is_part_of_anytime_portfolio;
 extern std::shared_ptr<utils::RandomNumberGenerator> g_rng();
 
 extern const std::shared_ptr<AbstractTask> g_root_task();
+extern std::vector<std::vector<bool>> g_mutex_var_pairs;
+extern std::vector<std::vector<std::set<FactPair>>>
+g_inconsistent_facts;
 
 extern utils::Log g_log;
 
