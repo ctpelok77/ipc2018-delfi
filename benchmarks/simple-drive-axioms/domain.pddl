@@ -8,5 +8,5 @@
  :effect
     (and (not (at ?truck ?location1)) (at ?truck ?location2)))
 (:derived (goal ?truck)
-    (and (at ?truck location2)))
+    (and (truck ?truck) (at ?truck location2)))
 )
