@@ -38,6 +38,8 @@ class MergeAndShrinkHeuristic : public Heuristic {
 
     const Verbosity verbosity;
 
+    bool debug_transition_systems;
+
     long starting_peak_memory;
     std::unique_ptr<MergeAndShrinkRepresentation> mas_representation;
 
