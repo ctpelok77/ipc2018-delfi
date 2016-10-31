@@ -52,6 +52,10 @@ public:
     int get_cost() const {
         return cost;
     }
+
+    bool operator==(const LabelGroup &other) const {
+        return labels == other.labels && cost == other.cost;
+    }
 };
 
 class LabelEquivalenceRelation {
@@ -81,6 +85,7 @@ public:
       the public add_label_group method below.
     */
     explicit LabelEquivalenceRelation(const Labels &labels);
+    LabelEquivalenceRelation(const LabelEquivalenceRelation &other);
 
     /*
       The given label mappings (from label reduction) contain the new label
@@ -114,6 +119,9 @@ public:
     const LabelGroup &get_group(int group_id) const {
         return grouped_labels.at(group_id);
     }
+//    bool consistent();
+    bool operator==(const LabelEquivalenceRelation &other) const;
+    void dump() const;
 };
 }
 
