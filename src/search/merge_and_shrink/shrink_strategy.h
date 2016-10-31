@@ -12,6 +12,7 @@ class TransitionSystem;
 
 class ShrinkStrategy {
 protected:
+    mutable std::vector<double> miss_qualified_states_ratios;
     /*
       Shrink the given transition system (index in fts) with the given
       equivalence relation. This method should be called by all inheriting
@@ -42,6 +43,10 @@ public:
         int index,
         int target,
         Verbosity verbosity) const = 0;
+
+    std::vector<double> &get_miss_qualified_states_ratios() {
+        return miss_qualified_states_ratios;
+    }
 
     void dump_options() const;
     std::string get_name() const;

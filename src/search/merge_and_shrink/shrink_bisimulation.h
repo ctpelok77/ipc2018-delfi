@@ -31,6 +31,11 @@ class ShrinkBisimulation : public ShrinkStrategy {
                             int index,
                             std::vector<Signature> &signatures,
                             const std::vector<int> &state_to_group) const;
+
+    StateEquivalenceRelation compute_equivalence_relation(
+        const FactoredTransitionSystem &fts,
+        int index,
+        int target_size) const;
 protected:
     virtual void dump_strategy_specific_options() const override;
     virtual std::string name() const override;
@@ -42,6 +47,9 @@ public:
         int index,
         int target,
         Verbosity verbosity) const override;
+    int compute_size_after_perfect_shrink(
+        const FactoredTransitionSystem &fts, int index);
+
 };
 }
 

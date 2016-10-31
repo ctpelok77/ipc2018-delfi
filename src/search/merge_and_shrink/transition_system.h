@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -115,16 +116,22 @@ private:
     std::vector<bool> goal_states;
     int init_state;
 
+    // for debugging: for each abstract state, store for all variables a set
+    // of values that each variable can take in that abstract state
+    std::vector<std::vector<std::set<int>>> abs_state_to_var_multi_vals;
+
     /*
       Check if two or more labels are locally equivalent to each other, and
       if so, update the label equivalence relation.
     */
     void compute_locally_equivalent_labels();
 
+public: // TODO: temporary access
     const std::vector<Transition> &get_transitions_for_group_id(int group_id) const {
         return transitions_by_group_id[group_id];
     }
 
+private:
     // Statistics and output
     int compute_total_transitions() const;
     std::string get_description() const;
@@ -137,7 +144,10 @@ public:
         int num_states,
         std::vector<bool> &&goal_states,
         int init_state,
-        bool compute_label_equivalence_relation);
+        bool compute_label_equivalence_relation,
+        std::vector<std::vector<std::set<int>>> &&abs_state_to_var_multi_vals);
+    // Copy constructor
+    TransitionSystem(const TransitionSystem &other);
     ~TransitionSystem();
     /*
       Factory method to construct the merge of two transition systems.
@@ -203,6 +213,7 @@ public:
     void dump_dot_graph() const;
     void dump_labels_and_transitions() const;
     void statistics() const;
+    void dump_state() const;
 
     int get_size() const {
         return num_states;
@@ -219,6 +230,9 @@ public:
     const std::vector<int> &get_incorporated_variables() const {
         return incorporated_variables;
     }
+
+    int get_group_id_for_label(int label_no) const;
+    bool operator==(const TransitionSystem &other) const;
 };
 }
 

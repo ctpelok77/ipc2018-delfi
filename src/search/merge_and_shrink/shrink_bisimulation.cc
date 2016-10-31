@@ -221,11 +221,10 @@ void ShrinkBisimulation::compute_signatures(
     ::sort(signatures.begin(), signatures.end());
 }
 
-bool ShrinkBisimulation::shrink(
-    FactoredTransitionSystem &fts,
+StateEquivalenceRelation ShrinkBisimulation::compute_equivalence_relation(
+    const FactoredTransitionSystem &fts,
     int index,
-    int target_size,
-    Verbosity verbosity) const {
+    int target_size) const {
     const TransitionSystem &ts = fts.get_ts(index);
     const Distances &distances = fts.get_dist(index);
     int num_states = ts.get_size();
@@ -326,6 +325,23 @@ bool ShrinkBisimulation::shrink(
             sig_start = sig_end;
         }
     }
+    int potentially_miss_qualified_states = 0;
+    if (!stable || stop_requested) {
+        signatures.clear();
+        compute_signatures(fts, index, signatures, state_to_group);
+        for (int state = 2; state < ts.get_size() + 1; ++state) {
+            const Signature &prev_sig = signatures[state - 1];
+            const Signature &curr_sig = signatures[state];
+            if (prev_sig.group == curr_sig.group &&
+                prev_sig.succ_signature != curr_sig.succ_signature) {
+                ++potentially_miss_qualified_states;
+            }
+        }
+    }
+    assert(potentially_miss_qualified_states <= ts.get_size());
+    miss_qualified_states_ratios.push_back(
+        static_cast<double>(potentially_miss_qualified_states) /
+        static_cast<double>(ts.get_size()));
 
     /* Reduce memory pressure before generating the equivalence
        relation since this is one of the code parts relevant to peak
@@ -343,7 +359,25 @@ bool ShrinkBisimulation::shrink(
         }
     }
 
+    return equivalence_relation;
+}
+
+bool ShrinkBisimulation::shrink(
+    FactoredTransitionSystem &fts,
+    int index,
+    int target,
+    Verbosity verbosity) const {
+    StateEquivalenceRelation equivalence_relation =
+        compute_equivalence_relation(fts, index, target);
     return shrink_fts(fts, index, equivalence_relation, verbosity);
+}
+
+int ShrinkBisimulation::compute_size_after_perfect_shrink(
+    const FactoredTransitionSystem &fts,
+    int index) {
+    StateEquivalenceRelation equivalence_relation =
+        compute_equivalence_relation(fts, index, fts.get_ts(index).get_size());
+    return equivalence_relation.size();
 }
 
 string ShrinkBisimulation::name() const {
