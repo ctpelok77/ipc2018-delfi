@@ -36,7 +36,8 @@ static const int PRE_FILE_VERSION = 3;
 //       are_mutex, which is at least better than exposing the data
 //       structure globally.)
 
-static vector<vector<set<FactPair>>> g_inconsistent_facts;
+vector<vector<set<FactPair>>> g_inconsistent_facts;
+vector<vector<bool>> g_mutex_var_pairs;
 
 bool test_goal(const GlobalState &state) {
     for (size_t i = 0; i < g_goal.size(); ++i) {
@@ -145,6 +146,8 @@ void read_mutexes(istream &in) {
     g_inconsistent_facts.resize(g_variable_domain.size());
     for (size_t i = 0; i < g_variable_domain.size(); ++i)
         g_inconsistent_facts[i].resize(g_variable_domain[i]);
+    g_mutex_var_pairs.resize(g_variable_domain.size(),
+                             vector<bool>(g_variable_domain.size(), false));
 
     int num_mutex_groups;
     in >> num_mutex_groups;
@@ -182,6 +185,8 @@ void read_mutexes(istream &in) {
                        where some but not all facts talk about the
                        same variable. */
                     g_inconsistent_facts[fact1.var][fact1.value].insert(fact2);
+                    g_mutex_var_pairs[fact1.var][fact2.var] = true;
+                    g_mutex_var_pairs[fact2.var][fact1.var] = true;
                 }
             }
         }
