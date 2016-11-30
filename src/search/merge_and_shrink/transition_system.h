@@ -121,10 +121,12 @@ private:
     */
     void compute_locally_equivalent_labels();
 
+public: // For copying transition systems within FTS
     const std::vector<Transition> &get_transitions_for_group_id(int group_id) const {
         return transitions_by_group_id[group_id];
     }
 
+private:
     // Statistics and output
     int compute_total_transitions() const;
     std::string get_description() const;
@@ -138,6 +140,7 @@ public:
         std::vector<bool> &&goal_states,
         int init_state,
         bool compute_label_equivalence_relation);
+    explicit TransitionSystem(const TransitionSystem &other);
     ~TransitionSystem();
     /*
       Factory method to construct the merge of two transition systems.
@@ -219,6 +222,9 @@ public:
     const std::vector<int> &get_incorporated_variables() const {
         return incorporated_variables;
     }
+
+    int get_group_id_for_label(int label_no) const;
+    bool operator==(const TransitionSystem &other) const;
 };
 }
 

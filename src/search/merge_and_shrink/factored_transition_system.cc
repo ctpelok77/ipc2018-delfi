@@ -88,6 +88,13 @@ void FactoredTransitionSystem::discard_states(
         }
     }
     apply_abstraction(index, state_equivalence_relation, verbosity);
+    // NOTE/HACK: this only works if the regular merge-and-shrink process
+    // uses verbosity of at least normal!
+    if (verbosity >= Verbosity::NORMAL) {
+        double new_size = transition_systems[index]->get_size();
+        assert(new_size <= num_states);
+        relative_pruning_per_iteration.push_back(1 - new_size / static_cast<double>(num_states));
+    }
 }
 
 bool FactoredTransitionSystem::is_index_valid(int index) const {
@@ -171,7 +178,8 @@ int FactoredTransitionSystem::merge(
     int index1,
     int index2,
     Verbosity verbosity,
-    bool finalize_if_unsolvable) {
+    bool finalize_if_unsolvable,
+    bool invalidating_merge) {
     assert(is_index_valid(index1));
     assert(is_index_valid(index2));
     transition_systems.push_back(
@@ -180,16 +188,43 @@ int FactoredTransitionSystem::merge(
             *transition_systems[index1],
             *transition_systems[index2],
             verbosity));
-    distances[index1] = nullptr;
-    distances[index2] = nullptr;
-    transition_systems[index1] = nullptr;
-    transition_systems[index2] = nullptr;
-    mas_representations.push_back(
-        utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
-            move(mas_representations[index1]),
-            move(mas_representations[index2])));
-    mas_representations[index1] = nullptr;
-    mas_representations[index2] = nullptr;
+    if (invalidating_merge) {
+        distances[index1] = nullptr;
+        distances[index2] = nullptr;
+        transition_systems[index1] = nullptr;
+        transition_systems[index2] = nullptr;
+        mas_representations.push_back(
+            utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                move(mas_representations[index1]),
+                move(mas_representations[index2])));
+        mas_representations[index1] = nullptr;
+        mas_representations[index2] = nullptr;
+    } else {
+        unique_ptr<MergeAndShrinkRepresentation> hr1 = nullptr;
+        if (dynamic_cast<MergeAndShrinkRepresentationLeaf *>(mas_representations[index1].get())) {
+            hr1 = utils::make_unique_ptr<MergeAndShrinkRepresentationLeaf>(
+                dynamic_cast<MergeAndShrinkRepresentationLeaf *>
+                    (mas_representations[index1].get()));
+        } else {
+            hr1 = utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                dynamic_cast<MergeAndShrinkRepresentationMerge *>(
+                    mas_representations[index1].get()));
+        }
+        unique_ptr<MergeAndShrinkRepresentation> hr2 = nullptr;
+        if (dynamic_cast<MergeAndShrinkRepresentationLeaf *>(mas_representations[index2].get())) {
+            hr2 = utils::make_unique_ptr<MergeAndShrinkRepresentationLeaf>(
+                        dynamic_cast<MergeAndShrinkRepresentationLeaf *>
+                        (mas_representations[index2].get()));
+        } else {
+            hr2 = utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                        dynamic_cast<MergeAndShrinkRepresentationMerge *>(
+                            mas_representations[index2].get()));
+        }
+        mas_representations.push_back(
+            utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                move(hr1),
+                move(hr2)));
+    }
     const TransitionSystem &new_ts = *transition_systems.back();
     distances.push_back(utils::make_unique_ptr<Distances>(new_ts));
     int new_index = transition_systems.size() - 1;
@@ -242,5 +277,62 @@ void FactoredTransitionSystem::dump(int index) const {
     assert(transition_systems[index]);
     transition_systems[index]->dump_labels_and_transitions();
     mas_representations[index]->dump();
+}
+
+int FactoredTransitionSystem::get_init_state_goal_distance(int index) const {
+    return distances[index]->get_goal_distance(transition_systems[index]->get_init_state());
+}
+
+int FactoredTransitionSystem::copy(int index) {
+    assert(is_active(index));
+    int new_index = transition_systems.size();
+    transition_systems.push_back(
+        utils::make_unique_ptr<TransitionSystem>(*transition_systems[index]));
+
+    unique_ptr<MergeAndShrinkRepresentation> hr = nullptr;
+    if (dynamic_cast<MergeAndShrinkRepresentationLeaf *>(mas_representations[index].get())) {
+        hr = utils::make_unique_ptr<MergeAndShrinkRepresentationLeaf>(
+            dynamic_cast<MergeAndShrinkRepresentationLeaf *>
+                (mas_representations[index].get()));
+    } else {
+        hr = utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+            dynamic_cast<MergeAndShrinkRepresentationMerge *>(
+                mas_representations[index].get()));
+    }
+    mas_representations.push_back(move(hr));
+
+    distances.push_back(utils::make_unique_ptr<Distances>(*transition_systems.back(),
+                                                          *distances[index]));
+
+    ++num_active_entries;
+    return new_index;
+}
+
+void FactoredTransitionSystem::release_copies() {
+    int last_index = transition_systems.size() - 1;
+    transition_systems[last_index] = nullptr;
+    transition_systems.pop_back();
+    assert(!transition_systems.back());
+    transition_systems.pop_back();
+    assert(!transition_systems.back());
+    transition_systems.pop_back();
+    mas_representations[last_index] = nullptr;
+    mas_representations.pop_back();
+    mas_representations.pop_back();
+    mas_representations.pop_back();
+    distances[last_index] = nullptr;
+    distances.pop_back();
+    assert(!distances.back());
+    distances.pop_back();
+    assert(!distances.back());
+    distances.pop_back();
+    --num_active_entries;
+}
+
+void FactoredTransitionSystem::remove(int index) {
+    assert(is_active(index));
+    transition_systems[index] = nullptr;
+    mas_representations[index] = nullptr;
+    distances[index] = nullptr;
 }
 }

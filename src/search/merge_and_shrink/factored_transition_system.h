@@ -49,6 +49,9 @@ class FactoredTransitionSystem {
     int unsolvable_index; // -1 if solvable, index of an unsolvable entry otw.
     int num_active_entries;
 
+    // Statistics
+    std::vector<double> relative_pruning_per_iteration;
+
     void compute_distances_and_prune(
         int index,
         Verbosity verbosity);
@@ -87,7 +90,8 @@ public:
         int index1,
         int index2,
         Verbosity verbosity,
-        bool finalize_if_unsolvable);
+        bool finalize_if_unsolvable,
+        bool invalidating_merge = true);
     /*
       This method may only be called either when there is only one entry left
       in the FTS or when the FTS is unsolvable.
@@ -136,6 +140,22 @@ public:
 
     bool is_active(int index) const {
         return is_index_valid(index);
+    }
+
+    int get_init_state_goal_distance(int index) const;
+    // Copy the entry at index and appends it, increasing the size by one.
+    int copy(int index);
+    /*
+      Delete the last three indices. This assumes and requires that the
+      entry at the last index represents a merge of the entries of the
+      second and third to last indices, which in turn have been copied
+      before.
+     */
+    void release_copies();
+    void remove(int index);
+
+    const std::vector<double> &get_pruning_statistics() const {
+        return relative_pruning_per_iteration;
     }
 };
 }

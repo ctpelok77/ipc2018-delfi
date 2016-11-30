@@ -4,6 +4,7 @@
 #include <vector>
 
 namespace merge_and_shrink {
+class Distances;
 class FactoredTransitionSystem;
 class ShrinkStrategy;
 class TransitionSystem;
@@ -44,6 +45,24 @@ extern bool shrink_transition_system(
     Verbosity verbosity);
 
 extern bool is_goal_relevant(const TransitionSystem &ts);
+
+extern int shrink_and_merge_temporarily(
+    FactoredTransitionSystem &fts,
+    int ts_index1,
+    int ts_index2,
+    const ShrinkStrategy &shrink_strategy,
+    int max_states,
+    int max_states_before_merge,
+    int shrink_threshold_before_merge);
+
+extern int compute_number_of_product_transitions(
+    const TransitionSystem &ts1, const TransitionSystem &ts2);
+
+extern double compute_average_h_value(const Distances &distances);
+
+extern void compute_irrelevant_labels(
+    const FactoredTransitionSystem &fts,
+    std::vector<std::vector<bool>> &ts_index_to_irrelevant_labels);
 }
 
 #endif
