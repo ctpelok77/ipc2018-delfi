@@ -18,6 +18,9 @@
     (= (distance location2 location0) 2)
     (= (distance location1 location2) 2) ;use 3 to remove symmetries
     (= (distance location2 location1) 2) ;use 3 to remove symmetries
+    (= (distance location0 location0) 0) ;required to silence the translator
+    (= (distance location1 location1) 0) ;required to silence the translator
+    (= (distance location2 location2) 0) ;required to silence the translator
 )
 
 (:goal (and
