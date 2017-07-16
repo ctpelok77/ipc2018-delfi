@@ -1,5 +1,6 @@
 #include "merge_tree.h"
 
+#include "../utils/logging.h"
 #include "../utils/rng.h"
 #include "../utils/system.h"
 
@@ -40,6 +41,53 @@ MergeTreeNode::MergeTreeNode(
       ts_index(UNINITIALIZED) {
     left_child->parent = this;
     right_child->parent = this;
+}
+
+MergeTreeNode::MergeTreeNode(string tree_string)
+    : left_child(nullptr),
+      right_child(nullptr),
+      ts_index(-1) {
+    assert(!tree_string.empty());
+//        cout << "building tree for string " << tree_string << endl;
+    char &c = tree_string[0];
+    if (c == 'y') {
+        ABORT("ill-specified string");
+    } else if (c == 'x') {
+        assert(tree_string.size() > 5); // need to have at least two subtrees
+        int parentheses_counter = 1;
+        string::size_type index = 1;
+        while (parentheses_counter != 0) {
+            if (tree_string[index] == 'x') {
+                ++parentheses_counter;
+            } else if (tree_string[index] == 'y') {
+                --parentheses_counter;
+            }
+            ++index;
+        }
+        string left_sub_tree_string = tree_string.substr(1, index - 2);
+        left_child = new MergeTreeNode(left_sub_tree_string);
+
+        assert(tree_string[index] == 'x');
+        parentheses_counter = 1;
+        ++index;
+        int right_index = index;
+        while (parentheses_counter != 0) {
+            if (tree_string[index] == 'x') {
+                ++parentheses_counter;
+            } else if (tree_string[index] == 'y') {
+                --parentheses_counter;
+            }
+            ++index;
+        }
+        assert(index == tree_string.size());
+        string right_sub_tree_string = tree_string.substr(right_index,
+                                                          index - right_index - 1);
+        right_child = new MergeTreeNode(right_sub_tree_string);
+    } else {
+        string to_be_index = tree_string.substr(0, tree_string.size() - 2);
+//            cout << "to be index: " << to_be_index << endl;
+        ts_index = stoi(to_be_index);
+    }
 }
 
 MergeTreeNode::~MergeTreeNode() {
@@ -184,7 +232,7 @@ pair<MergeTreeNode *, MergeTreeNode *> MergeTree::get_parents_of_ts_indices(
     return result;
 }
 
-void MergeTree::update(pair<int, int> merge, int new_index) {
+void MergeTree::update(pair<int, int> merge, int new_index, bool miasm_hack) {
     int ts_index1 = merge.first;
     int ts_index2 = merge.second;
     assert(root->ts_index != ts_index1 && root->ts_index != ts_index2);
@@ -198,10 +246,12 @@ void MergeTree::update(pair<int, int> merge, int new_index) {
     } else {
         MergeTreeNode *surviving_node = nullptr;
         MergeTreeNode *removed_node = nullptr;
-        if (update_option == UpdateOption::USE_FIRST) {
+        if (update_option == UpdateOption::USE_FIRST ||
+                (miasm_hack && root == first_parent)) {
             surviving_node = first_parent;
             removed_node = second_parent;
-        } else if (update_option == UpdateOption::USE_SECOND) {
+        } else if (update_option == UpdateOption::USE_SECOND ||
+                (miasm_hack && root == second_parent)) {
             surviving_node = second_parent;
             removed_node = first_parent;
         } else if (update_option == UpdateOption::USE_RANDOM) {
