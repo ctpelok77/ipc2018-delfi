@@ -51,6 +51,48 @@ def parse_args():
     argparser.add_argument(
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
+    argparser.add_argument(
+        "--compute-symmetries", action="store_true",
+        help="compute symmetries on the normalized taks using bliss, dump "
+        "statistics")
+    argparser.add_argument(
+        "--only-object-symmetries", action="store_true",
+        help="HACK! Only allow objects to be permuted, but not "
+        "predicates operators, axioms or functions.")
+    argparser.add_argument(
+        "--stabilize-initial-state", action="store_true",
+        help="If false, only those atoms in the initial state mentioning "
+        "static predicates are added.")
+    argparser.add_argument(
+        "--only-functions-from-initial-state", action="store_true",
+        help="If true, include only the functions mentioned in the initial "
+        "states, but not the fluents or types.")
+    argparser.add_argument(
+        "--preserve-symmetries-during-grounding", action="store_true",
+        help="If true, grounding preserves unreachable structures (axioms, "
+        "operators, ...) if they are symmetric to a reachable structure.")
+    argparser.add_argument(
+        "--add-mutex-groups", action="store_true",
+        help="If true, add mutex groups to the symmetry graph prior computing "
+        "symmetries. Does not work with --preserve-symmetries-during-grounding.")
+    argparser.add_argument(
+        "--ground-symmetries", action="store_true",
+        help="If true, ground lifted symmetries to the search representation, "
+        "mapping facts to facts.")
+    argparser.add_argument(
+        "--add-none-of-those-mappings", action="store_true",
+        help="This option is only useful if using --ground-symmetries."
+        "If true, add mappings to generators for none-of-those values: "
+        "if the var is not mapped to another var, then set identity. Otherwise, "
+        "map to the none-of-those-value of the mapped variable. This assumes "
+        "that vars are entirely mapped to vars, or not mapped at all. This has "
+        "been asserted on IPC tasks. "
+        "If this option is used, generators that map none-of-those values to "
+        "none-of-those values of other variables are *not* filtered out as "
+        "they would otherwise be.")
+    argparser.add_argument(
+        "--bliss-time-limit", default=300, type=int,
+        help="max time for bliss to search for automorphisms")
     return argparser.parse_args()
 
 
