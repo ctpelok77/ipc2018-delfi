@@ -10,6 +10,8 @@
 #include "../algorithms/ordered_set.h"
 #include "../task_utils/successor_generator.h"
 
+#include "../structural_symmetries/group.h"
+
 #include <cassert>
 #include <cstdlib>
 #include <memory>
@@ -27,6 +29,28 @@ EagerSearch::EagerSearch(const Options &opts)
       f_evaluator(opts.get<Evaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")) {
+    if (opts.contains("symmetries")) {
+        group = opts.get<shared_ptr<Group>>("symmetries");
+        if (group && !group->is_initialized()) {
+            cout << "Initializing symmetries (eager search)" << endl;
+            group->compute_symmetries();
+        }
+
+        if (use_dks()) {
+            cout << "Setting group in registry for DKS search" << endl;
+            state_registry.set_group(group);
+        }
+    } else {
+        group = nullptr;
+    }
+}
+
+bool EagerSearch::use_oss() const {
+    return group && group->has_symmetries() && group->get_search_symmetries() == SearchSymmetries::OSS;
+}
+
+bool EagerSearch::use_dks() const {
+    return group && group->has_symmetries() && group->get_search_symmetries() == SearchSymmetries::DKS;
 }
 
 void EagerSearch::initialize() {
@@ -56,7 +80,16 @@ void EagerSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
-    const GlobalState &initial_state = state_registry.get_initial_state();
+    if (use_oss() || use_dks()) {
+        assert(heuristics.size() == 1);
+    }
+    // Changed to copy the state to be able to reassign it.
+    GlobalState initial_state = state_registry.get_initial_state();
+    if (use_oss()) {
+        int *canonical_state = group->get_canonical_representative(initial_state);
+        initial_state = state_registry.register_state_buffer(canonical_state);
+        delete canonical_state;
+    }
     for (Heuristic *heuristic : heuristics) {
         heuristic->notify_initial_state(initial_state);
     }
@@ -104,7 +137,7 @@ SearchStatus EagerSearch::step() {
     SearchNode node = n.first;
 
     GlobalState s = node.get_state();
-    if (check_goal_and_set_plan(s))
+    if (check_goal_and_set_plan(s, group))
         return SOLVED;
 
     vector<OperatorID> applicable_ops;
@@ -125,8 +158,23 @@ SearchStatus EagerSearch::step() {
         const GlobalOperator *op = &g_operators[op_id.get_index()];
         if ((node.get_real_g() + op->get_cost()) >= bound)
             continue;
-
-        GlobalState succ_state = state_registry.get_successor_state(s, *op);
+        /*
+          NOTE: In orbit search tmp_registry has to survive as long as
+                succ_state is used. This could be forever, but for heuristics
+                that do not store per state information it is ok to keep it
+                only for this operator application. In regular search it is not
+                actually needed, but I don't see a way around having it there,
+                too.
+        */
+        StateRegistry tmp_registry(*g_root_task(), *g_state_packer,
+                                   *g_axiom_evaluator, g_initial_state_data);
+        StateRegistry *successor_registry = use_oss() ? &tmp_registry : &state_registry;
+        GlobalState succ_state = successor_registry->get_successor_state(s, *op);
+        if (use_oss()) {
+            int *canonical_state = group->get_canonical_representative(succ_state);
+            succ_state = state_registry.register_state_buffer(canonical_state);
+            delete canonical_state;
+        }
         statistics.inc_generated();
         bool is_preferred = preferred_operators.contains(op_id);
 
@@ -156,6 +204,12 @@ SearchStatus EagerSearch::step() {
             // TODO: Make this less fragile.
             int succ_g = node.get_g() + get_adjusted_cost(*op);
 
+            /*
+              NOTE: previous versions used the non-canocialized successor state
+              here, but this lead to problems because the EvaluationContext was
+              initialized with one state and the insertion was performed with
+              another state.
+             */
             EvaluationContext eval_context(
                 succ_state, succ_g, is_preferred, &statistics);
             statistics.inc_evaluated_states();
