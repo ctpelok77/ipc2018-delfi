@@ -26,6 +26,7 @@ import pddl
 import pddl_parser
 import sas_tasks
 import simplify
+import symmetries_module
 import timers
 import tools
 import variable_order
@@ -41,6 +42,7 @@ import variable_order
 # non-derived).
 
 DEBUG = False
+DUMP = False
 
 simplified_effect_condition_counter = 0
 added_implied_precondition_counter = 0
@@ -512,6 +514,121 @@ def unsolvable_sas_task(msg):
     print("%s! Generating unsolvable task..." % msg)
     return trivial_task(solvable=False)
 
+class Generator:
+    def __init__(self, generator, task):
+        # Transform generator into a tuple of dicts, mapping predicates
+        # and objects, ignoring identity mappings.
+        predicates = dict()
+        objects = dict()
+        for from_node, to_node in generator.items():
+            assert isinstance(from_node, tuple)
+            if (from_node[0] == symmetries_module.NodeType.predicate
+                and from_node[1] != to_node[1]):
+                predicates[from_node[1]] = to_node[1]
+            if (from_node[0] == symmetries_module.NodeType.constant
+                and from_node[1] != to_node[1]):
+                objects[from_node[1]] = to_node[1]
+
+            if from_node != to_node and from_node[0] in [symmetries_module.NodeType.operator, symmetries_module.NodeType.axiom]:
+                print("Generator affects operator or axiom")
+                assert len(from_node) == 3
+                name = from_node[2]
+                if name in [action.name for action in task.actions] or name in [axiom.name for axiom in task.axioms]:
+                    print("Generator entirely maps operator or axioms")
+
+        if predicates or objects:
+            self.generator = (predicates, objects)
+        else:
+            self.generator = None
+
+    def is_valid(self):
+        return self.generator is not None
+
+    def apply_to_atom(self, atom):
+        assert self.is_valid()
+        # If no entry is present, use identity mapping.
+        predicate = self.generator[0].get(atom.predicate, atom.predicate)
+        args = tuple(self.generator[1].get(a, a) for a in atom.args)
+        return pddl.Atom(predicate, args)
+
+    def dump(self):
+        assert self.is_valid()
+        print("Mapping objects: {}; Mapping predicates: {}".format(self.generator[0], self.generator[1]))
+
+def is_permutation(sas_generator):
+    # Caution! If the given sas_generator maps two keys to the same value,
+    # this check may fail and loop forever.
+    for start_key in sas_generator.keys():
+        current_key = sas_generator[start_key]
+        while current_key != start_key:
+            if not current_key in sas_generator.keys():
+                return False
+            current_key = tuple(sas_generator[current_key])
+    return True
+
+
+def is_identity(sas_generator):
+    for key in sas_generator.keys():
+        if sas_generator[key] != key:
+            return False
+    return True
+
+
+def filter_out_identities_or_nonpermutations(sas_generators):
+    # Return an updated list of generators, containing only "valid" generators,
+    # i.e. generators that are a permutation and not the identity.
+    remaining_generators = []
+    for sas_generator in sas_generators:
+        if is_identity(sas_generator):
+            if DUMP:
+                print(sas_generator)
+                print("is the identiy!")
+        elif not is_permutation(sas_generator):
+            if options.stabilize_initial_state:
+                assert False
+            elif DUMP:
+                print(sas_generator)
+                print("is not a permutation!")
+        else:
+            remaining_generators.append(sas_generator)
+    return remaining_generators
+
+
+def gcd(a, b):
+    """Return greatest common divisor using Euclid's Algorithm."""
+    while b:
+        a, b = b, a % b
+    return a
+
+
+def lcm(a, b):
+    """Return lowest common multiple."""
+    return a * b // gcd(a, b)
+
+
+def compute_order(sas_generator):
+    visited_keys = set()
+    order = 1
+    for start_key in sas_generator.keys():
+        if not start_key in visited_keys:
+            cycle_size = 1
+            visited_keys.add(start_key)
+            current_key = sas_generator[start_key]
+            while current_key != start_key:
+                current_key = tuple(sas_generator[current_key])
+                visited_keys.add(current_key)
+                cycle_size += 1
+            order = lcm(order, cycle_size)
+    return order
+
+
+def print_sas_generator(sas_generator):
+    for from_fact in sorted(sas_generator.keys()):
+        to_fact = sas_generator[from_fact]
+        if from_fact != to_fact:
+            print("{} -> {}".format(from_fact, sas_generator[from_fact]))
+
+
 def pddl_to_sas(task):
     with timers.timing("Instantiating", block=True):
         (relaxed_reachable, atoms, actions, axioms,
@@ -535,6 +652,91 @@ def pddl_to_sas(task):
     with timers.timing("Building STRIPS to SAS dictionary"):
         ranges, strips_to_sas = strips_to_sas_dictionary(
             groups, assert_partial=options.use_partial_encoding)
+
+    with timers.timing("Symmetries0 computing symmetries", block=True):
+        if options.compute_symmetries:
+            only_object_symmetries = options.only_object_symmetries
+            stabilize_initial_state = options.stabilize_initial_state
+            time_limit = options.bliss_time_limit
+            graph = symmetries_module.SymmetryGraph(task, only_object_symmetries, stabilize_initial_state)
+            if options.add_mutex_groups:
+                graph.add_mutex_groups(mutex_groups)
+            generators = graph.find_automorphisms(time_limit)
+            if DUMP:
+                graph.write_or_print_automorphisms(generators, dump=True)
+            print("Number of lifted generators: {}".format(len(generators)))
+            order_to_generator_count = defaultdict(int)
+            order_list = []
+            max_order = 0
+            for generator in generators:
+                order = compute_order(generator)
+                max_order = max(max_order, order)
+                order_to_generator_count[order] += 1
+                order_list.append(order)
+            print("Maximum generator order: {}".format(max_order))
+            printable_order_to_count = [(order, count) for order, count in order_to_generator_count.items()]
+            print("Lifted generator orders: {}".format(printable_order_to_count))
+            print("Lifted generator orders list: {}".format(order_list))
+            for order in range(2, 50):
+                print("Lifted generator order {}: {}".format(order, order_to_generator_count[order]))
+
+    with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
+        if options.compute_symmetries and options.ground_symmetries:
+            # Transform generators into suitable format, mapping predicates and objects.
+            assert isinstance(task.generators, list)
+            assert not task.generators
+            for generator in generators:
+                gen = Generator(generator, task)
+                if gen.is_valid():
+                    task.generators.append(gen)
+                elif DUMP:
+                    print("Initial transformation already filtered out a generator")
+            print("Number of lifted generators mapping predicates or objects: {}".format(len(task.generators)))
+
+    sas_generators = []
+    with timers.timing("Symmetries2 grounding generators into SAS", block=True):
+        # For each generator, create its sas mapping from var-vals to var-vals
+        for generator in task.generators:
+            if DUMP:
+                print("Considering generator: ")
+                generator.dump()
+            sas_generator = {}
+            valid_generator = True
+            for atom, var_val_list in strips_to_sas.items():
+                if not len(var_val_list) == 1:
+                    raise NotImplementedError("Using the option --full-encoding "
+                    "with --compute-symmetries is not implemented!")
+                mapped_atom = generator.apply_to_atom(atom)
+                mapped_var_val_list = strips_to_sas.get(mapped_atom, None)
+                if DUMP:
+                    if atom != mapped_atom:
+                        print("mapping atom {} to atom {}".format(atom, mapped_atom))
+                if mapped_var_val_list is None:
+                    if DUMP:
+                        print("need to skip generator because it maps an atom to some "
+                            "atom which does not exist in the sas representation")
+                    if options.stabilize_initial_state:
+                        assert False
+                    valid_generator = False
+                    break
+                if not len(mapped_var_val_list) == 1:
+                    raise NotImplementedError("Using the option --full-encoding "
+                    "with --compute-symmetries is not implemented!")
+                mapped_var_val = mapped_var_val_list[0]
+                var_val = var_val_list[0]
+                sas_generator[var_val] = mapped_var_val
+            if valid_generator:
+                if DUMP:
+                    print("Transformed generator (without none-of-those values!): ")
+                    print_sas_generator(sas_generator)
+                assert is_permutation(sas_generator)
+                if not is_identity(sas_generator):
+                    sas_generators.append(sas_generator)
+                elif DUMP:
+                    print("need to skip generator because it is the identiy")
+        if task.generators:
+            print("{} out of {} generators left after grounding them".format(len(sas_generators), len(task.generators)))
+
 
     with timers.timing("Building dictionary for full mutex groups"):
         mutex_ranges, mutex_dict = strips_to_sas_dictionary(
@@ -562,20 +764,163 @@ def pddl_to_sas(task):
     print("%d implied preconditions added" %
           added_implied_precondition_counter)
 
+    with timers.timing("Symmetries3 add none-of-those mappings and remove deleted facts", block=True):
+        if sas_generators:
+            # Go over all facts of the sas task and all generators:
+            # 1) If the option is set, add mappings for none-of-those values.
+            # 2) Remove all facts from the generators that are not present in
+            # the task anymore.
+            facts = []
+            for var, var_range in enumerate(sas_task.variables.ranges):
+                for val in range(var_range):
+                    facts.append((var, val))
+            for sas_generator in sas_generators:
+                if options.add_none_of_those_mappings:
+                    # 1) For each var, set the mapping for the none-of-those value.
+                    # If the var is mapped to another var, map to the other var's
+                    # none-of-those value. Otherwise, map to itself.
+                    for from_var, var_range in enumerate(sas_task.variables.ranges):
+                        from_fact = (from_var, 0) # some fact for var
+                        to_fact = sas_generator.get(from_fact, None)
+                        assert to_fact is not None
+                        to_var = to_fact[0]
+
+                        none_of_those_from_fact = (from_var, var_range - 1)
+                        assert sas_generator.get(none_of_those_from_fact, None) is None
+                        assert sas_task.variables.ranges[from_var] == sas_task.variables.ranges[to_var]
+                        none_of_those_to_fact = (to_var, var_range - 1)
+
+                        sas_generator[none_of_those_from_fact] = none_of_those_to_fact
+                # 2) remove facts that have been removed
+                for from_var_val, to_var_val in sas_generator.items():
+                    if from_var_val not in facts or to_var_val not in facts:
+                        del sas_generator[from_var_val]
+            sas_generators = filter_out_identities_or_nonpermutations(sas_generators)
+            if DUMP:
+                for sas_generator in sas_generators:
+                    print("generator: ")
+                    print_sas_generator(sas_generator)
+            print("{} out of {} generators left after the sas task has been created".format(len(sas_generators), len(task.generators)))
+
     if options.filter_unreachable_facts:
         with timers.timing("Detecting unreachable propositions", block=True):
             try:
-                simplify.filter_unreachable_propositions(sas_task)
+                sas_generators = simplify.filter_unreachable_propositions(sas_task, sas_generators)
             except simplify.Impossible:
                 return unsolvable_sas_task("Simplified to trivially false goal")
             except simplify.TriviallySolvable:
                 return solvable_sas_task("Simplified to empty goal")
+            if sas_generators:
+                sas_generators = filter_out_identities_or_nonpermutations(sas_generators)
+                if DUMP:
+                    for sas_generator in sas_generators:
+                        print("generator: ")
+                        print_sas_generator(sas_generator)
+            print("{} out of {} generators left after filtering unreachable propositions".format(len(sas_generators), len(task.generators)))
 
     if options.reorder_variables or options.filter_unimportant_vars:
         with timers.timing("Reordering and filtering variables", block=True):
-            variable_order.find_and_apply_variable_order(
-                sas_task, options.reorder_variables,
+            sas_generators = variable_order.find_and_apply_variable_order(
+                sas_task,
+                sas_generators,
+                options.reorder_variables,
                 options.filter_unimportant_vars)
+            if sas_generators:
+                sas_generators = filter_out_identities_or_nonpermutations(sas_generators)
+                if DUMP:
+                    for sas_generator in sas_generators:
+                        print("generator: ")
+                        print_sas_generator(sas_generator)
+            print("{} out of {} generators left after reordering and filtering variables".format(len(sas_generators), len(task.generators)))
+
+    print("Number of remaining grounded generators: {}".format(len(sas_generators)))
+    print("Number of removed generators: {}".format(len(task.generators) - len(sas_generators)))
+    if sas_generators:
+        order_to_generator_count = defaultdict(int)
+        order_list = []
+        for sas_generator in sas_generators:
+            order = compute_order(sas_generator)
+            order_to_generator_count[order] += 1
+            order_list.append(order)
+        printable_order_to_count = [(order, count) for order, count in order_to_generator_count.items()]
+        print("Grounded generator orders: {}".format(printable_order_to_count))
+        print("Grounded generator orders list: {}".format(order_list))
+        for order in range(2, 10):
+            print("Grounded generator order {}: {}".format(order, order_to_generator_count[order]))
+
+    with timers.timing("Symmetries4 transforming generators into search representation", block=True):
+        if sas_generators:
+            # Transform the sas generators into the format used by the search
+            # component, i.e. [0...n-1; 0...range(var-1)-1, ..., 0...range(var-n)-1]
+            # where the first n entries represent the mapping on variables, and
+            # successive block represent the mapping of each variable's values.
+            # For none-of-those-values, we use -1 to denote that the symmetry
+            # is not defined for these.
+
+            # Precompute some data structures to ease mapping from facts to indices
+            # of the above representation.
+            var_by_shifted_index = []
+            var_to_start_index = []
+            num_vars = len(sas_task.variables.ranges)
+            num_indices = num_vars
+            for var in range(num_vars):
+                var_to_start_index.append(num_indices)
+                num_indices += sas_task.variables.ranges[var]
+                for val in range(sas_task.variables.ranges[var]):
+                    var_by_shifted_index.append(var)
+
+            def get_var_val_by_index(index):
+                assert index >= num_vars
+                var =  var_by_shifted_index[index - num_vars]
+                val = index - var_to_start_index[var]
+                return (var, val)
+
+            def get_index_by_var_val((var, val)):
+                index = var_to_start_index[var] + val
+                assert num_vars <= index < num_indices
+                return index
+
+            facts = []
+            for var, var_range in enumerate(sas_task.variables.ranges):
+                for val in range(var_range):
+                    facts.append((var, val))
+            search_generators = []
+            for gen_no, sas_generator in enumerate(sas_generators):
+                transformed_generator = [-1 for x in range(num_indices)]
+                for from_fact in facts:
+                    to_fact = sas_generator.get(from_fact, None)
+                    if to_fact is None:
+                        continue
+                    from_index = get_index_by_var_val(from_fact)
+                    to_index = get_index_by_var_val(to_fact)
+                    transformed_generator[from_index] = to_index
+
+                    from_var = from_fact[0]
+                    to_var = to_fact[0]
+                    if transformed_generator[from_var] == -1:
+                        transformed_generator[from_var] = to_var
+                    else:
+                        assert transformed_generator[from_var] == to_var
+                if -1 in transformed_generator:
+                    print("Transformed generator contains -1")
+                    assert not options.add_none_of_those_mappings
+
+                search_generators.append(transformed_generator)
+                #for from_index, to_index in enumerate(transformed_generator):
+                    #if from_index < num_vars:
+                        #continue
+                    #from_fact = get_var_val_by_index(from_index)
+                    #to_fact = get_var_val_by_index(to_index)
+                    #assert sas_generator.get(from_fact, from_fact) == to_fact
+                if DUMP:
+                    print("original generator number {}:".format(gen_no))
+                    print_sas_generator(sas_generator)
+                    print("transformed_generator number {}:".format(gen_no))
+                    print(transformed_generator)
+            # Append the transformed generators to the task so that they are
+            # written to the output.sas file.
+            sas_task.search_generators = sas_tasks.SearchGenerators(
+                var_by_shifted_index, var_to_start_index, search_generators)
 
     return sas_task
 
@@ -659,7 +1004,6 @@ def dump_statistics(sas_task):
         print(warning)
     else:
         print("Translator peak memory: %d KB" % peak_memory)
-
 
 def main():
     timer = timers.Timer()
