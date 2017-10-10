@@ -3,6 +3,7 @@
 from collections import defaultdict, deque
 from itertools import chain
 import heapq
+import options
 
 DEBUG = False
 
@@ -337,8 +338,31 @@ class VariableOrder(object):
                                                    len(axioms)))
         axioms[:] = new_axioms
 
+    def apply_order_to_sas_generator(self, sas_generator):
+        # Build a new generator from the given one by updating all mappings
+        # var -> var'.
+        result = {}
+        for from_fact, to_fact in sas_generator.items():
+            if from_fact[0] not in self.new_var and to_fact[0] not in self.new_var:
+                # If both var and var' are mapped to None (i.e. var = var' or
+                # var != var', but both are removed), simply ignore this part
+                # of the generator.
+                continue
+            elif from_fact[0] not in self.new_var or to_fact[0] not in self.new_var:
+                # If only one of var and var' is removed, we know that var !=
+                # var', and the generator must be invalidated.
+                if options.stabilize_initial_state:
+                    assert False
+                #print("reorder: only one of from_var and to_var are removed, invalid generator")
+                return None
 
-def find_and_apply_variable_order(sas_task, reorder_vars=True,
+            new_from_var = self.new_var[from_fact[0]]
+            new_to_var = self.new_var[to_fact[0]]
+            result[(new_from_var, from_fact[1])] = (new_to_var, to_fact[1])
+        return result
+
+def find_and_apply_variable_order(sas_task, sas_generators,
+                                  reorder_vars=True,
                                   filter_unimportant_vars=True):
     if reorder_vars or filter_unimportant_vars:
         cg = CausalGraph(sas_task)
@@ -351,4 +375,11 @@ def find_and_apply_variable_order(sas_task, reorder_vars=True,
             print("%s of %s variables necessary." % (len(necessary),
                                                      len(order)))
             order = [var for var in order if necessary[var]]
-        VariableOrder(order).apply_to_task(sas_task)
+        var_order = VariableOrder(order)
+        var_order.apply_to_task(sas_task)
+        new_generators = []
+        for sas_generator in sas_generators:
+            new_generator = var_order.apply_order_to_sas_generator(sas_generator)
+            if new_generator is not None:
+                new_generators.append(new_generator)
+        return new_generators
