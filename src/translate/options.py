@@ -66,7 +66,7 @@ def parse_args():
     argparser.add_argument(
         "--compute-symmetric-object-sets", action="store_true",
         help="If true, compute symmetric object sets of object symmetry "
-        "generators.")
+        "generators. (Set option --only-object-symmetries)")
     argparser.add_argument(
         "--only-functions-from-initial-state", action="store_true",
         help="If true, include only the functions mentioned in the initial "
