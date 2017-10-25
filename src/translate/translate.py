@@ -515,13 +515,75 @@ def trivial_task(solvable):
     return sas_tasks.SASTask(variables, mutexes, init, goal,
                              operators, axioms, metric)
 
+
 def solvable_sas_task(msg):
     print("%s! Generating solvable task..." % msg)
     return trivial_task(solvable=True)
 
+
 def unsolvable_sas_task(msg):
     print("%s! Generating unsolvable task..." % msg)
     return trivial_task(solvable=False)
+
+
+def get_mapped_objects(generator):
+    keys = sorted(generator.keys())
+    mapped_objects = []
+    for from_vertex in keys:
+        to_vertex = generator[from_vertex]
+        if from_vertex != to_vertex and from_vertex[0] == 0:
+            mapped_objects.append(from_vertex[1])
+    return mapped_objects
+
+
+def compute_symmetric_object_sets(objects, transpositions):
+    symmetric_object_sets = set([frozenset([obj.name]) for obj in objects])
+    #print(symmetric_object_sets)
+    for transposition in transpositions:
+        mapped_objects = get_mapped_objects(transposition)
+        assert len(mapped_objects) == 2
+        #print(mapped_objects)
+
+        set1 = None
+        for symm_obj_set in symmetric_object_sets:
+            if mapped_objects[0] in symm_obj_set:
+                set1 = frozenset(symm_obj_set)
+                symmetric_object_sets.remove(symm_obj_set)
+                break
+        assert set1 is not None
+
+        set2 = None
+        for symm_obj_set in symmetric_object_sets:
+            if mapped_objects[1] in symm_obj_set:
+                set2 = frozenset(symm_obj_set)
+                symmetric_object_sets.remove(symm_obj_set)
+                break
+        assert set2 is not None
+
+        union = set1 | set2
+        symmetric_object_sets.add(union)
+    return symmetric_object_sets
+
+
+def compute_max_predicate_arity(predicates):
+    max_arity = 0
+    for pred in predicates:
+        max_arity = max(max_arity, len(pred.arguments))
+    return max_arity
+
+
+def compute_max_operator_arity(operators, largest_object_set):
+    max_arity = 0
+    for op in operators:
+        num_params = len(op.parameters)
+        num_obj_occurences = 0
+        # treat op.precondition
+        # treat op.effects
+        op.dump()
+        op_arity = num_params + num_obj_occurences
+        max_arity = max(max_arity, op_arity)
+    return max_arity
+
 
 class Generator:
     def __init__(self, generator, task):
@@ -631,45 +693,6 @@ def compute_order(sas_generator):
     return order
 
 
-def get_mapped_objects(generator):
-    keys = sorted(generator.keys())
-    mapped_objects = []
-    for from_vertex in keys:
-        to_vertex = generator[from_vertex]
-        if from_vertex != to_vertex and from_vertex[0] == 0:
-            mapped_objects.append(from_vertex[1])
-    return mapped_objects
-
-
-def compute_symmetric_object_sets(objects, transpositions):
-    symmetric_object_sets = set([frozenset([obj.name]) for obj in objects])
-    #print(symmetric_object_sets)
-    for transposition in transpositions:
-        mapped_objects = get_mapped_objects(transposition)
-        assert len(mapped_objects) == 2
-        #print(mapped_objects)
-
-        set1 = None
-        for symm_obj_set in symmetric_object_sets:
-            if mapped_objects[0] in symm_obj_set:
-                set1 = frozenset(symm_obj_set)
-                symmetric_object_sets.remove(symm_obj_set)
-                break
-        assert set1 is not None
-
-        set2 = None
-        for symm_obj_set in symmetric_object_sets:
-            if mapped_objects[1] in symm_obj_set:
-                set2 = frozenset(symm_obj_set)
-                symmetric_object_sets.remove(symm_obj_set)
-                break
-        assert set2 is not None
-
-        union = set1 | set2
-        symmetric_object_sets.add(union)
-    return symmetric_object_sets
-
-
 def print_sas_generator(sas_generator):
     for from_fact in sorted(sas_generator.keys()):
         to_fact = sas_generator[from_fact]
@@ -735,9 +758,23 @@ def pddl_to_sas(task):
                 print("Lifted generator order {}: {}".format(order, order_to_generator_count[order]))
 
             if transpositions:
-                print("Number of transpositions swapping two objects: {}".format(len(transpositions)))
+                print("Number of transpositions: {}".format(len(transpositions)))
                 symmetric_object_sets = compute_symmetric_object_sets(task.objects, transpositions)
+                print("Symmetric object sets:")
                 print(symmetric_object_sets)
+                size_largest_object_set = 0
+                largest_object_set = None
+                for symm_obj_set in symmetric_object_sets:
+                    if len(symm_obj_set) > size_largest_object_set:
+                        size_largest_object_set = len(symm_obj_set)
+                        largest_object_set = symm_obj_set
+                print("Size of largest symmetric object set: {}".format(size_largest_object_set))
+                print(largest_object_set)
+                max_pred_arity = compute_max_predicate_arity(task.predicates)
+                print("Maximum predicate arity: {}".format(max_pred_arity))
+                max_op_arity = compute_max_operator_arity(task.actions, largest_object_set)
+                print("Maximum operator arity given largest symmetric object set: {}".format(max_op_arity))
+
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
         if options.compute_symmetries and options.ground_symmetries:
