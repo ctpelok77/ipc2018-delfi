@@ -58,11 +58,15 @@ def parse_args():
     argparser.add_argument(
         "--only-object-symmetries", action="store_true",
         help="HACK! Only allow objects to be permuted, but not "
-        "predicates operators, axioms or functions.")
+        "predicates, operators, axioms or functions.")
     argparser.add_argument(
         "--stabilize-initial-state", action="store_true",
         help="If false, only those atoms in the initial state mentioning "
         "static predicates are added.")
+    argparser.add_argument(
+        "--compute-symmetric-object-sets", action="store_true",
+        help="If true, compute symmetric object sets of object symmetry "
+        "generators.")
     argparser.add_argument(
         "--only-functions-from-initial-state", action="store_true",
         help="If true, include only the functions mentioned in the initial "
