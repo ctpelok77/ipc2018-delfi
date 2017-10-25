@@ -31,9 +31,11 @@ from __future__ import print_function
 from collections import defaultdict
 from itertools import count
 
+import options
 import sas_tasks
 
 DEBUG = False
+DUMP = False
 
 # TODO:
 # This is all quite hackish and would be easier if the translator were
@@ -264,6 +266,48 @@ class VarValueRenaming(object):
         assert all((None not in value_names) for value_names in new_value_names)
         value_names[:] = new_value_names
 
+    def apply_to_generator(self, sas_generator, sas_task):
+        """Build a new generator from the given one by renaming the mapping.
+        Return None if the generator should be discarded."""
+
+        result = dict()
+        for from_fact in sorted(sas_generator.keys()):
+            to_fact = sas_generator[from_fact]
+            new_from_fact = self.translate_pair(from_fact)
+            new_to_fact = self.translate_pair(to_fact)
+            if DUMP:
+                print("{} -> {}  ---> {} -> {}".format(from_fact, to_fact, new_from_fact, new_to_fact))
+
+            # First, test whether one or both variables of the mapping are removed.
+            if new_from_fact[0] is None and new_to_fact[0] is None:
+                if DUMP:
+                    print("simplify: both from_var and to_var are removed, ignore mapping")
+                continue
+            elif None in (new_from_fact[0], new_to_fact[0]):
+                if DUMP:
+                    print("simplify: only one of from_var and to_var are removed, invalid generator")
+                if options.stabilize_initial_state:
+                    assert False
+                return None
+
+            # Second, test whether one or both values of the mapping are removed.
+            # We only test for always_false here because if one value is set to
+            # always_true, then the entire variable will be removed (all other
+            # values must be set to always_false then).
+            if new_from_fact[1] == always_false and new_to_fact[1] == always_false:
+                if DUMP:
+                    print("simplify: both from_val and to_val are mapped to always_false, ignore mapping")
+                continue
+            elif always_false in (new_from_fact[1], new_to_fact[1]):
+                if DUMP:
+                    print("simplify: only one of from_val and to_val are mapped always_false, invalid generator")
+                if options.stabilize_initial_state:
+                    assert False
+                return None
+
+            result[new_from_fact] = new_to_fact
+        return result
+
     def apply_to_mutexes(self, mutexes):
         new_mutexes = []
         for mutex in mutexes:
@@ -488,7 +532,7 @@ def build_renaming(dtgs):
     return renaming
 
 
-def filter_unreachable_propositions(sas_task):
+def filter_unreachable_propositions(sas_task, sas_generators):
     """We remove unreachable propositions and then prune variables
     with only one value.
 
@@ -516,6 +560,15 @@ def filter_unreachable_propositions(sas_task):
         sas_task.validate()
     dtgs = build_dtgs(sas_task)
     renaming = build_renaming(dtgs)
+    if DUMP:
+        renaming.dump()
+    # need to *first* transform the generators, as it accesses information
+    # from the old given sas_task
+    new_generators = []
+    for sas_generator in sas_generators:
+        new_generator = renaming.apply_to_generator(sas_generator, sas_task)
+        if new_generator is not None:
+            new_generators.append(new_generator)
     # apply_to_task may raise Impossible if the goal is detected as
     # unreachable or TriviallySolvable if it has no goal. We let the
     # exceptions propagate to the caller.
@@ -523,3 +576,4 @@ def filter_unreachable_propositions(sas_task):
     print("%d propositions removed" % renaming.num_removed_values)
     if DEBUG:
         sas_task.validate()
+    return new_generators
