@@ -572,15 +572,16 @@ def compute_max_predicate_arity(predicates):
     return max_arity
 
 
-def compute_max_operator_arity(operators, largest_object_set):
+def compute_max_operator_arity(operators, symmetric_object_set):
     max_arity = 0
     for op in operators:
         num_params = len(op.parameters)
-        num_obj_occurences = 0
-        # treat op.precondition
-        # treat op.effects
-        op.dump()
-        op_arity = num_params + num_obj_occurences
+        occurring_objects = op.precondition.get_constants()
+        for effect in op.effects:
+            occurring_objects |= effect.condition.get_constants()
+            occurring_objects |= effect.literal.get_constants()
+        num_obj_from_symm_obj_set = len(occurring_objects & symmetric_object_set)
+        op_arity = num_params + num_obj_from_symm_obj_set
         max_arity = max(max_arity, op_arity)
     return max_arity
 
@@ -762,17 +763,17 @@ def pddl_to_sas(task):
                 symmetric_object_sets = compute_symmetric_object_sets(task.objects, transpositions)
                 print("Symmetric object sets:")
                 print(symmetric_object_sets)
-                size_largest_object_set = 0
-                largest_object_set = None
+                size_largest_symmetric_object_set = 0
+                largest_symmetric_object_set = None
                 for symm_obj_set in symmetric_object_sets:
-                    if len(symm_obj_set) > size_largest_object_set:
-                        size_largest_object_set = len(symm_obj_set)
-                        largest_object_set = symm_obj_set
-                print("Size of largest symmetric object set: {}".format(size_largest_object_set))
-                print(largest_object_set)
+                    if len(symm_obj_set) > size_largest_symmetric_object_set:
+                        size_largest_symmetric_object_set = len(symm_obj_set)
+                        largest_symmetric_object_set = symm_obj_set
+                print("Size of largest symmetric object set: {}".format(size_largest_symmetric_object_set))
+                print("Largest symmetric object set: {}".format(largest_symmetric_object_set))
                 max_pred_arity = compute_max_predicate_arity(task.predicates)
                 print("Maximum predicate arity: {}".format(max_pred_arity))
-                max_op_arity = compute_max_operator_arity(task.actions, largest_object_set)
+                max_op_arity = compute_max_operator_arity(task.actions, largest_symmetric_object_set)
                 print("Maximum operator arity given largest symmetric object set: {}".format(max_op_arity))
 
 
