@@ -631,6 +631,45 @@ def compute_order(sas_generator):
     return order
 
 
+def get_mapped_objects(generator):
+    keys = sorted(generator.keys())
+    mapped_objects = []
+    for from_vertex in keys:
+        to_vertex = generator[from_vertex]
+        if from_vertex != to_vertex and from_vertex[0] == 0:
+            mapped_objects.append(from_vertex[1])
+    return mapped_objects
+
+
+def compute_symmetric_object_sets(objects, transpositions):
+    symmetric_object_sets = set([frozenset([obj.name]) for obj in objects])
+    #print(symmetric_object_sets)
+    for transposition in transpositions:
+        mapped_objects = get_mapped_objects(transposition)
+        assert len(mapped_objects) == 2
+        #print(mapped_objects)
+
+        set1 = None
+        for symm_obj_set in symmetric_object_sets:
+            if mapped_objects[0] in symm_obj_set:
+                set1 = frozenset(symm_obj_set)
+                symmetric_object_sets.remove(symm_obj_set)
+                break
+        assert set1 is not None
+
+        set2 = None
+        for symm_obj_set in symmetric_object_sets:
+            if mapped_objects[1] in symm_obj_set:
+                set2 = frozenset(symm_obj_set)
+                symmetric_object_sets.remove(symm_obj_set)
+                break
+        assert set2 is not None
+
+        union = set1 | set2
+        symmetric_object_sets.add(union)
+    return symmetric_object_sets
+
+
 def print_sas_generator(sas_generator):
     for from_fact in sorted(sas_generator.keys()):
         to_fact = sas_generator[from_fact]
@@ -677,8 +716,14 @@ def pddl_to_sas(task):
             order_to_generator_count = defaultdict(int)
             order_list = []
             max_order = 0
+            transpositions = []
             for generator in generators:
+                graph.print_generator(generator)
                 order = compute_order(generator)
+                if options.compute_symmetric_object_sets:
+                    assert options.only_object_symmetries
+                    if order == 2 and len(get_mapped_objects(generator)) == 2:
+                        transpositions.append(generator)
                 max_order = max(max_order, order)
                 order_to_generator_count[order] += 1
                 order_list.append(order)
@@ -688,6 +733,11 @@ def pddl_to_sas(task):
             print("Lifted generator orders list: {}".format(order_list))
             for order in range(2, 50):
                 print("Lifted generator order {}: {}".format(order, order_to_generator_count[order]))
+
+            if transpositions:
+                print("Number of transpositions swapping two objects: {}".format(len(transpositions)))
+                symmetric_object_sets = compute_symmetric_object_sets(task.objects, transpositions)
+                print(symmetric_object_sets)
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
         if options.compute_symmetries and options.ground_symmetries:

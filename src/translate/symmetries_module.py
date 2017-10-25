@@ -585,6 +585,7 @@ class SymmetryGraph:
         automorphisms = self.graph.find_automorphisms(time_limit)
         return automorphisms
 
+
     def print_generator(self, generator, hide_equal_predicates=False):
         keys = sorted(generator.keys())
         for from_vertex in keys:
