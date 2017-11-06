@@ -25,6 +25,7 @@ import normalize
 import options
 import pddl
 import pddl_parser
+import reduction
 import sas_tasks
 import simplify
 import symmetries_module
@@ -526,27 +527,6 @@ def unsolvable_sas_task(msg):
     return trivial_task(solvable=False)
 
 
-def compute_max_predicate_arity(predicates):
-    max_arity = 0
-    for pred in predicates:
-        max_arity = max(max_arity, len(pred.arguments))
-    return max_arity
-
-
-def compute_max_operator_arity(operators, symmetric_object_set):
-    max_arity = 0
-    for op in operators:
-        num_params = len(op.parameters)
-        occurring_objects = op.precondition.get_constants()
-        for effect in op.effects:
-            occurring_objects |= effect.condition.get_constants()
-            occurring_objects |= effect.literal.get_constants()
-        num_obj_from_symm_obj_set = len(occurring_objects & symmetric_object_set)
-        op_arity = num_params + num_obj_from_symm_obj_set
-        max_arity = max(max_arity, op_arity)
-    return max_arity
-
-
 class Generator:
     def __init__(self, generator, task):
         # Transform generator into a tuple of dicts, mapping predicates
@@ -683,9 +663,9 @@ def pddl_to_sas(task):
                         largest_symmetric_object_set = symm_obj_set
                 print("Size of largest symmetric object set: {}".format(size_largest_symmetric_object_set))
                 print("Largest symmetric object set: {}".format(largest_symmetric_object_set))
-                max_pred_arity = compute_max_predicate_arity(task.predicates)
+                max_pred_arity = reduction.compute_max_predicate_arity(task.predicates)
                 print("Maximum predicate arity: {}".format(max_pred_arity))
-                max_op_arity = compute_max_operator_arity(task.actions, largest_symmetric_object_set)
+                max_op_arity = reduction.compute_max_operator_arity(task.actions, largest_symmetric_object_set)
                 print("Maximum operator arity given largest symmetric object set: {}".format(max_op_arity))
 
 
