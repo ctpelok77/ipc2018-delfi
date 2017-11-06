@@ -179,6 +179,26 @@ def compute_max_operator_arity_tight(operators, model, object_set):
     return max_arity
 
 
+def compute_max_axiom_arity_tight(axioms, model, object_set):
+    max_arity = 0
+    for ax in axioms:
+        params_instantiatable_with_objects_from_set = set()
+        for atom in model:
+            key_index = atom.predicate
+            if isinstance(key_index[0], pddl.Axiom) and key_index[0] is ax:
+                assert key_index[1] in [param.name for param in ax.parameters]
+                params_instantiatable_with_objects_from_set.add(key_index[1])
+        param_arity = len(params_instantiatable_with_objects_from_set)
+
+        # TODO: is that enough?
+        occurring_objects = ax.condition.get_constants()
+        num_obj_from_symm_obj_set = len(occurring_objects & object_set)
+
+        ax_arity = param_arity + num_obj_from_symm_obj_set
+        max_arity = max(max_arity, ax_arity)
+    return max_arity
+
+
 if __name__ == "__main__":
     import pddl_parser
     task = pddl_parser.open()

@@ -676,7 +676,9 @@ def pddl_to_sas(task):
                     max_pred_arity = reduction.compute_max_predicate_arity_tight(task.predicates, model)
                     print("Maximum predicate arity tight: {}".format(max_pred_arity))
                     max_op_arity = reduction.compute_max_operator_arity_tight(task.actions, model, largest_symmetric_object_set)
-                    print("Maximum operator arity given largest symmetric object set tight: {}".format(max_op_arity))
+                    print("Maximum operator arity tight: {}".format(max_op_arity))
+                    max_ax_arity = reduction.compute_max_axiom_arity_tight(task.axioms, model, largest_symmetric_object_set)
+                    print("Maximum axiom arity tight: {}".format(max_ax_arity))
 
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
