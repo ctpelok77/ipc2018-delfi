@@ -80,7 +80,7 @@ def build_reachability_program(task, objects):
 
             for index, param in enumerate(eff.literal.args):
                 condition = []
-                if param not in eff.parameters:
+                if param not in [param.name for param in eff.parameters]:
                     # param is action parameter
                     condition.append(get_atom((op, param)))
                 for x in eff_arg_to_body[param]:
@@ -90,9 +90,8 @@ def build_reachability_program(task, objects):
                 prog.add_rule(rule)
 
     for ax in task.axioms:
-        condition = ax.condition
-
         # add rule for axiom applicability
+        condition = ax.condition
         param_to_body = compute_param_condition_to_rule_body(condition)
         for param in ax.parameters:
             condition = [get_atom(x) for x in param_to_body[param.name]]
@@ -101,6 +100,7 @@ def build_reachability_program(task, objects):
 
 
         # add rules for axiom head
+        condition = ax.condition
         relevant_args = set(ax.parameters[:ax.num_external_parameters])
         arg_to_body = compute_param_condition_to_rule_body_given_params(condition, relevant_args)
         for index, param in enumerate(ax.parameters[:ax.num_external_parameters]):
@@ -115,6 +115,7 @@ def build_reachability_program(task, objects):
 
 
 def compute_parameter_reachability(task, object_set):
+    #task.dump()
     prog = build_reachability_program(task, object_set)
     #prog.dump()
     model = build_model.compute_model(prog)
