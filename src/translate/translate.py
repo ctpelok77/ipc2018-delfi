@@ -666,34 +666,6 @@ def filter_out_identities_or_nonpermutations(sas_generators):
     return remaining_generators
 
 
-def gcd(a, b):
-    """Return greatest common divisor using Euclid's Algorithm."""
-    while b:
-        a, b = b, a % b
-    return a
-
-
-def lcm(a, b):
-    """Return lowest common multiple."""
-    return a * b // gcd(a, b)
-
-
-def compute_order(sas_generator):
-    visited_keys = set()
-    order = 1
-    for start_key in sas_generator.keys():
-        if not start_key in visited_keys:
-            cycle_size = 1
-            visited_keys.add(start_key)
-            current_key = sas_generator[start_key]
-            while current_key != start_key:
-                current_key = tuple(sas_generator[current_key])
-                visited_keys.add(current_key)
-                cycle_size += 1
-            order = lcm(order, cycle_size)
-    return order
-
-
 def print_sas_generator(sas_generator):
     for from_fact in sorted(sas_generator.keys()):
         to_fact = sas_generator[from_fact]
@@ -720,7 +692,7 @@ def pddl_to_sas(task):
             transpositions = []
             for generator in generators:
                 graph.print_generator(generator)
-                order = compute_order(generator)
+                order = symmetries_module.compute_order(generator)
                 if options.compute_symmetric_object_sets:
                     assert options.only_object_symmetries
                     if order == 2 and len(get_mapped_objects(generator)) == 2:
@@ -935,7 +907,7 @@ def pddl_to_sas(task):
         order_to_generator_count = defaultdict(int)
         order_list = []
         for sas_generator in sas_generators:
-            order = compute_order(sas_generator)
+            order = symmetries_module.compute_order(sas_generator)
             order_to_generator_count[order] += 1
             order_list.append(order)
         printable_order_to_count = [(order, count) for order, count in order_to_generator_count.items()]

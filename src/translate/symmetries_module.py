@@ -630,3 +630,32 @@ class SymmetryGraph:
                 lit_node = self._add_literal(NodeType.mutex_group, Color.mutex_group, atom, (index))
                 self.graph.add_edge(group_node, lit_node)
 
+
+
+def gcd(a, b):
+    """Return greatest common divisor using Euclid's Algorithm."""
+    while b:
+        a, b = b, a % b
+    return a
+
+
+def lcm(a, b):
+    """Return lowest common multiple."""
+    return a * b // gcd(a, b)
+
+
+def compute_order(generator):
+    visited_keys = set()
+    order = 1
+    for start_key in generator.keys():
+        if not start_key in visited_keys:
+            cycle_size = 1
+            visited_keys.add(start_key)
+            current_key = generator[start_key]
+            while current_key != start_key:
+                current_key = tuple(generator[current_key])
+                visited_keys.add(current_key)
+                cycle_size += 1
+            order = lcm(order, cycle_size)
+    return order
+
