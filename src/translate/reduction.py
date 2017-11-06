@@ -8,14 +8,23 @@ import pddl
 import pddl_to_prolog
 
 
+
 def build_reachability_program(task, objects):
+    def get_atom(key):
+        if key not in tuple_to_atom:
+            tuple_to_atom[key] = pddl.Atom(key, ())
+        return tuple_to_atom[key]
+
+
+    tuple_to_atom = dict()
+
     prog = pddl_to_prolog.PrologProgram()
 
     for fact in task.init:
         if isinstance(fact, pddl.Atom):
             for num, obj in enumerate(fact.args):
-                if obj in objects:
-                    prog.add_fact(pddl.Atom((fact.predicate, num), ()))
+                if obj in objects and (fact.predicate, num) not in tuple_to_atom:
+                    prog.add_fact(get_atom((fact.predicate, num)))
 
     for op in task.actions:
         op_param_to_body = defaultdict(set)
@@ -35,8 +44,8 @@ def build_reachability_program(task, objects):
 
         # add rule for operator applicability
         for param, body in op_param_to_body.items():
-            condition = [pddl.Atom(x, ()) for x in body]
-            rule = pddl_to_prolog.Rule(condition, pddl.Atom((op, param), ()))
+            condition = [get_atom(x) for x in body]
+            rule = pddl_to_prolog.Rule(condition, get_atom((op, param)))
             prog.add_rule(rule)
 
 
@@ -64,11 +73,11 @@ def build_reachability_program(task, objects):
                 condition = []
                 if param not in eff.parameters:
                     # param is action parameter
-                    condition.append(pddl.Atom((op, param), ()))
+                    condition.append(get_atom((op, param)))
                 for x in eff_arg_to_body[param]:
-                    condition.append(pddl.Atom(x, ()))
+                    condition.append(get_atom(x))
                 rule = pddl_to_prolog.Rule(condition,
-                                           pddl.Atom((eff.literal.predicate, index), ()))
+                                           get_atom((eff.literal.predicate, index)))
                 prog.add_rule(rule)
 
     for ax in task.axioms:
@@ -92,9 +101,9 @@ def build_reachability_program(task, objects):
 
         
         for index, param in enumerate(ax.parameters[:ax.num_external_parameters]):
-            condition = [pddl.Atom(x, ()) for x in arg_to_body[param]]
+            condition = [get_atom(x) for x in arg_to_body[param]]
             rule = pddl_to_prolog.Rule(condition,
-                                       pddl.Atom((ax.name, index), ()))
+                                       get_atom((ax.name, index)))
             prog.add_rule(rule)
     
     prog.normalize()
