@@ -130,8 +130,6 @@ def build_reachability_program(task, objects):
                                        get_atom((ax.name, index)))
             prog.add_rule(rule)
 
-    prog.dump()
-    print("hier ist jetzt aber schluss")
     prog.normalize()
     prog.split_rules()
     return prog
