@@ -652,7 +652,8 @@ def pddl_to_sas(task):
                 print("Number of transpositions: {}".format(len(transpositions)))
                 symmetric_object_sets = symmetries_module.compute_symmetric_object_sets(task.objects, transpositions)
                 print("Symmetric object sets:")
-                print(symmetric_object_sets)
+                for obj_set in symmetric_object_sets:
+                    print(", ".join([x for x in obj_set]))
                 size_largest_symmetric_object_set = 0
                 largest_symmetric_object_set = None
                 for symm_obj_set in symmetric_object_sets:
