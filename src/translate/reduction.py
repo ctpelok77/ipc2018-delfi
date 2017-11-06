@@ -43,9 +43,9 @@ def build_reachability_program(task, objects):
             assert False
 
         # add rule for operator applicability
-        for param, body in op_param_to_body.items():
-            condition = [get_atom(x) for x in body]
-            rule = pddl_to_prolog.Rule(condition, get_atom((op, param)))
+        for param in op.parameters:
+            condition = [get_atom(x) for x in op_param_to_body[param.name]]
+            rule = pddl_to_prolog.Rule(condition, get_atom((op, param.name)))
             prog.add_rule(rule)
 
 
@@ -81,6 +81,30 @@ def build_reachability_program(task, objects):
                 prog.add_rule(rule)
 
     for ax in task.axioms:
+        param_to_body = defaultdict(set)
+       
+        if isinstance(ax.condition, pddl.Conjunction):
+            for literal in op.condition.parts:
+                for index, param in enumerate(literal.args):
+                    param_to_body[param].add((literal.predicate, index))
+        elif isinstance(ax.condition, pddl.Literal):
+            literal = ax.condition
+            for index, param in enumerate(literal.args):
+                param_to_body[param].add((literal.predicate, index))
+        elif isinstance(ax.condition, pddl.Truth):
+            pass
+        else:
+            assert False
+
+        # add rule for axiom applicability
+        for param in ax.parameters:
+            condition = [get_atom(x) for x in param_to_body[param.name]]
+            rule = pddl_to_prolog.Rule(condition, get_atom((ax, param.name)))
+            prog.add_rule(rule)
+
+
+        
+
         relevant_args = set(ax.parameters[:ax.num_external_parameters])
         arg_to_body = defaultdict(set)
 
@@ -105,7 +129,9 @@ def build_reachability_program(task, objects):
             rule = pddl_to_prolog.Rule(condition,
                                        get_atom((ax.name, index)))
             prog.add_rule(rule)
-    
+
+    prog.dump()
+    print("hier ist jetzt aber schluss")
     prog.normalize()
     prog.split_rules()
     return prog
