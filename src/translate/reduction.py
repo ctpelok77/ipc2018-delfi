@@ -25,6 +25,26 @@ def compute_param_condition_to_rule_body(condition):
 
     return param_to_body
 
+def compute_param_condition_to_rule_body_given_params(condition, params):
+    param_to_body = defaultdict(set)
+
+    if isinstance(condition, pddl.Conjunction):
+        for literal in condition.parts:
+            for index, param in enumerate(literal.args):
+                if param in params:
+                    param_to_body[param].add((literal.predicate, index))
+    elif isinstance(condition, pddl.Literal):
+        literal = condition
+        for index, param in enumerate(literal.args):
+            if param in params:
+                param_to_body[param].add((literal.predicate, index))
+    elif isinstance(condition, pddl.Truth):
+        pass
+    else:
+        assert False
+
+    return param_to_body
+
 def build_reachability_program(task, objects):
     def get_atom(key):
         if key not in tuple_to_atom:
@@ -52,26 +72,11 @@ def build_reachability_program(task, objects):
             rule = pddl_to_prolog.Rule(condition, get_atom((op, param.name)))
             prog.add_rule(rule)
 
-
+        # add rules for operator effects
         for eff in op.effects:
             condition = eff.condition
             eff_args = set(eff.literal.args)
-            eff_arg_to_body = defaultdict(set)
-
-            if isinstance(condition, pddl.Conjunction):
-                for literal in condition.parts:
-                    for index, param in enumerate(literal.args):
-                        if param in eff_args:
-                            eff_arg_to_body[param].add((literal.predicate, index))
-            elif isinstance(condition, pddl.Literal):
-                literal = condition
-                for index, param in enumerate(literal.args):
-                    if param in eff_args:
-                        eff_arg_to_body[param].add((literal.predicate, index))
-            elif isinstance(condition, pddl.Truth):
-                pass
-            else:
-                assert False
+            eff_arg_to_body = compute_param_condition_to_rule_body_given_params(condition, eff_args)
 
             for index, param in enumerate(eff.literal.args):
                 condition = []
@@ -86,35 +91,18 @@ def build_reachability_program(task, objects):
 
     for ax in task.axioms:
         condition = ax.condition
-        param_to_body = compute_param_condition_to_rule_body(condition)
 
         # add rule for axiom applicability
+        param_to_body = compute_param_condition_to_rule_body(condition)
         for param in ax.parameters:
             condition = [get_atom(x) for x in param_to_body[param.name]]
             rule = pddl_to_prolog.Rule(condition, get_atom((ax, param.name)))
             prog.add_rule(rule)
 
 
-
+        # add rules for axiom head
         relevant_args = set(ax.parameters[:ax.num_external_parameters])
-        arg_to_body = defaultdict(set)
-
-        if isinstance(condition, pddl.Conjunction):
-            for literal in condition.parts:
-                for index, param in enumerate(literal.args):
-                    if param in relevant_args:
-                        arg_to_body[param].add((literal.predicate, index))
-        elif isinstance(condition, pddl.Literal):
-            literal = condition
-            for index, param in enumerate(literal.args):
-                if param in relevant_args:
-                    arg_to_body[param].add((literal.predicate, index))
-        elif isinstance(condition, pddl.Truth):
-            pass
-        else:
-            assert False
-
-
+        arg_to_body = compute_param_condition_to_rule_body_given_params(condition, relevant_args)
         for index, param in enumerate(ax.parameters[:ax.num_external_parameters]):
             condition = [get_atom(x) for x in arg_to_body[param]]
             rule = pddl_to_prolog.Rule(condition,
