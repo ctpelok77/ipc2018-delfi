@@ -661,17 +661,22 @@ def pddl_to_sas(task):
                     if len(symm_obj_set) > size_largest_symmetric_object_set:
                         size_largest_symmetric_object_set = len(symm_obj_set)
                         largest_symmetric_object_set = symm_obj_set
+                print("Largest symmetric object set:")
+                print(", ".join([x for x in largest_symmetric_object_set]))
                 print("Size of largest symmetric object set: {}".format(size_largest_symmetric_object_set))
-                print("Largest symmetric object set: {}".format(largest_symmetric_object_set))
-                max_pred_arity = reduction.compute_max_predicate_arity(task.predicates)
-                print("Maximum predicate arity: {}".format(max_pred_arity))
-                max_op_arity = reduction.compute_max_operator_arity(task.actions, largest_symmetric_object_set)
-                print("Maximum operator arity given largest symmetric object set: {}".format(max_op_arity))
+                max_pred_arity = reduction.compute_max_predicate_arity_simple(task.predicates)
+                print("Maximum predicate arity simple: {}".format(max_pred_arity))
+                max_op_arity = reduction.compute_max_operator_arity_simple(task.actions, largest_symmetric_object_set)
+                print("Maximum operator arity given largest symmetric object set simple: {}".format(max_op_arity))
                 with timers.timing("Computing reachability model to determine bounds of subset of symmetric objects", block=True):
                     model = reduction.compute_parameter_reachability(task, largest_symmetric_object_set)
                     for atom in model:
                         print(atom)
                     print("%d atoms" % len(model))
+                    max_pred_arity = reduction.compute_max_predicate_arity_tight(task.predicates, model)
+                    print("Maximum predicate arity tight: {}".format(max_pred_arity))
+                    max_op_arity = reduction.compute_max_operator_arity_tight(task.actions, model, largest_symmetric_object_set)
+                    print("Maximum operator arity given largest symmetric object set tight: {}".format(max_op_arity))
 
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
