@@ -516,11 +516,9 @@ def trivial_task(solvable):
     return sas_tasks.SASTask(variables, mutexes, init, goal,
                              operators, axioms, metric)
 
-
 def solvable_sas_task(msg):
     print("%s! Generating solvable task..." % msg)
     return trivial_task(solvable=True)
-
 
 def unsolvable_sas_task(msg):
     print("%s! Generating unsolvable task..." % msg)
