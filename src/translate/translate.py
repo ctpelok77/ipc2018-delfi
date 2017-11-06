@@ -702,37 +702,14 @@ def print_sas_generator(sas_generator):
 
 
 def pddl_to_sas(task):
-    with timers.timing("Instantiating", block=True):
-        (relaxed_reachable, atoms, actions, axioms,
-         reachable_action_params) = instantiate.explore(task)
-
-    if not relaxed_reachable:
-        return unsolvable_sas_task("No relaxed solution")
-
-    # HACK! Goals should be treated differently.
-    if isinstance(task.goal, pddl.Conjunction):
-        goal_list = task.goal.parts
-    else:
-        goal_list = [task.goal]
-    for item in goal_list:
-        assert isinstance(item, pddl.Literal)
-
-    with timers.timing("Computing fact groups", block=True):
-        groups, mutex_groups, translation_key = fact_groups.compute_groups(
-            task, atoms, reachable_action_params)
-
-    with timers.timing("Building STRIPS to SAS dictionary"):
-        ranges, strips_to_sas = strips_to_sas_dictionary(
-            groups, assert_partial=options.use_partial_encoding)
-
     with timers.timing("Symmetries0 computing symmetries", block=True):
         if options.compute_symmetries:
             only_object_symmetries = options.only_object_symmetries
             stabilize_initial_state = options.stabilize_initial_state
             time_limit = options.bliss_time_limit
             graph = symmetries_module.SymmetryGraph(task, only_object_symmetries, stabilize_initial_state)
-            if options.add_mutex_groups:
-                graph.add_mutex_groups(mutex_groups)
+            #if options.add_mutex_groups:
+                #graph.add_mutex_groups(mutex_groups)
             generators = graph.find_automorphisms(time_limit)
             if DUMP:
                 graph.write_or_print_automorphisms(generators, dump=True)
@@ -789,6 +766,28 @@ def pddl_to_sas(task):
                 elif DUMP:
                     print("Initial transformation already filtered out a generator")
             print("Number of lifted generators mapping predicates or objects: {}".format(len(task.generators)))
+    with timers.timing("Instantiating", block=True):
+        (relaxed_reachable, atoms, actions, axioms,
+         reachable_action_params) = instantiate.explore(task)
+
+    if not relaxed_reachable:
+        return unsolvable_sas_task("No relaxed solution")
+
+    # HACK! Goals should be treated differently.
+    if isinstance(task.goal, pddl.Conjunction):
+        goal_list = task.goal.parts
+    else:
+        goal_list = [task.goal]
+    for item in goal_list:
+        assert isinstance(item, pddl.Literal)
+
+    with timers.timing("Computing fact groups", block=True):
+        groups, mutex_groups, translation_key = fact_groups.compute_groups(
+            task, atoms, reachable_action_params)
+
+    with timers.timing("Building STRIPS to SAS dictionary"):
+        ranges, strips_to_sas = strips_to_sas_dictionary(
+            groups, assert_partial=options.use_partial_encoding)
 
     sas_generators = []
     with timers.timing("Symmetries2 grounding generators into SAS", block=True):
