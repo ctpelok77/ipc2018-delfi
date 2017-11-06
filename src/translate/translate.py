@@ -566,6 +566,7 @@ class Generator:
         assert self.is_valid()
         print("Mapping objects: {}; Mapping predicates: {}".format(self.generator[0], self.generator[1]))
 
+
 def is_permutation(sas_generator):
     # Caution! If the given sas_generator maps two keys to the same value,
     # this check may fail and loop forever.
@@ -666,6 +667,11 @@ def pddl_to_sas(task):
                 print("Maximum predicate arity: {}".format(max_pred_arity))
                 max_op_arity = reduction.compute_max_operator_arity(task.actions, largest_symmetric_object_set)
                 print("Maximum operator arity given largest symmetric object set: {}".format(max_op_arity))
+                with timers.timing("Computing reachability model to determine bounds of subset of symmetric objects", block=True):
+                    model = reduction.compute_parameter_reachability(task, largest_symmetric_object_set)
+                    for atom in model:
+                        print(atom)
+                    print("%d atoms" % len(model))
 
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):

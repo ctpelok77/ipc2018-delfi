@@ -126,6 +126,13 @@ def build_reachability_program(task, objects):
     return prog
 
 
+def compute_parameter_reachability(task, symmetric_object_sets):
+    prog = build_reachability_program(task, symmetric_object_sets)
+    #prog.dump()
+    model = build_model.compute_model(prog)
+    return model
+
+
 def compute_max_predicate_arity(predicates):
     max_arity = 0
     for pred in predicates:
