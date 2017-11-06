@@ -680,8 +680,10 @@ def pddl_to_sas(task):
             stabilize_initial_state = options.stabilize_initial_state
             time_limit = options.bliss_time_limit
             graph = symmetries_module.SymmetryGraph(task, only_object_symmetries, stabilize_initial_state)
-            #if options.add_mutex_groups:
+            if options.add_mutex_groups:
                 #graph.add_mutex_groups(mutex_groups)
+                print("Adding mutex group to the computation of symmetries currently not supported.")
+                sys.exit(1)
             generators = graph.find_automorphisms(time_limit)
             if DUMP:
                 graph.write_or_print_automorphisms(generators, dump=True)
