@@ -126,6 +126,27 @@ def build_reachability_program(task, objects):
     return prog
 
 
+def compute_max_predicate_arity(predicates):
+    max_arity = 0
+    for pred in predicates:
+        max_arity = max(max_arity, len(pred.arguments))
+    return max_arity
+
+
+def compute_max_operator_arity(operators, symmetric_object_set):
+    max_arity = 0
+    for op in operators:
+        num_params = len(op.parameters)
+        occurring_objects = op.precondition.get_constants()
+        for effect in op.effects:
+            occurring_objects |= effect.condition.get_constants()
+            occurring_objects |= effect.literal.get_constants()
+        num_obj_from_symm_obj_set = len(occurring_objects & symmetric_object_set)
+        op_arity = num_params + num_obj_from_symm_obj_set
+        max_arity = max(max_arity, op_arity)
+    return max_arity
+
+
 if __name__ == "__main__":
     import pddl_parser
     task = pddl_parser.open()
