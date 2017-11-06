@@ -126,30 +126,66 @@ def build_reachability_program(task, objects):
     return prog
 
 
-def compute_parameter_reachability(task, symmetric_object_sets):
-    prog = build_reachability_program(task, symmetric_object_sets)
+def compute_parameter_reachability(task, object_set):
+    prog = build_reachability_program(task, object_set)
     #prog.dump()
     model = build_model.compute_model(prog)
     return model
 
 
-def compute_max_predicate_arity(predicates):
+def compute_max_predicate_arity_simple(predicates):
     max_arity = 0
     for pred in predicates:
         max_arity = max(max_arity, len(pred.arguments))
     return max_arity
 
 
-def compute_max_operator_arity(operators, symmetric_object_set):
+def compute_max_predicate_arity_tight(predicates, model):
+    max_arity = 0
+    for pred in predicates:
+        param_indices_instantiable_with_objects_from_set = set()
+        for atom in model:
+            key_index = atom.predicate
+            if key_index[0] == pred.name:
+                param_indices_instantiable_with_objects_from_set.add(key_index[1])
+        assert len(param_indices_instantiable_with_objects_from_set) <= len(pred.arguments)
+        max_arity = max(max_arity, len(param_indices_instantiable_with_objects_from_set))
+    return max_arity
+
+
+def compute_num_occurring_objects_from_set(op, object_set):
+    occurring_objects = op.precondition.get_constants()
+    for effect in op.effects:
+        occurring_objects |= effect.condition.get_constants()
+        occurring_objects |= effect.literal.get_constants()
+    num_obj_from_symm_obj_set = len(occurring_objects & object_set)
+    return num_obj_from_symm_obj_set
+
+
+def compute_max_operator_arity_simple(operators, object_set):
     max_arity = 0
     for op in operators:
         num_params = len(op.parameters)
-        occurring_objects = op.precondition.get_constants()
-        for effect in op.effects:
-            occurring_objects |= effect.condition.get_constants()
-            occurring_objects |= effect.literal.get_constants()
-        num_obj_from_symm_obj_set = len(occurring_objects & symmetric_object_set)
+        num_obj_from_symm_obj_set = compute_num_occurring_objects_from_set(op, object_set)
         op_arity = num_params + num_obj_from_symm_obj_set
+        max_arity = max(max_arity, op_arity)
+    return max_arity
+
+
+def compute_max_operator_arity_tight(operators, model, object_set):
+    max_arity = 0
+    for op in operators:
+        params_instantiatable_with_objects_from_set = set()
+        for atom in model:
+            key_index = atom.predicate
+            if isinstance(key_index[0], pddl.Action) and key_index[0] is op:
+                assert key_index[1] in [param.name for param in op.parameters]
+                params_instantiatable_with_objects_from_set.add(key_index[1])
+        param_arity = len(params_instantiatable_with_objects_from_set)
+
+        num_obj_from_symm_obj_set = compute_num_occurring_objects_from_set(op, object_set)
+
+        op_arity = param_arity + num_obj_from_symm_obj_set
         max_arity = max(max_arity, op_arity)
     return max_arity
 
