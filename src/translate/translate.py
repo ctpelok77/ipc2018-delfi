@@ -526,45 +526,6 @@ def unsolvable_sas_task(msg):
     return trivial_task(solvable=False)
 
 
-def get_mapped_objects(generator):
-    keys = sorted(generator.keys())
-    mapped_objects = []
-    for from_vertex in keys:
-        to_vertex = generator[from_vertex]
-        if from_vertex != to_vertex and from_vertex[0] == 0:
-            mapped_objects.append(from_vertex[1])
-    return mapped_objects
-
-
-def compute_symmetric_object_sets(objects, transpositions):
-    symmetric_object_sets = set([frozenset([obj.name]) for obj in objects])
-    #print(symmetric_object_sets)
-    for transposition in transpositions:
-        mapped_objects = get_mapped_objects(transposition)
-        assert len(mapped_objects) == 2
-        #print(mapped_objects)
-
-        set1 = None
-        for symm_obj_set in symmetric_object_sets:
-            if mapped_objects[0] in symm_obj_set:
-                set1 = frozenset(symm_obj_set)
-                symmetric_object_sets.remove(symm_obj_set)
-                break
-        assert set1 is not None
-
-        set2 = None
-        for symm_obj_set in symmetric_object_sets:
-            if mapped_objects[1] in symm_obj_set:
-                set2 = frozenset(symm_obj_set)
-                symmetric_object_sets.remove(symm_obj_set)
-                break
-        assert set2 is not None
-
-        union = set1 | set2
-        symmetric_object_sets.add(union)
-    return symmetric_object_sets
-
-
 def compute_max_predicate_arity(predicates):
     max_arity = 0
     for pred in predicates:
@@ -697,7 +658,7 @@ def pddl_to_sas(task):
                 order = symmetries_module.compute_order(generator)
                 if options.compute_symmetric_object_sets:
                     assert options.only_object_symmetries
-                    if order == 2 and len(get_mapped_objects(generator)) == 2:
+                    if order == 2 and len(symmetries_module.get_mapped_objects(generator)) == 2:
                         transpositions.append(generator)
                 max_order = max(max_order, order)
                 order_to_generator_count[order] += 1
@@ -711,7 +672,7 @@ def pddl_to_sas(task):
 
             if transpositions:
                 print("Number of transpositions: {}".format(len(transpositions)))
-                symmetric_object_sets = compute_symmetric_object_sets(task.objects, transpositions)
+                symmetric_object_sets = symmetries_module.compute_symmetric_object_sets(task.objects, transpositions)
                 print("Symmetric object sets:")
                 print(symmetric_object_sets)
                 size_largest_symmetric_object_set = 0
