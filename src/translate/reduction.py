@@ -134,13 +134,6 @@ def compute_num_occurring_objects_from_set_in_op(op, object_set):
     return num_obj_from_symm_obj_set
 
 
-def compute_num_occurring_objects_from_set_in_ax(ax, object_set):
-    occurring_objects = ax.condition.get_constants()
-    # TODO: can objects occur in the head of an axiom?
-    num_obj_from_symm_obj_set = len(occurring_objects & object_set)
-    return num_obj_from_symm_obj_set
-
-
 def compute_max_operator_arity_simple(operators, object_set):
     max_arity = 0
     for op in operators:
@@ -166,6 +159,23 @@ def compute_max_operator_arity_tight(operators, model, object_set):
 
         op_arity = param_arity + num_obj_from_symm_obj_set
         max_arity = max(max_arity, op_arity)
+    return max_arity
+
+
+def compute_num_occurring_objects_from_set_in_ax(ax, object_set):
+    occurring_objects = ax.condition.get_constants()
+    # TODO: can objects occur in the head of an axiom?
+    num_obj_from_symm_obj_set = len(occurring_objects & object_set)
+    return num_obj_from_symm_obj_set
+
+
+def compute_max_axiom_arity_simple(axioms, object_set):
+    max_arity = 0
+    for ax in axioms:
+        num_params = len(ax.parameters)
+        num_obj_from_symm_obj_set = compute_num_occurring_objects_from_set_in_ax(ax, object_set)
+        ax_arity = num_params + num_obj_from_symm_obj_set
+        max_arity = max(max_arity, ax_arity)
     return max_arity
 
 
