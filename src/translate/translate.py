@@ -667,18 +667,19 @@ def pddl_to_sas(task):
                 max_pred_arity = reduction.compute_max_predicate_arity_simple(task.predicates)
                 print("Maximum predicate arity simple: {}".format(max_pred_arity))
                 max_op_arity = reduction.compute_max_operator_arity_simple(task.actions, largest_symmetric_object_set)
-                print("Maximum operator arity given largest symmetric object set simple: {}".format(max_op_arity))
-                with timers.timing("Computing reachability model to determine bounds of subset of symmetric objects", block=True):
-                    model = reduction.compute_parameter_reachability(task, largest_symmetric_object_set)
-                    #for atom in model:
-                        #print(atom)
-                    #print("%d atoms" % len(model))
-                    max_pred_arity = reduction.compute_max_predicate_arity_tight(task.predicates, model)
-                    print("Maximum predicate arity given largest symmetric object set tight: {}".format(max_pred_arity))
-                    max_op_arity = reduction.compute_max_operator_arity_tight(task.actions, model, largest_symmetric_object_set)
-                    print("Maximum operator arity given largest symmetric object set tight: {}".format(max_op_arity))
-                    max_ax_arity = reduction.compute_max_axiom_arity_tight(task.axioms, model, largest_symmetric_object_set)
-                    print("Maximum axiom arity given largest symmetric object set tight: {}".format(max_ax_arity))
+                print("Maximum operator arity given largest symmetric object set simple: {}s".format(max_op_arity))
+                timer = timers.Timer()
+                model = reduction.compute_parameter_reachability(task, largest_symmetric_object_set)
+                print("Time to compute reachability model for parameters: {}".format(timer.elapsed_time()))
+                #for atom in model:
+                    #print(atom)
+                #print("%d atoms" % len(model))
+                max_pred_arity = reduction.compute_max_predicate_arity_tight(task.predicates, model)
+                print("Maximum predicate arity given largest symmetric object set tight: {}".format(max_pred_arity))
+                max_op_arity = reduction.compute_max_operator_arity_tight(task.actions, model, largest_symmetric_object_set)
+                print("Maximum operator arity given largest symmetric object set tight: {}".format(max_op_arity))
+                max_ax_arity = reduction.compute_max_axiom_arity_tight(task.axioms, model, largest_symmetric_object_set)
+                print("Maximum axiom arity given largest symmetric object set tight: {}".format(max_ax_arity))
 
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
