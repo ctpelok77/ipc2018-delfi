@@ -38,6 +38,7 @@ parser.add_pattern('num_transpositions', 'Number of transpositions: (\d+)', requ
 parser.add_pattern('size_largest_symmetric_object_set', 'Size of largest symmetric object set: (\d+)', required=False, type=int)
 parser.add_pattern('max_predicate_arity_simple', 'Maximum predicate arity simple: (\d+)', required=False, type=int)
 parser.add_pattern('max_operator_arity_simple', 'Maximum operator arity given largest symmetric object set simple: (\d+)', required=False, type=int)
+parser.add_pattern('max_axiom_arity_simple', 'Maximum axiom arity given largest symmetric object set simple: (\d+)', required=False, type=int)
 parser.add_pattern('max_predicate_arity_tight', 'Maximum predicate arity given largest symmetric object set tight: (\d+)', required=False, type=int)
 parser.add_pattern('max_operator_arity_tight', 'Maximum operator arity given largest symmetric object set tight: (\d+)', required=False, type=int)
 parser.add_pattern('max_axiom_arity_tight', 'Maximum axiom arity given largest symmetric object set tight: (\d+)', required=False, type=int)
