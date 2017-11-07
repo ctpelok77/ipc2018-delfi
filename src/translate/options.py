@@ -68,6 +68,10 @@ def parse_args():
         help="If true, compute symmetric object sets of object symmetry "
         "generators. (Set option --only-object-symmetries)")
     argparser.add_argument(
+        "--symmetry-reduction", action="store_true",
+        help="If true, compute a task reduction based on the largest symmetric "
+        "object sets. (Set option --compute-symmetric-object-sets)")
+    argparser.add_argument(
         "--only-functions-from-initial-state", action="store_true",
         help="If true, include only the functions mentioned in the initial "
         "states, but not the fluents or types.")

@@ -71,9 +71,9 @@ def instantiate(task, model):
     return (relaxed_reachable, fluent_facts, instantiated_actions,
             sorted(instantiated_axioms), reachable_action_parameters)
 
-def explore(task):
+def explore(task, to_be_preserved_objects = None):
     timer = timers.Timer()
-    prog = pddl_to_prolog.translate(task)
+    prog = pddl_to_prolog.translate(task, to_be_preserved_objects)
     model = build_model.compute_model(prog)
     time = timer.elapsed_time()
     print ("Done building program and model: %ss" % time)
