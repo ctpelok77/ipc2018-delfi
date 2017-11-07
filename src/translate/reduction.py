@@ -17,10 +17,11 @@ def compute_param_condition_to_rule_body(condition, params=None):
 
     if isinstance(condition, pddl.Conjunction):
         for literal in condition.parts:
-            if isinstance(literal, pddl.Atom):
+            if isinstance(literal, pddl.Atom): # Ignore negative atoms
                 add_prog_atom_for_pddl_atom(literal, param_to_body, params)
-    elif isinstance(condition, pddl.Atom):
-        add_prog_atom_for_pddl_atom(condition, param_to_body, params)
+    elif isinstance(condition, pddl.Literal):
+        if isinstance(condition, pddl.Atom): # Ignore negative atoms
+            add_prog_atom_for_pddl_atom(condition, param_to_body, params)
     elif isinstance(condition, pddl.Truth):
         pass
     else:
