@@ -14,7 +14,7 @@ except ImportError:
     print 'matplotlib not availabe, scatter plots not available'
     matplotlib = False
 
-REVISION = 'edb832f99e9c'
+REVISION = 'ab849a2317cc'
 
 def main(revisions=None):
     benchmarks_dir=os.path.expanduser('~/repos/downward/benchmarks')
@@ -113,8 +113,6 @@ def main(revisions=None):
     time_parameter_reachability_program = Attribute('time_parameter_reachability_program', absolute=False, min_wins=True, functions=[geometric_mean])
     bliss_out_of_memory = Attribute('bliss_out_of_memory', absolute=True, min_wins=True)
     bliss_out_of_time = Attribute('bliss_out_of_time', absolute=True, min_wins=True)
-    translator_completed = Attribute('translator_completed', absolute=True, min_wins=False)
-    timeout = Attribute('timeout', absolute=True, min_wins=True)
     ignore_none_of_those_mapping = Attribute('ignore_none_of_those_mapping', absolute=True, min_wins=True)
     num_transpositions = Attribute('num_transpositions', absolute=True, min_wins=False)
     size_largest_symmetric_object_set = Attribute('size_largest_symmetric_object_set', absolute=True, min_wins=True)
@@ -141,39 +139,37 @@ def main(revisions=None):
         generator_order_lifted_8,
         generator_order_lifted_9,
         generator_order_lifted_max,
-        generator_count_grounded_1_after_grounding,
-        generator_count_grounded_2_after_sas_task,
-        generator_count_grounded_3_after_filtering_props,
-        generator_count_grounded_4_after_reordering_filtering_vars,
-        generator_count_grounded,
-        generator_count_removed,
-        generator_lifted_affecting_actions_axioms,
-        generator_lifted_mapping_actions_axioms,
-        generator_not_well_defined_for_search,
-        generator_count_lifted_grounded,
-        generator_orders_grounded,
-        generator_orders_grounded_list,
-        generator_order_grounded_2,
-        generator_order_grounded_3,
-        generator_order_grounded_4,
-        generator_order_grounded_5,
-        generator_order_grounded_6,
-        generator_order_grounded_7,
-        generator_order_grounded_8,
-        generator_order_grounded_9,
+        #generator_count_grounded_1_after_grounding,
+        #generator_count_grounded_2_after_sas_task,
+        #generator_count_grounded_3_after_filtering_props,
+        #generator_count_grounded_4_after_reordering_filtering_vars,
+        #generator_count_grounded,
+        #generator_count_removed,
+        #generator_lifted_affecting_actions_axioms,
+        #generator_lifted_mapping_actions_axioms,
+        #generator_not_well_defined_for_search,
+        #generator_count_lifted_grounded,
+        #generator_orders_grounded,
+        #generator_orders_grounded_list,
+        #generator_order_grounded_2,
+        #generator_order_grounded_3,
+        #generator_order_grounded_4,
+        #generator_order_grounded_5,
+        #generator_order_grounded_6,
+        #generator_order_grounded_7,
+        #generator_order_grounded_8,
+        #generator_order_grounded_9,
         time_symmetries1_symmetry_graph,
         time_symmetries2_bliss,
         time_symmetries3_translate_automorphisms,
         time_parameter_reachability_program,
         bliss_out_of_memory,
         bliss_out_of_time,
-        translator_completed,
-        timeout,
-        ignore_none_of_those_mapping,
-        'removed1_after_grounding',
-        'removed2_after_sas_task',
-        'removed3_after_filtering_props',
-        'removed4_after_reordering_filtering_vars',
+        #ignore_none_of_those_mapping,
+        #'removed1_after_grounding',
+        #'removed2_after_sas_task',
+        #'removed3_after_filtering_props',
+        #'removed4_after_reordering_filtering_vars',
         num_transpositions,
         size_largest_symmetric_object_set,
         max_predicate_arity_simple,

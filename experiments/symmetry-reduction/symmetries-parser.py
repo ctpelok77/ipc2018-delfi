@@ -48,12 +48,6 @@ def add_composed_attributes(content, props):
     generator_count_grounded = props.get('generator_count_grounded', 0)
     props['generator_count_lifted_grounded'] = "{}/{}".format(generator_count_lifted, generator_count_grounded)
 
-    translator_time_done = props.get('translator_time_done', None)
-    translator_completed = False
-    if translator_time_done is not None:
-        translator_completed = True
-    props['translator_completed'] = translator_completed
-
 parser.add_function(add_composed_attributes)
 
 def parse_generator_orders(content, props):
