@@ -674,7 +674,7 @@ def pddl_to_sas(task):
 
                 timer = timers.Timer()
                 model = reduction.compute_parameter_reachability(task, largest_symmetric_object_set)
-                print("Time to compute reachability model for parameters: {}".format(timer.elapsed_time()))
+                print("Time to compute reachability model for parameters: {}s".format(timer.elapsed_time()))
 
                 max_pred_arity_tight = reduction.compute_max_predicate_arity_tight(task.predicates, model)
                 print("Maximum predicate arity given largest symmetric object set tight: {}".format(max_pred_arity_tight))
