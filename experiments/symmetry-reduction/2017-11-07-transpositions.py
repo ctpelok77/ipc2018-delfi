@@ -14,7 +14,7 @@ except ImportError:
     print 'matplotlib not availabe, scatter plots not available'
     matplotlib = False
 
-REVISION = 'eca8456e6e37'
+REVISION = 'edb832f99e9c'
 
 def main(revisions=None):
     benchmarks_dir=os.path.expanduser('~/repos/downward/benchmarks')
@@ -120,10 +120,12 @@ def main(revisions=None):
     size_largest_symmetric_object_set = Attribute('size_largest_symmetric_object_set', absolute=True, min_wins=True)
     max_predicate_arity_simple = Attribute('max_predicate_arity_simple', absolute=True, min_wins=True)
     max_operator_arity_simple = Attribute('max_operator_arity_simple', absolute=True, min_wins=True)
+    max_axiom_arity_simple = Attribute('max_axiom_arity_simple', absolute=True, min_wins=True)
+    has_symmetry_reduction_potential_simple = Attribute('has_symmetry_reduction_potential_simple', absolute=True, min_wins=True)
     max_predicate_arity_tight = Attribute('max_predicate_arity_tight', absolute=True, min_wins=True)
     max_operator_arity_tight = Attribute('max_operator_arity_tight', absolute=True, min_wins=True)
     max_axiom_arity_tight = Attribute('max_axiom_arity_tight', absolute=True, min_wins=True)
-    has_symmetry_reduction_potential = Attribute('has_symmetry_reduction_potential', absolute=True, min_wins=True)
+    has_symmetry_reduction_potential_tight = Attribute('has_symmetry_reduction_potential_tight', absolute=True, min_wins=True)
 
     extra_attributes = [
         generator_count_lifted,
