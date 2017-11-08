@@ -151,12 +151,6 @@ def translate_typed_object(prog, obj, type_dict):
         prog.add_fact(pddl.TypedObject(obj.name, type_name).get_atom())
 
 def does_atom_intersect_objects(atom, objects):
-    #print("does intersect?")
-    #print(atom)
-    #print(objects)
-    #print(atom.get_constants())
-    #print(objects & atom.get_constants())
-    #print("Result: {}".format(len(objects & atom.get_constants())))
     return len(objects & atom.get_constants())
 
 def translate_facts(prog, task, to_be_removed_objects = None):
@@ -174,7 +168,6 @@ def translate_facts(prog, task, to_be_removed_objects = None):
                 if does_atom_intersect_objects(fact, to_be_removed_objects):
                     skip_fact = True
             if not skip_fact:
-                print("adding fact {}".format(fact))
                 prog.add_fact(fact)
 
 def all_symmetric_atoms(init, generators):
@@ -196,14 +189,25 @@ def translate(task, to_be_removed_objects = None):
         prog = PrologProgram()
         translate_facts(prog, task, to_be_removed_objects)
         for conditions, effect in normalize.build_exploration_rules(task):
-            skip_rule = False
+            assert isinstance(conditions, list)
+            new_conditions = []
             if to_be_removed_objects is not None:
-                for atom in conditions:
-                    if does_atom_intersect_objects(atom, to_be_removed_objects):
-                        skip_rule = True
-                        break
-            if not skip_rule:
-                prog.add_rule(Rule(conditions, effect))
+                for condition in conditions:
+                    skip_cond = False
+                    if to_be_removed_objects is not None:
+                        if does_atom_intersect_objects(condition, to_be_removed_objects):
+                            skip_cond = True
+                    if not skip_cond:
+                        new_conditions.append(condition)
+                #for atom in conditions:
+                    #if does_atom_intersect_objects(atom, to_be_removed_objects):
+                        #skip_rule = True
+                        #break
+            else:
+                new_conditions = conditions
+            if new_conditions:
+                prog.add_rule(Rule(new_conditions, effect))
+
     with timers.timing("Normalizing Datalog program", block=True):
         # Using block=True because normalization can output some messages
         # in rare cases.
