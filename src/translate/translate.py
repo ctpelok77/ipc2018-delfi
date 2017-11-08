@@ -697,22 +697,23 @@ def pddl_to_sas(task):
                     print("Initial transformation already filtered out a generator")
             print("Number of lifted generators mapping predicates or objects: {}".format(len(task.generators)))
     with timers.timing("Instantiating", block=True):
-        symmetric_subset = None
+        to_be_removed_objects = None
         if (options.compute_symmetries and options.compute_symmetric_object_sets
             and options.symmetry_reduction and largest_symmetric_object_set is not None):
             max_arity = max(max_pred_arity_tight, max_op_arity_tight, max_ax_arity_tight)
+            to_be_preserved_objects = set()
             if len(largest_symmetric_object_set) > max_arity:
-                symmetric_subset = set()
                 for obj in largest_symmetric_object_set:
-                    symmetric_subset.add(obj)
-                    if len(symmetric_subset) == max_arity:
+                    to_be_preserved_objects.add(obj)
+                    if len(to_be_preserved_objects) == max_arity:
                         break
-            if len(symmetric_subset):
+            if len(to_be_preserved_objects):
                 print("Choosing subset of largest symmetric object set:")
-                print(", ".join([x for x in symmetric_subset]))
+                print(", ".join([x for x in to_be_preserved_objects]))
+                to_be_removed_objects = largest_symmetric_object_set - to_be_preserved_objects
 
         (relaxed_reachable, atoms, actions, axioms,
-         reachable_action_params) = instantiate.explore(task, symmetric_subset)
+         reachable_action_params) = instantiate.explore(task, to_be_removed_objects)
 
     if not relaxed_reachable:
         return unsolvable_sas_task("No relaxed solution")

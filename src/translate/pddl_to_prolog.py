@@ -151,9 +151,15 @@ def translate_typed_object(prog, obj, type_dict):
         prog.add_fact(pddl.TypedObject(obj.name, type_name).get_atom())
 
 def does_atom_intersect_objects(atom, objects):
+    #print("does intersect?")
+    #print(atom)
+    #print(objects)
+    #print(atom.get_constants())
+    #print(objects & atom.get_constants())
+    #print("Result: {}".format(len(objects & atom.get_constants())))
     return len(objects & atom.get_constants())
 
-def translate_facts(prog, task, to_be_preserved_objects = None):
+def translate_facts(prog, task, to_be_removed_objects = None):
     type_dict = dict((type.name, type) for type in task.types)
     for obj in task.objects:
         translate_typed_object(prog, obj, type_dict)
@@ -164,11 +170,11 @@ def translate_facts(prog, task, to_be_preserved_objects = None):
         assert isinstance(fact, pddl.Atom) or isinstance(fact, pddl.Assign)
         if isinstance(fact, pddl.Atom):
             skip_fact = False
-            if to_be_preserved_objects is not None:
-                if does_atom_intersect_objects(fact, to_be_preserved_objects):
+            if to_be_removed_objects is not None:
+                if does_atom_intersect_objects(fact, to_be_removed_objects):
                     skip_fact = True
-                    break
             if not skip_fact:
+                print("adding fact {}".format(fact))
                 prog.add_fact(fact)
 
 def all_symmetric_atoms(init, generators):
@@ -184,16 +190,16 @@ def all_symmetric_atoms(init, generators):
             closed.add(atom)
     return closed
 
-def translate(task, to_be_preserved_objects = None):
+def translate(task, to_be_removed_objects = None):
     # Note: The function requires that the task has been normalized.
     with timers.timing("Generating Datalog program", block=True):
         prog = PrologProgram()
-        translate_facts(prog, task, to_be_preserved_objects)
+        translate_facts(prog, task, to_be_removed_objects)
         for conditions, effect in normalize.build_exploration_rules(task):
             skip_rule = False
-            if to_be_preserved_objects is not None:
+            if to_be_removed_objects is not None:
                 for atom in conditions:
-                    if does_atom_intersect_objects(atom, to_be_preserved_objects):
+                    if does_atom_intersect_objects(atom, to_be_removed_objects):
                         skip_rule = True
                         break
             if not skip_rule:
