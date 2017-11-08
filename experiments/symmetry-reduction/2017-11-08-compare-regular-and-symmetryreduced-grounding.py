@@ -202,7 +202,7 @@ def main(revisions=None):
 
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
         '{}-translate'.format(REVISION),
-        '{}-translate-symmetric-object-sets'.format(REVISION),
+        '{}-translate-symmetry-reduction'.format(REVISION),
         #'{}-translate-stabinit-ground'.format(REVISION),
         #'{}-translate-stabinit-ground-noneofthose'.format(REVISION),
     ],filter=[compute_removed_count_in_each_step])
