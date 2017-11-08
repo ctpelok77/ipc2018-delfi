@@ -6,7 +6,7 @@ from lab.parser import Parser
 
 parser = Parser()
 parser.add_pattern('generator_count_lifted', 'Number of lifted generators: (\d+)', required=False, type=int)
-parser.add_pattern('generator_count_lifted_mapping_objects_predicates', 'Number of lifted generators mapping predicates or objects: (\d+)', required=False, type=int)
+#parser.add_pattern('generator_count_lifted_mapping_objects_predicates', 'Number of lifted generators mapping predicates or objects: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_2', 'Lifted generator order 2: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_3', 'Lifted generator order 3: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_4', 'Lifted generator order 4: (\d+)', required=False, type=int)
@@ -26,6 +26,7 @@ parser.add_pattern('time_symmetries1_symmetry_graph', 'Done creating symmetry gr
 parser.add_pattern('time_symmetries2_bliss', 'Done searching for automorphisms: (.+)s', required=False, type=float)
 parser.add_pattern('time_symmetries3_translate_automorphisms', 'Done translating automorphisms: (.+)s', required=False, type=float)
 parser.add_pattern('time_parameter_reachability_program', 'Time to compute reachability model for parameters: (.+)s', required=False, type=float)
+parser.add_pattern('time_program_and_model', 'Done building program and model: (.+)s', required=False, type=float)
 parser.add_pattern('generator_order_grounded_2', 'Grounded generator order 2: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_grounded_3', 'Grounded generator order 3: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_grounded_4', 'Grounded generator order 4: (\d+)', required=False, type=int)
