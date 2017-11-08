@@ -111,6 +111,7 @@ def main(revisions=None):
     time_symmetries2_bliss = Attribute('time_symmetries2_bliss', absolute=False, min_wins=True, functions=[geometric_mean])
     time_symmetries3_translate_automorphisms = Attribute('time_symmetries3_translate_automorphisms', absolute=False, min_wins=True, functions=[geometric_mean])
     time_parameter_reachability_program = Attribute('time_parameter_reachability_program', absolute=False, min_wins=True, functions=[geometric_mean])
+    time_program_and_model = Attribute('time_program_and_model', absolute=False, min_wins=True, functions=[geometric_mean])
     bliss_out_of_memory = Attribute('bliss_out_of_memory', absolute=True, min_wins=True)
     bliss_out_of_time = Attribute('bliss_out_of_time', absolute=True, min_wins=True)
     ignore_none_of_those_mapping = Attribute('ignore_none_of_those_mapping', absolute=True, min_wins=True)
@@ -127,7 +128,7 @@ def main(revisions=None):
 
     extra_attributes = [
         generator_count_lifted,
-        generator_count_lifted_mapping_objects_predicates,
+        #generator_count_lifted_mapping_objects_predicates,
         generator_orders_lifted,
         generator_orders_lifted_list,
         generator_order_lifted_2,
@@ -163,6 +164,7 @@ def main(revisions=None):
         time_symmetries2_bliss,
         time_symmetries3_translate_automorphisms,
         time_parameter_reachability_program,
+        time_program_and_model,
         bliss_out_of_memory,
         bliss_out_of_time,
         #ignore_none_of_those_mapping,
