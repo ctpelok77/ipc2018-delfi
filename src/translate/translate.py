@@ -45,6 +45,7 @@ import variable_order
 
 DEBUG = False
 DUMP = False
+COMPARE_GROUNDINGS = True
 
 EXIT_MEMORY_ERROR = 100
 
@@ -714,6 +715,127 @@ def pddl_to_sas(task):
             (relaxed_reachable, atoms, actions, axioms,
              reachable_action_params) = instantiate.explore(task,
              largest_symmetric_object_set, to_be_preserved_objects)
+
+            if COMPARE_GROUNDINGS:
+                (relaxed_reachable2, atoms2, actions2, axioms2,
+                 reachable_action_params2) = instantiate.explore(task)
+
+                assert relaxed_reachable == relaxed_reachable2
+
+                def equal_literals(lit1, lit2):
+                    return lit1.predicate == lit2.predicate and lit1.args == lit2.args
+
+                for atom in atoms:
+                    found_atom = False
+                    for atom2 in atoms2:
+                        if equal_literals(atom, atom2):
+                            found_atom = True
+                            break
+                    assert found_atom
+
+                def equal_conditions(conditions1, conditions2):
+                    for cond1 in conditions1:
+                        found_cond = False
+                        for cond2 in conditions2:
+                            if equal_literals(cond1, cond2):
+                                found_cond = True
+                                break
+                        if not found_cond:
+                            return False
+                    return True
+
+                def equal_add_del_effects(effects1, effects2):
+                    for eff1 in effects1:
+                        found_eff = False
+                        for eff2 in effects2:
+                            assert len(eff1) == 2 and len(eff2) == 2
+                            if equal_conditions(eff1[0], eff2[0]) and equal_literals(eff1[1], eff2[1]):
+                                found_eff = True
+                                break
+                        if not found_eff:
+                            return False
+                    return True
+
+                def equal_prop_actions(action1, action2):
+                    if action1.name != action2.name:
+                        return False
+                    if not equal_conditions(action1.precondition, action2.precondition):
+                        return False
+                    if not equal_add_del_effects(action1.add_effects, action2.add_effects):
+                        return False
+                    if not equal_add_del_effects(action1.del_effects, action2.del_effects):
+                        return False
+                    return action1.cost == action2.cost
+
+                for action in actions:
+                    found_action = False
+                    for action2 in actions2:
+                        if equal_prop_actions(action, action2):
+                            found_action = True
+                            break
+                    assert found_action
+
+                def equal_prop_axioms(axiom1, axiom2):
+                    if axiom1.name != axiom2.name:
+                        return False
+                    if not equal_conditions(axiom1.condition, axiom2.condition):
+                        return False
+                    return equal_literals(axiom1.effect, axiom2.effect)
+
+                for axiom in axioms:
+                    found_axiom = False
+                    for axiom2 in axioms2:
+                        if equal_prop_axioms(axiom, axiom2):
+                            found_axiom = True
+                            break
+                    assert found_axiom
+
+                def equal_lists_of_comparable_elements(list1, list2):
+                    for elem1 in list1:
+                        found_elem = False
+                        for elem2 in list2:
+                            if elem1 == elem2:
+                                found_elem = True
+                                break
+                        if not found_elem:
+                            return False
+                    return True
+
+                def equal_actions(action1, action2):
+                    if action1.name != action2.name:
+                        return False
+                    if not equal_lists_of_comparable_elements(action1.parameters, action2.parameters):
+                        return False
+                    if action1.num_external_parameters != action2.num_external_parameters:
+                        return False
+                    if action1.precondition != action2.precondition:
+                        return False
+                    if not equal_lists_of_comparable_elements(action1.effects, action2.effects):
+                        return False
+                    if action1.cost != action2.cost:
+                        return False
+                    return action1.cost == action2.cost
+
+                def equal_param_lists(params1, params2):
+                    for param1 in params1:
+                        found_param = False
+                        for param2 in params2:
+                            if param1 == param2:
+                                found_param = True
+                                break
+                        if not found_param:
+                            return False
+                    return True
+
+                for action, params in reachable_action_params.items():
+                    found_reachable_action_param = False
+                    for action2 in reachable_action_params2.keys():
+                        if equal_actions(action, action2):
+                            params2 = reachable_action_params2[action2]
+                            if equal_param_lists(params, params2):
+                                found_reachable_action_param = True
+                                break
+                    assert found_reachable_action_param
         else:
             (relaxed_reachable, atoms, actions, axioms,
              reachable_action_params) = instantiate.explore(task)
