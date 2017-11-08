@@ -710,10 +710,13 @@ def pddl_to_sas(task):
             if len(to_be_preserved_objects):
                 print("Choosing subset of largest symmetric object set:")
                 print(", ".join([x for x in to_be_preserved_objects]))
-                to_be_removed_objects = largest_symmetric_object_set - to_be_preserved_objects
 
-        (relaxed_reachable, atoms, actions, axioms,
-         reachable_action_params) = instantiate.explore(task, to_be_removed_objects)
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task,
+             largest_symmetric_object_set, to_be_preserved_objects)
+        else:
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task)
 
     if not relaxed_reachable:
         return unsolvable_sas_task("No relaxed solution")
