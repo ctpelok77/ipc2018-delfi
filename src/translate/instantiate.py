@@ -74,9 +74,9 @@ def instantiate(task, model):
 def explore(task, to_be_removed_objects = None):
     timer = timers.Timer()
     prog = pddl_to_prolog.translate(task, to_be_removed_objects)
-    prog.dump()
+    #prog.dump()
     model = build_model.compute_model(prog)
-    print(model)
+    #print(model)
     time = timer.elapsed_time()
     print ("Done building program and model: %ss" % time)
     with timers.timing("Completing instantiation"):
