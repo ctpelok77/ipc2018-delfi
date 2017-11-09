@@ -45,7 +45,7 @@ import variable_order
 
 DEBUG = False
 DUMP = False
-COMPARE_GROUNDINGS = True
+COMPARE_GROUNDINGS = False
 
 EXIT_MEMORY_ERROR = 100
 
