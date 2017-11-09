@@ -615,6 +615,7 @@ def print_sas_generator(sas_generator):
 
 
 def pddl_to_sas(task):
+    largest_symmetric_object_set = None
     with timers.timing("Symmetries0 computing symmetries", block=True):
         if options.compute_symmetries:
             only_object_symmetries = options.only_object_symmetries
@@ -650,7 +651,6 @@ def pddl_to_sas(task):
             for order in range(2, 50):
                 print("Lifted generator order {}: {}".format(order, order_to_generator_count[order]))
 
-            largest_symmetric_object_set = None
             if transpositions:
                 print("Number of transpositions: {}".format(len(transpositions)))
                 symmetric_object_sets = symmetries_module.compute_symmetric_object_sets(task.objects, transpositions)
