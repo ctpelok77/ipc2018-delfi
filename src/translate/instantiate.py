@@ -113,8 +113,8 @@ def expand(model, symmetric_object_set):
 def explore(task, symmetric_object_set = None, symmetric_subset = None):
     timer = timers.Timer()
     to_be_removed_objects = None
-    if symmetric_object_set is not None:
-        assert symmetric_subset is not None
+    if symmetric_subset is not None:
+        assert symmetric_object_set is not None
         assert symmetric_subset <= symmetric_object_set
         to_be_removed_objects = symmetric_object_set - symmetric_subset
     prog = pddl_to_prolog.translate(task, to_be_removed_objects)
