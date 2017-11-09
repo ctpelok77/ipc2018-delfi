@@ -14,7 +14,7 @@ except ImportError:
     print 'matplotlib not availabe, scatter plots not available'
     matplotlib = False
 
-REVISION = '8fba4a1f3343'
+REVISION = '14fc76b9beb6'
 
 def main(revisions=None):
     benchmarks_dir=os.path.expanduser('~/repos/downward/benchmarks')
@@ -59,7 +59,7 @@ def main(revisions=None):
         environment = LocalEnvironment(processes=4)
 
     configs = {
-        #IssueConfig('translate', [], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate', [], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-symmetry-reduction', ['--translate-options', '--compute-symmetries', '--stabilize-initial-state', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduction', '--bliss-time-limit', '300', ], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
@@ -203,7 +203,7 @@ def main(revisions=None):
         return props
 
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
-        #'{}-translate'.format(REVISION),
+        '{}-translate'.format(REVISION),
         '{}-translate-symmetry-reduction'.format(REVISION),
         #'{}-translate-stabinit-ground'.format(REVISION),
         #'{}-translate-stabinit-ground-noneofthose'.format(REVISION),
