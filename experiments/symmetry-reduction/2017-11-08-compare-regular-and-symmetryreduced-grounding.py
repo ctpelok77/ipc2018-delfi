@@ -14,7 +14,7 @@ except ImportError:
     print 'matplotlib not availabe, scatter plots not available'
     matplotlib = False
 
-REVISION = '7fd72e5cf9c3'
+REVISION = '8fba4a1f3343'
 
 def main(revisions=None):
     benchmarks_dir=os.path.expanduser('~/repos/downward/benchmarks')
@@ -188,7 +188,7 @@ def main(revisions=None):
     attributes.append('translator_time_symmetries0_computing_symmetries')
     attributes.append('translator_time_symmetries0_computing_symmetries')
 
-    exp.add_fetcher(name='parse-memory-error', parsers=['translator-memory-error-parser.py'])
+    exp.add_fetcher(dest='test-eval', name='parse-memory-error', parsers=['translator-memory-error-parser.py'])
 
     def compute_removed_count_in_each_step(props):
         count_lifted = props.get('generator_count_lifted', 0)
