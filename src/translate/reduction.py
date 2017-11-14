@@ -4,8 +4,10 @@ from collections import defaultdict
 
 import build_model
 import normalize
+import options
 import pddl
 import pddl_to_prolog
+import timers
 
 def add_prog_atom_for_pddl_atom(atom, param_to_body, params):
     for index, param in enumerate(atom.args):
@@ -196,6 +198,53 @@ def compute_max_axiom_arity_tight(axioms, model, object_set):
         ax_arity = param_arity + num_obj_from_symm_obj_set
         max_arity = max(max_arity, ax_arity)
     return max_arity
+
+
+def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_sets):
+    result = []
+    if options.symmetry_reduction and symmetric_object_sets is not None:
+        size_largest_symmetric_object_set = 0
+        largest_symmetric_object_set = None
+        for symm_obj_set in symmetric_object_sets:
+            if len(symm_obj_set) > size_largest_symmetric_object_set:
+                size_largest_symmetric_object_set = len(symm_obj_set)
+                largest_symmetric_object_set = symm_obj_set
+        print("Largest symmetric object set:")
+        print(", ".join([x for x in largest_symmetric_object_set]))
+        print("Size of largest symmetric object set: {}".format(size_largest_symmetric_object_set))
+
+        #max_pred_arity_simple = compute_max_predicate_arity_simple(task.predicates)
+        #print("Maximum predicate arity simple: {}".format(max_pred_arity_simple))
+        #max_op_arity_simple = compute_max_operator_arity_simple(task.actions, largest_symmetric_object_set)
+        #print("Maximum operator arity given largest symmetric object set simple: {}".format(max_op_arity_simple))
+        #max_ax_arity_simple = compute_max_axiom_arity_simple(task.axioms, largest_symmetric_object_set)
+        #print("Maximum axiom arity given largest symmetric object set simple: {}".format(max_ax_arity_simple))
+
+        timer = timers.Timer()
+        model = compute_parameter_reachability(task, largest_symmetric_object_set)
+        max_pred_arity_tight = compute_max_predicate_arity_tight(task.predicates, model)
+        print("Maximum predicate arity given largest symmetric object set tight: {}".format(max_pred_arity_tight))
+        max_op_arity_tight = compute_max_operator_arity_tight(task.actions, model, largest_symmetric_object_set)
+        print("Maximum operator arity given largest symmetric object set tight: {}".format(max_op_arity_tight))
+        max_ax_arity_tight = compute_max_axiom_arity_tight(task.axioms, model, largest_symmetric_object_set)
+        print("Maximum axiom arity given largest symmetric object set tight: {}".format(max_ax_arity_tight))
+        max_arity = max(max_pred_arity_tight, max_op_arity_tight, max_ax_arity_tight)
+        print("Time to compute bounds on symmetric subset size: {}s".format(timer.elapsed_time()))
+
+        max_arity = max(max_pred_arity_tight, max_op_arity_tight, max_ax_arity_tight)
+        if len(largest_symmetric_object_set) > max_arity:
+            to_be_preserved_objects = set()
+            for obj in largest_symmetric_object_set:
+                to_be_preserved_objects.add(obj)
+                if len(to_be_preserved_objects) == max_arity:
+                    break
+            if len(to_be_preserved_objects):
+                print("Choosing subset of largest symmetric object set:")
+                print(", ".join([x for x in to_be_preserved_objects]))
+                result.append((largest_symmetric_object_set, to_be_preserved_objects))
+            else:
+                print("No symmetric object set large enough")
+    return result
 
 
 if __name__ == "__main__":

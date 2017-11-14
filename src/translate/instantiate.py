@@ -8,6 +8,7 @@ import build_model
 import itertools
 import pddl_to_prolog
 import pddl
+import reduction
 import timers
 
 def get_fluent_facts(task, model):
@@ -110,17 +111,17 @@ def expand(model, symmetric_object_set):
                 model.append(symmetric_atom)
                 open_list.append(symmetric_atom)
 
-def explore(task, symmetric_object_set = None, symmetric_subset = None):
+def explore(task, symmetric_object_sets = None):
     timer = timers.Timer()
-    to_be_removed_objects = None
-    if symmetric_subset is not None:
-        assert symmetric_object_set is not None
-        assert symmetric_subset <= symmetric_object_set
-        to_be_removed_objects = symmetric_object_set - symmetric_subset
+    object_sets_and_preserved_subsets = reduction.compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_sets)
+    to_be_removed_objects = set()
+    for obj_set, preserved_subset in object_sets_and_preserved_subsets:
+        to_be_removed_objects |= (obj_set - preserved_subset)
     prog = pddl_to_prolog.translate(task, to_be_removed_objects)
     model = build_model.compute_model(prog)
     time = timer.elapsed_time()
-    if to_be_removed_objects is not None:
+    if len(object_sets_and_preserved_subsets) == 1:
+        symmetric_object_set = object_sets_and_preserved_subsets[0][0]
         expand(model, symmetric_object_set)
     print ("Done building program and model: %ss" % time)
     with timers.timing("Completing instantiation"):
