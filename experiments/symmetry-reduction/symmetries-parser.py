@@ -25,7 +25,7 @@ parser.add_pattern('generator_count_removed', 'Number of removed generators: (\d
 parser.add_pattern('time_symmetries1_symmetry_graph', 'Done creating symmetry graph: (.+)s', required=False, type=float)
 parser.add_pattern('time_symmetries2_bliss', 'Done searching for automorphisms: (.+)s', required=False, type=float)
 parser.add_pattern('time_symmetries3_translate_automorphisms', 'Done translating automorphisms: (.+)s', required=False, type=float)
-parser.add_pattern('time_parameter_reachability_program', 'Time to compute reachability model for parameters: (.+)s', required=False, type=float)
+parser.add_pattern('time_parameter_reachability_program', 'Time to compute bounds on symmetric subset size: (.+)s', required=False, type=float)
 parser.add_pattern('time_program_and_model', 'Done building program and model: (.+)s', required=False, type=float)
 parser.add_pattern('generator_order_grounded_2', 'Grounded generator order 2: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_grounded_3', 'Grounded generator order 3: (\d+)', required=False, type=int)
