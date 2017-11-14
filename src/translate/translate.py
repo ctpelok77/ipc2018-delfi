@@ -20,6 +20,7 @@ from itertools import product
 
 import axiom_rules
 import fact_groups
+import h2_mutexes
 import instantiate
 import normalize
 import options
@@ -811,6 +812,11 @@ def pddl_to_sas(task):
         goal_list = [task.goal]
     for item in goal_list:
         assert isinstance(item, pddl.Literal)
+
+    with timers.timing("Computing h2 mutex groups", block=True):
+        if options.h2_mutexes:
+            mutex_pairs = h2_mutexes.compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params)
+            print(mutex_pairs)
 
     with timers.timing("Computing fact groups", block=True):
         groups, mutex_groups, translation_key = fact_groups.compute_groups(

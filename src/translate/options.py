@@ -106,6 +106,9 @@ def parse_args():
     argparser.add_argument(
         "--bliss-time-limit", default=300, type=int,
         help="max time for bliss to search for automorphisms")
+    argparser.add_argument(
+        "--h2-mutexes", action="store_true",
+        help="If true, compute h2 mutex groups.")
     return argparser.parse_args()
 
 
