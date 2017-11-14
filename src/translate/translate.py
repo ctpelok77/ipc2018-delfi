@@ -45,7 +45,7 @@ import variable_order
 
 DEBUG = False
 DUMP = False
-COMPARE_GROUNDINGS = False
+COMPARE_GROUNDINGS = True
 
 EXIT_MEMORY_ERROR = 100
 
@@ -615,7 +615,7 @@ def print_sas_generator(sas_generator):
 
 
 def pddl_to_sas(task):
-    largest_symmetric_object_set = None
+    symmetric_object_sets = None
     with timers.timing("Symmetries0 computing symmetries", block=True):
         if options.compute_symmetries:
             only_object_symmetries = options.only_object_symmetries
@@ -657,33 +657,6 @@ def pddl_to_sas(task):
                 print("Symmetric object sets:")
                 for obj_set in symmetric_object_sets:
                     print(", ".join([x for x in obj_set]))
-                size_largest_symmetric_object_set = 0
-                for symm_obj_set in symmetric_object_sets:
-                    if len(symm_obj_set) > size_largest_symmetric_object_set:
-                        size_largest_symmetric_object_set = len(symm_obj_set)
-                        largest_symmetric_object_set = symm_obj_set
-                print("Largest symmetric object set:")
-                print(", ".join([x for x in largest_symmetric_object_set]))
-                print("Size of largest symmetric object set: {}".format(size_largest_symmetric_object_set))
-
-                max_pred_arity_simple = reduction.compute_max_predicate_arity_simple(task.predicates)
-                print("Maximum predicate arity simple: {}".format(max_pred_arity_simple))
-                max_op_arity_simple = reduction.compute_max_operator_arity_simple(task.actions, largest_symmetric_object_set)
-                print("Maximum operator arity given largest symmetric object set simple: {}".format(max_op_arity_simple))
-                max_ax_arity_simple = reduction.compute_max_axiom_arity_simple(task.axioms, largest_symmetric_object_set)
-                print("Maximum axiom arity given largest symmetric object set simple: {}".format(max_ax_arity_simple))
-
-                timer = timers.Timer()
-                model = reduction.compute_parameter_reachability(task, largest_symmetric_object_set)
-                print("Time to compute reachability model for parameters: {}s".format(timer.elapsed_time()))
-
-                max_pred_arity_tight = reduction.compute_max_predicate_arity_tight(task.predicates, model)
-                print("Maximum predicate arity given largest symmetric object set tight: {}".format(max_pred_arity_tight))
-                max_op_arity_tight = reduction.compute_max_operator_arity_tight(task.actions, model, largest_symmetric_object_set)
-                print("Maximum operator arity given largest symmetric object set tight: {}".format(max_op_arity_tight))
-                max_ax_arity_tight = reduction.compute_max_axiom_arity_tight(task.axioms, model, largest_symmetric_object_set)
-                print("Maximum axiom arity given largest symmetric object set tight: {}".format(max_ax_arity_tight))
-
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
         if options.compute_symmetries and options.ground_symmetries:
@@ -698,28 +671,14 @@ def pddl_to_sas(task):
                     print("Initial transformation already filtered out a generator")
             print("Number of lifted generators mapping predicates or objects: {}".format(len(task.generators)))
     with timers.timing("Instantiating", block=True):
-        to_be_preserved_objects = None
-        if (options.compute_symmetries and options.compute_symmetric_object_sets
-            and options.symmetry_reduction and largest_symmetric_object_set is not None):
-            max_arity = max(max_pred_arity_tight, max_op_arity_tight, max_ax_arity_tight)
-            to_be_preserved_objects = set()
-            if len(largest_symmetric_object_set) > max_arity:
-                for obj in largest_symmetric_object_set:
-                    to_be_preserved_objects.add(obj)
-                    if len(to_be_preserved_objects) == max_arity:
-                        break
-            if len(to_be_preserved_objects):
-                print("Choosing subset of largest symmetric object set:")
-                print(", ".join([x for x in to_be_preserved_objects]))
-            else:
-                print("No symmetric object set large enough")
-                to_be_preserved_objects = None
+        if options.symmetry_reduction:
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task, symmetric_object_sets)
+        else:
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task)
 
-        (relaxed_reachable, atoms, actions, axioms,
-         reachable_action_params) = instantiate.explore(task,
-         largest_symmetric_object_set, to_be_preserved_objects)
-
-        if to_be_preserved_objects is not None and COMPARE_GROUNDINGS:
+        if options.symmetry_reduction and symmetric_object_sets is not None and COMPARE_GROUNDINGS:
             # Perform regular grounding in addition to the above symmetry-
             # reduced one to compare the results.
             (relaxed_reachable2, atoms2, actions2, axioms2,
