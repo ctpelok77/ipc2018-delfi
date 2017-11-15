@@ -681,7 +681,7 @@ def pddl_to_sas(task):
                 (relaxed_reachable2, atoms2, actions2, axioms2,
                  reachable_action_params2) = instantiate.explore(task)
                 reduction.assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,
-                reachable_action_params, elaxed_reachable2, atoms2, actions2, axioms2,
+                reachable_action_params, relaxed_reachable2, atoms2, actions2, axioms2,
                 reachable_action_params2)
         else:
             (relaxed_reachable, atoms, actions, axioms,

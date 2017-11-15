@@ -239,7 +239,7 @@ def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_se
 
 
 def assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,
-    reachable_action_params, elaxed_reachable2, atoms2, actions2, axioms2,
+    reachable_action_params, relaxed_reachable2, atoms2, actions2, axioms2,
     reachable_action_params2):
     assert relaxed_reachable == relaxed_reachable2
 
