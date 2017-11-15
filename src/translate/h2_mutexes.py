@@ -48,6 +48,12 @@ def add_rule(pair_to_rules, pair_index, rules, condition_pairs, pair_set):
     rules.append([pair_index, len(condition_pairs)])
 
 
+def add_literals_if_not_present(literals, condition):
+    for lit in extract_literals_from_condition(condition):
+        if lit not in literals:
+            literals.append(lit)
+
+
 def compute_reachability_program(atoms, actions, axioms):
     literals = list(atoms)
     for atom in atoms:
@@ -81,9 +87,7 @@ def compute_reachability_program(atoms, actions, axioms):
                 for cond, eff in op.add_effects:
                     if literal == eff: # 4) operator makes l true
                         relevant_literals = extract_literals_from_condition(op.precondition)
-                        for lit in extract_literals_from_condition(cond):
-                            if lit not in relevant_literals:
-                                relevant_literals.append(lit)
+                        add_literals_if_not_present(relevant_literals, cond)
                         condition_pairs = compute_all_pairs(relevant_literals)
                         add_rule(pair_to_rules, index, rules, condition_pairs, pair_set)
 
@@ -91,9 +95,7 @@ def compute_reachability_program(atoms, actions, axioms):
                     del_eff = eff.negate()
                     if literal == del_eff: # 4) operator makes ~literal false, i.e. literal true
                         relevant_literals = extract_literals_from_condition(op.precondition)
-                        for lit in extract_literals_from_condition(cond):
-                            if lit not in relevant_literals:
-                                relevant_literals.append(lit)
+                        add_literals_if_not_present(relevant_literals, cond)
 
                         negated_lit = literal.negate()
                         # check case 3 of 4)
@@ -154,9 +156,7 @@ def compute_reachability_program(atoms, actions, axioms):
                         for lit2_eff in lit2_effects:
                             relevant_literals = extract_literals_from_condition(op.precondition)
                             for cond in [lit1_eff[0], lit2_eff[0]]:
-                                for lit in extract_literals_from_condition(cond):
-                                    if lit not in relevant_literals:
-                                        relevant_literals.append(lit)
+                                add_literals_if_not_present(relevant_literals, cond)
 
                             overwriting_add_effect_lit1 = False
                             if not lit1_eff[1]: # case 3 of 4) for literal1 (delete effect)
@@ -195,9 +195,7 @@ def compute_reachability_program(atoms, actions, axioms):
                 elif lit1_effects or lit2_effects: # 5) operator only makes true one of literal1 and literal2
                     for lit1_eff in lit1_effects:
                         relevant_literals = extract_literals_from_condition(op.precondition)
-                        for lit in extract_literals_from_condition(lit1_eff[0]):
-                            if lit not in relevant_literals:
-                                relevant_literals.append(lit)
+                        add_literals_if_not_present(relevant_literals, lit1_eff[0])
 
                         # check case 4 of 5) for literal1 first, since we need to test against phi \land \pre(o) only
                         negated_lit2 = literal2.negate()
@@ -214,7 +212,7 @@ def compute_reachability_program(atoms, actions, axioms):
                                     break
 
                         if not overwriting_add_effect_lit2:
-                            # add literal2 to relevant literals (see case 2 and 3 of 5))
+                            # add literal2 to relevant literals (required for case 2 and 3 of 5))
                             if literal2 not in relevant_literals:
                                 relevant_literals.append(literal2)
 
@@ -279,7 +277,7 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params):
                     closed.add(new_pair)
                     open_list.append(new_pair)
 
-    print("Found {} of reachable pair of literals".format(len(closed)))
+    print("Found {} reachable pairs of literals".format(len(closed)))
     if DEBUG:
         for pair in closed:
             for lit in pair:
