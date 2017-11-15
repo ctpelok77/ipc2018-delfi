@@ -72,6 +72,10 @@ def parse_args():
         help="If true, compute a task reduction based on the largest symmetric "
         "object sets. (Set option --compute-symmetric-object-sets)")
     argparser.add_argument(
+        "--expand-reduced-task", action="store_true",
+        help="If true, expand the model of a symmetry-reduced task before "
+        "instantiating it. (Set option --symmetry-reduction)")
+    argparser.add_argument(
         "--only-functions-from-initial-state", action="store_true",
         help="If true, include only the functions mentioned in the initial "
         "states, but not the fluents or types.")

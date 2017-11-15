@@ -6,6 +6,7 @@ from collections import defaultdict, deque
 
 import build_model
 import itertools
+import options
 import pddl_to_prolog
 import pddl
 import reduction
@@ -75,8 +76,6 @@ def instantiate(task, model):
 
 def permute_atom(atom, permutation):
     """Compute a symmetric atom from the given one and the given permutation."""
-    #print("given atom: {}".format(atom))
-    #print("given perm: {}".format(permutation))
     symmetric_args = []
     for arg in atom.args:
         if arg in permutation:
@@ -84,19 +83,18 @@ def permute_atom(atom, permutation):
         else:
             symmetric_args.append(arg)
     symmetric_atom = pddl.Atom(atom.predicate, symmetric_args)
-    #print("symmetric atom: {}".format(symmetric_atom))
     return symmetric_atom
 
 def expand(model, symmetric_object_set):
     """Extend the model by all symmetric atoms, using all permutations created
     from the objects in *symmetric_object_set*."""
+    print("Expanding model for symmetric object set:")
+    print(", ".join([x for x in symmetric_object_set]))
     canonical_perm = tuple(symmetric_object_set)
     permutation_dicts = []
     for perm in itertools.permutations(symmetric_object_set):
         if perm != canonical_perm: # skip the one identity permutation
             permutation_dicts.append(dict(zip(canonical_perm, perm)))
-        #else:
-            #print("skipping identity permutation")
     open_list = deque()
     closed_list = set()
     for atom in model:
@@ -120,9 +118,10 @@ def explore(task, symmetric_object_sets = None):
     prog = pddl_to_prolog.translate(task, to_be_removed_objects)
     model = build_model.compute_model(prog)
     time = timer.elapsed_time()
-    if len(object_sets_and_preserved_subsets) == 1:
+    if options.expand_reduced_task:
         symmetric_object_set = object_sets_and_preserved_subsets[0][0]
-        expand(model, symmetric_object_set)
+        for symm_obj_set, subset in object_sets_and_preserved_subsets:
+            expand(model, symm_obj_set)
     print ("Done building program and model: %ss" % time)
     with timers.timing("Completing instantiation"):
         return instantiate(task, model)
