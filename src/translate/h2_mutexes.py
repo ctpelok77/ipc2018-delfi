@@ -1,8 +1,10 @@
 #! /usr/bin/env python
 
-from collections import defaultdict
+from collections import defaultdict, deque
 
 import pddl
+
+DEBUG = False
 
 def compute_all_pairs(elements):
     assert isinstance(elements, list)
@@ -34,42 +36,47 @@ def extract_literals_from_condition(condition):
     return condition_literals
 
 
-def add_rule(pairs_to_rules, pair_index, rules, condition_pairs, pair_set):
+def add_rule(pair_to_rules, pair_index, rules, condition_pairs, pair_set):
     """ *pair_set* only used for assertions"""
     for cond_pair in condition_pairs:
         assert cond_pair in pair_set
-        pairs_to_rules[cond_pair] = len(rules)
-    rules.append((pair_index, len(condition_pairs)))
+        pair_to_rules[cond_pair].append(len(rules))
+        if DEBUG:
+            print("adding rule index {} to pair".format(len(rules)))
+    if DEBUG:
+        print("adding rule with body {}".format(condition_pairs))
+    rules.append([pair_index, len(condition_pairs)])
 
 
 def compute_reachability_program(atoms, actions, axioms):
-    #print(atoms)
-    #for action in actions:
-        #action.dump()
-    #for axiom in axioms:
-        #axiom.dump()
-    #print(reachable_action_params)
-
     literals = list(atoms)
     for atom in atoms:
         literals.append(atom.negate())
     pairs = compute_all_pairs(literals)
     pair_set = set(pairs) # only for assertions
 
-    pairs_to_rules = defaultdict(list)
+    pair_to_rules = defaultdict(list)
     rules = []
     for index, pair in enumerate(pairs):
+        if DEBUG:
+            print("considering pair {}".format(pair))
         if len(pair) == 1: # l = l'
             literal = list(pair)[0]
 
             for ax in axioms:
+                if DEBUG:
+                    print("considering axiom"),
+                    ax.dump()
                 assert isinstance(ax.effect, pddl.Literal)
                 if literal == ax.effect: # 2) axiom from which literal can be derived
                     condition_literals = extract_literals_from_condition(ax.condition)
                     condition_pairs = compute_all_pairs(condition_literals)
-                    add_rule(pairs_to_rules, index, rules, condition_pairs, pair_set)
+                    add_rule(pair_to_rules, index, rules, condition_pairs, pair_set)
 
             for op in actions:
+                if DEBUG:
+                    print("considering action:"),
+                    op.dump()
                 # TODO: is this complete and correct? there is no second effect phi' -> l', since l = l'
                 for cond, eff in op.add_effects:
                     if literal == eff: # 4) operator makes l true
@@ -78,7 +85,7 @@ def compute_reachability_program(atoms, actions, axioms):
                             if lit not in relevant_literals:
                                 relevant_literals.append(lit)
                         condition_pairs = compute_all_pairs(relevant_literals)
-                        add_rule(pairs_to_rules, index, rules, condition_pairs, pair_set)
+                        add_rule(pair_to_rules, index, rules, condition_pairs, pair_set)
 
                 for cond, eff in op.del_effects:
                     del_eff = eff.negate()
@@ -99,7 +106,7 @@ def compute_reachability_program(atoms, actions, axioms):
                                         break
                                 if not all_literals_contained:
                                     condition_pairs = compute_all_pairs(relevant_literals)
-                                    add_rule(pairs_to_rules, index, rules, condition_pairs, pair_set)
+                                    add_rule(pair_to_rules, index, rules, condition_pairs, pair_set)
 
         else: # l != l'
             literal1 = list(pair)[0]
@@ -107,6 +114,9 @@ def compute_reachability_program(atoms, actions, axioms):
             assert literal1 != literal2
 
             for ax in axioms:
+                if DEBUG:
+                    print("considering axiom"),
+                    ax.dump()
                 assert isinstance(ax.effect, pddl.Literal)
                 if literal1 == ax.effect or literal2 == ax.effect: #  3) axiom from which literal1 or literal2 can be derived
                     condition_literals = extract_literals_from_condition(ax.condition)
@@ -117,10 +127,13 @@ def compute_reachability_program(atoms, actions, axioms):
                         if literal1 not in condition_literals:
                             condition_literals.append(literal1)
                     condition_pairs = compute_all_pairs(condition_literals)
-                    add_rule(pairs_to_rules, index, rules, condition_pairs, pair_set)
+                    add_rule(pair_to_rules, index, rules, condition_pairs, pair_set)
 
 
             for op in actions:
+                if DEBUG:
+                    print("considering action:"),
+                    op.dump()
                 lit1_effects = []
                 lit2_effects = []
                 for cond, eff in op.add_effects:
@@ -175,7 +188,7 @@ def compute_reachability_program(atoms, actions, axioms):
 
                             if not overwriting_add_effect_lit1 and not overwriting_add_effect_lit2:
                                 condition_pairs = compute_all_pairs(relevant_literals)
-                                add_rule(pairs_to_rules, index, rules, condition_pairs, pair_set)
+                                add_rule(pair_to_rules, index, rules, condition_pairs, pair_set)
 
 
 
@@ -222,17 +235,55 @@ def compute_reachability_program(atoms, actions, axioms):
 
                             if not overwriting_add_effect_lit1:
                                 condition_pairs = compute_all_pairs(relevant_literals)
-                                add_rule(pairs_to_rules, index, rules, condition_pairs, pair_set)
+                                add_rule(pair_to_rules, index, rules, condition_pairs, pair_set)
 
-    #for pair_index, num_conditions in rules:
-        #print("{} <- {}".format(pairs[pair_index], num_conditions))
-
-    #print(rules)
-    return pairs_to_rules, rules
+    return pairs, pair_to_rules, rules
 
 
 def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params):
-    pairs_to_rules, rules = compute_reachability_program(atoms, actions, axioms)
+    pairs, pair_to_rules, rules = compute_reachability_program(atoms, actions, axioms)
 
-    result = []
-    return result
+    if DEBUG:
+        for key,val in pair_to_rules.items():
+            print(key, val)
+
+        for rule in rules:
+            pair = pairs[rule[0]]
+            num_conditions = rule[1]
+            print("{} <- {}".format(pair, num_conditions))
+
+    open_list = deque()
+    closed = set()
+    initial_pairs = compute_all_pairs(task.init)
+    for pair in initial_pairs:
+        assert pair not in closed
+        open_list.append(pair)
+        closed.add(pair)
+    while len(open_list):
+        pair = open_list.popleft()
+        #print("pop pair {}".format(pair))
+        to_be_removed_rule_indices = set()
+        for rule_index in pair_to_rules[pair]:
+            rule = rules[rule_index]
+            #print("deal with rule index {} which is rule {}".format(rule_index, rule))
+            if rule[1] > 0: # rule is not applicable yet
+                rule[1] = rule[1] - 1
+
+            if rule[1] == 0:
+                # handle applicable rule (the test against closed prevents
+                # rules from being handled more than once)
+                new_pair = pairs[rule[0]]
+                #print("new pair {}".format(new_pair))
+                if new_pair not in closed: # already dealt with new_pair
+                    #print("must be queued")
+                    closed.add(new_pair)
+                    open_list.append(new_pair)
+
+    print("Found {} of reachable pair of literals".format(len(closed)))
+    if DEBUG:
+        for pair in closed:
+            for lit in pair:
+                print(lit),
+            print
+
+    return closed
