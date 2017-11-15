@@ -25,7 +25,7 @@ parser.add_pattern('generator_count_removed', 'Number of removed generators: (\d
 parser.add_pattern('time_symmetries1_symmetry_graph', 'Done creating symmetry graph: (.+)s', required=False, type=float)
 parser.add_pattern('time_symmetries2_bliss', 'Done searching for automorphisms: (.+)s', required=False, type=float)
 parser.add_pattern('time_symmetries3_translate_automorphisms', 'Done translating automorphisms: (.+)s', required=False, type=float)
-parser.add_pattern('time_parameter_reachability_program', 'Time to compute bounds on symmetric subset size: (.+)s', required=False, type=float)
+parser.add_pattern('time_bounds_and_subsets', 'Total time to compute bounds and determine subsets of symmetric object sets: (.+)s', required=False, type=float)
 parser.add_pattern('time_program_and_model', 'Done building program and model: (.+)s', required=False, type=float)
 parser.add_pattern('generator_order_grounded_2', 'Grounded generator order 2: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_grounded_3', 'Grounded generator order 3: (\d+)', required=False, type=int)
@@ -36,13 +36,15 @@ parser.add_pattern('generator_order_grounded_7', 'Grounded generator order 7: (\
 parser.add_pattern('generator_order_grounded_8', 'Grounded generator order 8: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_grounded_9', 'Grounded generator order 9: (\d+)', required=False, type=int)
 parser.add_pattern('num_transpositions', 'Number of transpositions: (\d+)', required=False, type=int)
-parser.add_pattern('size_largest_symmetric_object_set', 'Size of largest symmetric object set: (\d+)', required=False, type=int)
-parser.add_pattern('max_predicate_arity_simple', 'Maximum predicate arity simple: (\d+)', required=False, type=int)
-parser.add_pattern('max_operator_arity_simple', 'Maximum operator arity given largest symmetric object set simple: (\d+)', required=False, type=int)
-parser.add_pattern('max_axiom_arity_simple', 'Maximum axiom arity given largest symmetric object set simple: (\d+)', required=False, type=int)
-parser.add_pattern('max_predicate_arity_tight', 'Maximum predicate arity given largest symmetric object set tight: (\d+)', required=False, type=int)
-parser.add_pattern('max_operator_arity_tight', 'Maximum operator arity given largest symmetric object set tight: (\d+)', required=False, type=int)
-parser.add_pattern('max_axiom_arity_tight', 'Maximum axiom arity given largest symmetric object set tight: (\d+)', required=False, type=int)
+#parser.add_pattern('size_largest_symmetric_object_set', 'Size of largest symmetric object set: (\d+)', required=False, type=int)
+#parser.add_pattern('max_predicate_arity_simple', 'Maximum predicate arity simple: (\d+)', required=False, type=int)
+#parser.add_pattern('max_operator_arity_simple', 'Maximum operator arity given largest symmetric object set simple: (\d+)', required=False, type=int)
+#parser.add_pattern('max_axiom_arity_simple', 'Maximum axiom arity given largest symmetric object set simple: (\d+)', required=False, type=int)
+#parser.add_pattern('max_predicate_arity_tight', 'Maximum predicate arity given largest symmetric object set tight: (\d+)', required=False, type=int)
+#parser.add_pattern('max_operator_arity_tight', 'Maximum operator arity given largest symmetric object set tight: (\d+)', required=False, type=int)
+#parser.add_pattern('max_axiom_arity_tight', 'Maximum axiom arity given largest symmetric object set tight: (\d+)', required=False, type=int)
+parser.add_pattern('num_used_symmetric_object_sets', 'Number of symmetric object sets used for symmetry reduction: (\d+)', required=False, type=int)
+
 
 def add_composed_attributes(content, props):
     generator_count_lifted = props.get('generator_count_lifted', 0)
@@ -73,6 +75,7 @@ def parse_boolean_flags(content, props):
     simplify_var_removed = False
     simplify_val_removed = False
     reorder_var_removed = False
+    reduction = False
     lines = content.split('\n')
     for line in lines:
         if 'Bliss memory out' in line:
@@ -102,6 +105,9 @@ def parse_boolean_flags(content, props):
         if 'reorder: only one of from_var and to_var are removed, invalid generator' in line:
             reorder_var_removed = True
 
+        if line == 'Actually can perform a symmetry reduction':
+            reduction = True
+
     props['bliss_out_of_memory'] = bliss_memory_out
     props['bliss_out_of_time'] = bliss_timeout
     props['generator_lifted_affecting_actions_axioms'] = generator_lifted_affecting_actions_axioms
@@ -111,22 +117,23 @@ def parse_boolean_flags(content, props):
     props['simplify_var_removed'] = simplify_var_removed
     props['simplify_val_removed'] = simplify_val_removed
     props['reorder_var_removed'] = reorder_var_removed
+    props['reduction'] = reduction
 
 parser.add_function(parse_boolean_flags)
 
-def parse_symmetry_reduction_potential(content, props):
-    size_largest_symmetric_object_set = props.get('size_largest_symmetric_object_set', 0)
-    max_predicate_arity_simple = props.get('max_predicate_arity_simple', 0)
-    max_operator_arity_simple = props.get('max_operator_arity_simple', 0)
-    max_axiom_arity_simple = props.get('max_axiom_arity_simple', 0)
-    has_symmetry_reduction_potential_simple = size_largest_symmetric_object_set > max(max_predicate_arity_simple, max_operator_arity_simple, max_axiom_arity_simple)
-    props['has_symmetry_reduction_potential_simple'] = has_symmetry_reduction_potential_simple
-    max_predicate_arity_tight = props.get('max_predicate_arity_tight', 0)
-    max_operator_arity_tight = props.get('max_operator_arity_tight', 0)
-    max_axiom_arity_tight = props.get('max_axiom_arity_tight', 0)
-    has_symmetry_reduction_potential_tight = size_largest_symmetric_object_set > max(max_predicate_arity_tight, max_operator_arity_tight, max_axiom_arity_tight)
-    props['has_symmetry_reduction_potential_tight'] = has_symmetry_reduction_potential_tight
+#def parse_symmetry_reduction_potential(content, props):
+    #size_largest_symmetric_object_set = props.get('size_largest_symmetric_object_set', 0)
+    #max_predicate_arity_simple = props.get('max_predicate_arity_simple', 0)
+    #max_operator_arity_simple = props.get('max_operator_arity_simple', 0)
+    #max_axiom_arity_simple = props.get('max_axiom_arity_simple', 0)
+    #has_symmetry_reduction_potential_simple = size_largest_symmetric_object_set > max(max_predicate_arity_simple, max_operator_arity_simple, max_axiom_arity_simple)
+    #props['has_symmetry_reduction_potential_simple'] = has_symmetry_reduction_potential_simple
+    #max_predicate_arity_tight = props.get('max_predicate_arity_tight', 0)
+    #max_operator_arity_tight = props.get('max_operator_arity_tight', 0)
+    #max_axiom_arity_tight = props.get('max_axiom_arity_tight', 0)
+    #has_symmetry_reduction_potential_tight = size_largest_symmetric_object_set > max(max_predicate_arity_tight, max_operator_arity_tight, max_axiom_arity_tight)
+    #props['has_symmetry_reduction_potential_tight'] = has_symmetry_reduction_potential_tight
 
-parser.add_function(parse_symmetry_reduction_potential)
+#parser.add_function(parse_symmetry_reduction_potential)
 
 parser.parse()
