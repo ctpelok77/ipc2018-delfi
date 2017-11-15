@@ -53,6 +53,45 @@ def add_literals_if_not_present(literals, condition):
             literals.append(lit)
 
 
+def all_literals_contained(literals, condition):
+    for lit in extract_literals_from_condition(condition):
+        if lit not in literals:
+            return False
+    return True
+
+
+def handle_axiom_for_literal(literal, axiom, pair_to_rules, pair_index, rules):
+    assert isinstance(axiom.effect, pddl.Literal)
+    if literal == axiom.effect: # 2) axiom from which literal can be derived
+        condition_literals = extract_literals_from_condition(axiom.condition)
+        condition_pairs = compute_all_pairs(condition_literals)
+        add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+
+
+def handle_operator_for_literal(literal, operator, pair_to_rules, pair_index, rules):
+    # TODO: is this complete and correct? there is no second effect phi' -> l', since l = l'
+    for cond, eff in operator.add_effects:
+        if literal == eff: # 4) operator makes l true
+            relevant_literals = extract_literals_from_condition(operator.precondition)
+            add_literals_if_not_present(relevant_literals, cond)
+            condition_pairs = compute_all_pairs(relevant_literals)
+            add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+
+    for cond, eff in operator.del_effects:
+        del_eff = eff.negate()
+        if literal == del_eff: # 4) operator makes ~literal false, i.e. literal true
+            relevant_literals = extract_literals_from_condition(operator.precondition)
+            add_literals_if_not_present(relevant_literals, cond)
+
+            # check case 3 of 4)
+            negated_lit = literal.negate()
+            for add_cond, add_eff in operator.add_effects:
+                if add_eff == negated_lit:
+                    if not all_literals_contained(literals, add_cond):
+                        condition_pairs = compute_all_pairs(relevant_literals)
+                        add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+
+
 def compute_reachability_program(atoms, actions, axioms):
     literals = list(atoms)
     for atom in atoms:
@@ -74,42 +113,13 @@ def compute_reachability_program(atoms, actions, axioms):
                 if DEBUG:
                     print("considering axiom"),
                     ax.dump()
-                assert isinstance(ax.effect, pddl.Literal)
-                if literal == ax.effect: # 2) axiom from which literal can be derived
-                    condition_literals = extract_literals_from_condition(ax.condition)
-                    condition_pairs = compute_all_pairs(condition_literals)
-                    add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+                handle_axiom_for_literal(literal, ax, pair_to_rules, pair_index, rules)
 
             for op in actions:
                 if DEBUG:
                     print("considering action:"),
                     op.dump()
-                # TODO: is this complete and correct? there is no second effect phi' -> l', since l = l'
-                for cond, eff in op.add_effects:
-                    if literal == eff: # 4) operator makes l true
-                        relevant_literals = extract_literals_from_condition(op.precondition)
-                        add_literals_if_not_present(relevant_literals, cond)
-                        condition_pairs = compute_all_pairs(relevant_literals)
-                        add_rule(pair_to_rules, pair_index, rules, condition_pairs)
-
-                for cond, eff in op.del_effects:
-                    del_eff = eff.negate()
-                    if literal == del_eff: # 4) operator makes ~literal false, i.e. literal true
-                        relevant_literals = extract_literals_from_condition(op.precondition)
-                        add_literals_if_not_present(relevant_literals, cond)
-
-                        negated_lit = literal.negate()
-                        # check case 3 of 4)
-                        for add_cond, add_eff in op.add_effects:
-                            if add_eff == negated_lit:
-                                all_literals_contained = True
-                                for lit in extract_literals_from_condition(add_cond):
-                                    if lit not in relevant_literals:
-                                        all_literals_contained = False
-                                        break
-                                if not all_literals_contained:
-                                    condition_pairs = compute_all_pairs(relevant_literals)
-                                    add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+                handle_operator_for_literal(literal, op, pair_to_rules, pair_index, rules)
 
         else: # l != l'
             literal1 = list(pair)[0]
@@ -164,32 +174,23 @@ def compute_reachability_program(atoms, actions, axioms):
                                 negated_lit1 = literal1.negate()
                                 for add_cond, add_eff in op.add_effects:
                                     if add_eff == negated_lit1:
-                                        all_literals_contained = True
-                                        for lit in extract_literals_from_condition(add_cond):
-                                            if lit not in relevant_literals:
-                                                all_literals_contained = False
-                                                break
-                                        if all_literals_contained:
-                                            overwriting_add_effect_lit1 = True
+                                        if all_literals_contained(relevant_literals, add_cond):
+                                            overwriting_add_effect_lit1 = True # skip rule entirely
                                             break
 
-                            overwriting_add_effect_lit2 = False
-                            if not lit2_eff[1]: # case 3 of 4) for literal2 (delete effect)
-                                negated_lit2 = literal2.negate()
-                                for add_cond, add_eff in op.add_effects:
-                                    if add_eff == negated_lit2:
-                                        all_literals_contained = True
-                                        for lit in extract_literals_from_condition(add_cond):
-                                            if lit not in relevant_literals:
-                                                all_literals_contained = False
+                            if not overwriting_add_effect_lit1:
+                                overwriting_add_effect_lit2 = False
+                                if not lit2_eff[1]: # case 3 of 4) for literal2 (delete effect)
+                                    negated_lit2 = literal2.negate()
+                                    for add_cond, add_eff in op.add_effects:
+                                        if add_eff == negated_lit2:
+                                            if all_literals_contained(relevant_literals, add_cond):
+                                                overwriting_add_effect_lit2 = True # skip rule entirely
                                                 break
-                                        if all_literals_contained:
-                                            overwriting_add_effect_lit2 = True
-                                            break
 
-                            if not overwriting_add_effect_lit1 and not overwriting_add_effect_lit2:
-                                condition_pairs = compute_all_pairs(relevant_literals)
-                                add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+                                if not overwriting_add_effect_lit2:
+                                    condition_pairs = compute_all_pairs(relevant_literals)
+                                    add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
 
 
@@ -203,12 +204,7 @@ def compute_reachability_program(atoms, actions, axioms):
                         overwriting_add_effect_lit2 = False
                         for add_cond, add_eff in op.add_effects:
                             if add_eff == negated_lit2:
-                                all_literals_contained = True
-                                for lit in extract_literals_from_condition(add_cond):
-                                    if lit not in relevant_literals:
-                                        all_literals_contained = False
-                                        break
-                                if all_literals_contained:
+                                if all_literals_contained(relevant_literals, add_cond):
                                     overwriting_add_effect_lit2 = True # skip rule entirely
                                     break
 
@@ -223,12 +219,7 @@ def compute_reachability_program(atoms, actions, axioms):
 
                                 for add_cond, add_eff in op.add_effects:
                                     if add_eff == negated_lit1:
-                                        all_literals_contained = True
-                                        for lit in extract_literals_from_condition(add_cond):
-                                            if lit not in relevant_literals:
-                                                all_literals_contained = False
-                                                break
-                                        if all_literals_contained:
+                                        if all_literals_contained(relevant_literals, add_cond):
                                             overwriting_add_effect_lit1 = True # skip rule entirely
                                             break
 
