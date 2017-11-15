@@ -64,7 +64,7 @@ def compute_reachability_program(atoms, actions, axioms):
         pair_to_rules[pair] = [] # to assert that each pair inserted is known
 
     rules = []
-    for index, pair in enumerate(pairs):
+    for pair_index, pair in enumerate(pairs):
         if DEBUG:
             print("considering pair {}".format(pair))
         if len(pair) == 1: # l = l'
@@ -78,7 +78,7 @@ def compute_reachability_program(atoms, actions, axioms):
                 if literal == ax.effect: # 2) axiom from which literal can be derived
                     condition_literals = extract_literals_from_condition(ax.condition)
                     condition_pairs = compute_all_pairs(condition_literals)
-                    add_rule(pair_to_rules, index, rules, condition_pairs)
+                    add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
             for op in actions:
                 if DEBUG:
@@ -90,7 +90,7 @@ def compute_reachability_program(atoms, actions, axioms):
                         relevant_literals = extract_literals_from_condition(op.precondition)
                         add_literals_if_not_present(relevant_literals, cond)
                         condition_pairs = compute_all_pairs(relevant_literals)
-                        add_rule(pair_to_rules, index, rules, condition_pairs)
+                        add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
                 for cond, eff in op.del_effects:
                     del_eff = eff.negate()
@@ -109,7 +109,7 @@ def compute_reachability_program(atoms, actions, axioms):
                                         break
                                 if not all_literals_contained:
                                     condition_pairs = compute_all_pairs(relevant_literals)
-                                    add_rule(pair_to_rules, index, rules, condition_pairs)
+                                    add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
         else: # l != l'
             literal1 = list(pair)[0]
@@ -130,7 +130,7 @@ def compute_reachability_program(atoms, actions, axioms):
                         if literal1 not in condition_literals:
                             condition_literals.append(literal1)
                     condition_pairs = compute_all_pairs(condition_literals)
-                    add_rule(pair_to_rules, index, rules, condition_pairs)
+                    add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
 
             for op in actions:
@@ -189,7 +189,7 @@ def compute_reachability_program(atoms, actions, axioms):
 
                             if not overwriting_add_effect_lit1 and not overwriting_add_effect_lit2:
                                 condition_pairs = compute_all_pairs(relevant_literals)
-                                add_rule(pair_to_rules, index, rules, condition_pairs)
+                                add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
 
 
@@ -234,7 +234,7 @@ def compute_reachability_program(atoms, actions, axioms):
 
                             if not overwriting_add_effect_lit1:
                                 condition_pairs = compute_all_pairs(relevant_literals)
-                                add_rule(pair_to_rules, index, rules, condition_pairs)
+                                add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
     return pairs, pair_to_rules, rules
 
