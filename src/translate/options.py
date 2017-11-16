@@ -58,7 +58,8 @@ def parse_args():
     argparser.add_argument(
         "--only-object-symmetries", action="store_true",
         help="HACK! Only allow objects to be permuted, but not "
-        "predicates, operators, axioms or functions.")
+        "predicates, operators, axioms or functions. (Set option "
+        "--compute-symmetries)")
     argparser.add_argument(
         "--stabilize-initial-state", action="store_true",
         help="If false, only those atoms in the initial state mentioning "
