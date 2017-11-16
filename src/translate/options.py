@@ -68,9 +68,15 @@ def parse_args():
         help="If true, compute symmetric object sets of object symmetry "
         "generators. (Set option --only-object-symmetries)")
     argparser.add_argument(
-        "--symmetry-reduction", action="store_true",
-        help="If true, compute a task reduction based on the largest symmetric "
-        "object sets. (Set option --compute-symmetric-object-sets)")
+        "--symmetry-reduced-grounding", action="store_true",
+        help="If true, compute a task reduction based on all large enough "
+        "symemtric object sets. (Set option --compute-symmetric-object-sets)")
+    argparser.add_argument(
+        "--symmetry-reduced-grounding-for-h2-mutexes", action="store_true",
+        help="If true, compute a task reduction based on all large enough "
+        "symemtric object sets, computing the minimum size as required for "
+        "computing h2 mutexes on the reduction. (Set option "
+        "--compute-symmetric-object-sets)")
     argparser.add_argument(
         "--expand-reduced-task", action="store_true",
         help="If true, expand the model of a symmetry-reduced task before "
