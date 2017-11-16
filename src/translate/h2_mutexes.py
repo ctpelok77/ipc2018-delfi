@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from collections import defaultdict, deque
+from collections import deque
 
 import pddl
 
@@ -38,8 +38,7 @@ def extract_literals_from_condition(condition):
 
 def add_rule(pair_to_rules, pair_index, rules, condition_pairs):
     for cond_pair in condition_pairs:
-        assert cond_pair in pair_to_rules.keys()
-        pair_to_rules[cond_pair].append(len(rules))
+        pair_to_rules[cond_pair].append(len(rules)) # fails if cond_pair is unknown
         if DEBUG:
             print("adding rule index {} to pair".format(len(rules)))
     if DEBUG:
@@ -77,7 +76,9 @@ def handle_axiom_for_literal(literal, axiom, pair_to_rules, pair_index, rules):
 
 
 def handle_operator_for_literal(literal, operator, pair_to_rules, pair_index, rules):
-    # TODO: is this complete and correct? there is no second effect phi' -> l', since l = l'
+    # Since l = l', there is no second effect phi' -> l', since l = l'.
+
+    # Find add effect making literal true
     for cond, eff in operator.add_effects:
         if literal == eff: # 4) operator makes l true
             relevant_literals = extract_literals_from_condition(operator.precondition)
@@ -85,6 +86,7 @@ def handle_operator_for_literal(literal, operator, pair_to_rules, pair_index, ru
             condition_pairs = compute_all_pairs(relevant_literals)
             add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
+    # Find del effect making literal true
     for cond, eff in operator.del_effects:
         del_eff = eff.negate()
         if literal == del_eff: # 4) operator makes ~literal false, i.e. literal true
@@ -104,6 +106,7 @@ def handle_axiom_for_pair(literal1, literal2, axiom, pair_to_rules, pair_index, 
     assert isinstance(axiom.effect, pddl.Literal)
     if literal1 == axiom.effect or literal2 == axiom.effect: #  3) axiom from which literal1 or literal2 can be derived
         condition_literals = extract_literals_from_condition(axiom.condition)
+        # Depending on which literal is made true by the axiom, add the other to condition_literals.
         if literal1 == axiom.effect:
             if literal2 not in condition_literals:
                 condition_literals.append(literal2)
@@ -137,6 +140,7 @@ def handle_operator_for_pair_single_effect(literal, other_literal, lit_effects, 
 
 
 def handle_operator_for_pair(literal1, literal2, operator, pair_to_rules, pair_index, rules):
+    # Collect all add and delete effects that make any of the literals true.
     lit1_effects = []
     lit2_effects = []
     for cond, eff in operator.add_effects:
@@ -152,7 +156,7 @@ def handle_operator_for_pair(literal1, literal2, operator, pair_to_rules, pair_i
             lit2_effects.append((cond, False))
 
     if lit1_effects and lit2_effects: # 4) operator makes both literal1 and literal2 true
-        # go over all pairs of effects that make both literals true
+        # Go over all pairs of effects that make both literals true.
         for lit1_eff in lit1_effects:
             for lit2_eff in lit2_effects:
                 condition_literals = extract_literals_from_condition(operator.precondition)
@@ -181,17 +185,21 @@ def compute_reachability_program(atoms, actions, axioms):
     literals = list(atoms)
     for atom in atoms:
         literals.append(atom.negate())
+    # pair contains both "singleton pairs" and "real pairs".
     pairs = compute_all_pairs(literals)
 
-    pair_to_rules = {} #defaultdict(list)
+    pair_to_rules = {}
+    # Manually set empty list for each pair to enforce key errors when
+    # attempting to access unknown pairs later.
     for pair in pairs:
-        pair_to_rules[pair] = [] # to assert that each pair inserted is known
+        pair_to_rules[pair] = []
 
+    # Go over all pairs and compute relevant rules for each.
     rules = []
     for pair_index, pair in enumerate(pairs):
         if DEBUG:
             print("considering pair {}".format(pair))
-        if len(pair) == 1: # l = l'
+        if len(pair) == 1: # "singleton pair" (l = l')
             literal = list(pair)[0]
 
             for ax in axioms:
@@ -206,7 +214,7 @@ def compute_reachability_program(atoms, actions, axioms):
                     op.dump()
                 handle_operator_for_literal(literal, op, pair_to_rules, pair_index, rules)
 
-        else: # l != l'
+        else: # "regular pair" (l != l')
             literal1 = list(pair)[0]
             literal2 = list(pair)[1]
             assert literal1 != literal2
