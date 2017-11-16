@@ -7,6 +7,8 @@ import pddl
 DEBUG = False
 
 def compute_all_pairs(elements):
+    """ Return a list of unordered pairs of elements from *elements*, including
+    'singleton pairs'."""
     assert isinstance(elements, list)
     pairs = []
     for index1 in range(len(elements)):
@@ -280,4 +282,16 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params):
                 print(lit),
             print
 
-    return closed
+    mutex_pairs = []
+    for pair in pairs:
+        if pair not in closed:
+            mutex_pairs.append(pair)
+    print("Found {} unreachable pairs of literals".format(len(mutex_pairs)))
+    global DEBUG
+    if DEBUG:
+        for pair in mutex_pairs:
+            for lit in pair:
+                print(lit),
+            print
+
+    return mutex_pairs
