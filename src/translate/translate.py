@@ -673,6 +673,7 @@ def pddl_to_sas(task):
             print("Number of lifted generators mapping predicates or objects: {}".format(len(task.generators)))
     with timers.timing("Instantiating", block=True):
         if options.symmetry_reduced_grounding or options.symmetry_reduced_grounding_for_h2_mutexes:
+            assert options.compute_symmetric_object_sets
             (relaxed_reachable, atoms, actions, axioms,
              reachable_action_params) = instantiate.explore(task, symmetric_object_sets)
             if COMPARE_GROUNDINGS:
