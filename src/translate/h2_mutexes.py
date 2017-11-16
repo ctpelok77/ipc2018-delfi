@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
-from collections import deque
+from collections import deque, defaultdict
+from itertools import combinations
 
 import pddl
 
@@ -9,14 +10,10 @@ DEBUG = False
 def compute_all_pairs(elements):
     """ Return a list of unordered pairs of elements from *elements*, including
     'singleton pairs'."""
-    assert isinstance(elements, list)
-    pairs = []
-    for index1 in range(len(elements)):
-        elem1 = elements[index1]
-        pairs.append(frozenset([elem1]))
-        for index2 in range(index1 + 1, len(elements)):
-            elem2 = elements[index2]
-            pairs.append(frozenset([elem1, elem2]))
+#    assert isinstance(elements, list)
+    pairs = [frozenset([e]) for e in elements]
+    for pair in combinations(elements, 2):
+        pairs.append(frozenset(pair))
     return pairs
 
 
@@ -183,56 +180,153 @@ def handle_operator_for_pair(literal1, literal2, operator, pair_to_rules, pair_i
         handle_operator_for_pair_single_effect(literal2, literal1, lit2_effects, operator, pair_to_rules, pair_index, rules)
 
 
+def handle_operator_for_literal2(literal, pair_to_rules, pair_index,
+    rules, conditions_by_effect, pre_set):
+
+    # Since l = l', there is no second effect phi' -> l', since l = l'.
+    atom = literal
+    negative = False
+    if literal.negated:
+        negative = True
+        atom = literal.negate()
+
+    for condition in conditions_by_effect[(atom,  not negative)]:
+        relevant_literals = pre_set | condition
+        
+        if negative:
+            skip_rule = False
+            for psi in conditions_by_effect[(atom, True)]:
+                if psi <= relevant_literals:
+                    skip_rule = True
+                    break
+            if skip_rule:
+                continue
+
+        condition_pairs = compute_all_pairs(relevant_literals)
+        add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+
+def handle_operator_for_pair_single_effect2(literal, preserve_literal, pair_to_rules, pair_index,
+    rules, conditions_by_effect, pre_set):
+
+    atom = literal
+    negative = False
+    if literal.negated:
+        negative = True
+        atom = literal.negate()
+
+    preserve_atom = preserve_literal
+    preserve_negative = False
+    if preserve_literal.negated:
+        preserve_negative = True
+        preserve_atom = preserve_literal.negate()
+
+    for phi in conditions_by_effect[(atom, not negative)]:
+        relevant_literals = pre_set | phi
+        skip_rule = False
+        for psi in conditions_by_effect[(preserve_atom, preserve_negative)]:
+            if psi <= relevant_literals:
+                skip_rule = True
+                break
+        if skip_rule:
+            continue
+
+        relevant_literals.add(preserve_literal)
+        if negative:
+            for psi in conditions_by_effect[(atom, True)]:
+                if psi <= relevant_literals:
+                    skip_rule = True
+                    break
+            if skip_rule:
+                continue
+        
+        condition_pairs = compute_all_pairs(relevant_literals)
+        add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+    
+
+def handle_operator_for_pair2(literal1, literal2, pair_to_rules, pair_index,
+    rules, conditions_by_effect, pre_set):
+
+    # first case: both possibly made true by operator
+    atom1, atom2 = literal1, literal2
+    negative1, negative2 = False, False
+    if literal1.negated:
+        negative1 = True
+        atom1 = literal1.negate()
+    if literal2.negated:
+        negative2 = True
+        atom2 = literal2.negate()
+
+    for phi1 in conditions_by_effect[(atom1, not negative1)]:
+        for phi2 in conditions_by_effect[(atom2, not negative2)]:
+
+            relevant_literals = pre_set | phi1 | phi2
+            
+            if negative1:
+                skip_rule = False
+                for psi in conditions_by_effect[(atom1, True)]:
+                    if psi <= relevant_literals:
+                        skip_rule = True
+                        break
+                if skip_rule:
+                    continue
+            if negative2:
+                skip_rule = False
+                for psi in conditions_by_effect[(atom2, True)]:
+                    if psi <= relevant_literals:
+                        skip_rule = True
+                        break
+                if skip_rule:
+                    continue
+
+            condition_pairs = compute_all_pairs(relevant_literals)
+            add_rule(pair_to_rules, pair_index, rules, condition_pairs)
+
+    # second case: one possibly made true whereas the other is preserved
+    handle_operator_for_pair_single_effect2(literal1, literal2, pair_to_rules,
+        pair_index, rules, conditions_by_effect, pre_set) 
+    handle_operator_for_pair_single_effect2(literal2, literal1, pair_to_rules,
+        pair_index, rules, conditions_by_effect, pre_set) 
+
+
+
+def handle_operator(pairs, operator, pair_to_rules, rules):
+    conditions_by_effect = defaultdict(set)
+    for cond, eff in operator.add_effects:
+        conditions_by_effect[(eff, True)].add(frozenset(extract_literals_from_condition(cond))) 
+    for cond, eff in operator.del_effects:
+        conditions_by_effect[(eff.negate(), False)].add(frozenset(extract_literals_from_condition(cond)))
+    pre_set = set(extract_literals_from_condition(operator.precondition))
+
+    for pair_index, pair in enumerate(pairs):
+        if len(pair) == 1:
+            handle_operator_for_literal2(iter(pair).next(), pair_to_rules,
+                pair_index, rules, conditions_by_effect, pre_set)
+        else:
+            literals = list(pair)
+            handle_operator_for_pair2(literals[0], literals[1], pair_to_rules,
+                pair_index, rules, conditions_by_effect, pre_set)
+
+
 def compute_reachability_program(atoms, actions, axioms):
+    print(atoms)
     literals = list(atoms)
     for atom in atoms:
         literals.append(atom.negate())
     # pair contains both "singleton pairs" and "real pairs".
     pairs = compute_all_pairs(literals)
-
+#    print(pairs)
+    
+    rules = []
     pair_to_rules = {}
     # Manually set empty list for each pair to enforce key errors when
     # attempting to access unknown pairs later.
     for pair in pairs:
         pair_to_rules[pair] = []
 
-    # Go over all pairs and compute relevant rules for each.
-    rules = []
-    for pair_index, pair in enumerate(pairs):
-        if DEBUG:
-            print("considering pair {}".format(pair))
-        if len(pair) == 1: # "singleton pair" (l = l')
-            literal = list(pair)[0]
-
-            for ax in axioms:
-                if DEBUG:
-                    print("considering axiom"),
-                    ax.dump()
-                handle_axiom_for_literal(literal, ax, pair_to_rules, pair_index, rules)
-
-            for op in actions:
-                if DEBUG:
-                    print("considering action:"),
-                    op.dump()
-                handle_operator_for_literal(literal, op, pair_to_rules, pair_index, rules)
-
-        else: # "regular pair" (l != l')
-            literal1 = list(pair)[0]
-            literal2 = list(pair)[1]
-            assert literal1 != literal2
-
-            for ax in axioms:
-                if DEBUG:
-                    print("considering axiom"),
-                    ax.dump()
-                handle_axiom_for_pair(literal1, literal2, ax, pair_to_rules, pair_index, rules)
-
-            for op in actions:
-                if DEBUG:
-                    print("considering action:"),
-                    op.dump()
-                handle_operator_for_pair(literal1, literal2, op, pair_to_rules, pair_index, rules)
-
+    for op in actions:
+        handle_operator(pairs, op, pair_to_rules, rules)
+    for ax in axioms:
+        pass # TODO
     return pairs, pair_to_rules, rules
 
 
@@ -248,9 +342,14 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params):
             num_conditions = rule[1]
             print("{} <- {}".format(pair, num_conditions))
 
+
     open_list = deque()
     closed = set()
-    initial_pairs = compute_all_pairs(task.init)
+    # TODO we also need to consider the negative literals that are initially
+    # true
+    init = set(task.init)
+    init &= atoms
+    initial_pairs = compute_all_pairs(init)
     for pair in initial_pairs:
         assert pair not in closed
         open_list.append(pair)
@@ -258,22 +357,21 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params):
     while len(open_list):
         pair = open_list.popleft()
         #print("pop pair {}".format(pair))
-        if pair in pair_to_rules.keys():
-            for rule_index in pair_to_rules[pair]:
-                rule = rules[rule_index]
-                #print("deal with rule index {} which is rule {}".format(rule_index, rule))
-                if rule[1] > 0: # rule is not applicable yet
-                    rule[1] = rule[1] - 1
+        for rule_index in pair_to_rules[pair]:
+            rule = rules[rule_index]
+            #print("deal with rule index {} which is rule {}".format(rule_index, rule))
+            assert(rule[1] > 0)
+            rule[1] = rule[1] - 1
 
-                if rule[1] == 0:
-                    # handle applicable rule (the test against closed prevents
-                    # rules from being handled more than once)
-                    new_pair = pairs[rule[0]]
-                    #print("new pair {}".format(new_pair))
-                    if new_pair not in closed: # already dealt with new_pair
-                        #print("must be queued")
-                        closed.add(new_pair)
-                        open_list.append(new_pair)
+            if rule[1] == 0:
+                # handle applicable rule (the test against closed prevents
+                # rules from being handled more than once)
+                new_pair = pairs[rule[0]]
+                #print("new pair {}".format(new_pair))
+                if new_pair not in closed: # already dealt with new_pair
+                    #print("must be queued")
+                    closed.add(new_pair)
+                    open_list.append(new_pair)
 
     print("Found {} reachable pairs of literals".format(len(closed)))
     if DEBUG:
