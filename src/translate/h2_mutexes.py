@@ -369,11 +369,15 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params):
 
     open_list = deque()
     closed = set()
-    # TODO we also need to consider the negative literals that are initially
-    # true
     init = set(task.init)
     init &= atoms
-    initial_pairs = compute_all_pairs(init)
+    initially_true_literals = []
+    for atom in atoms:
+        if atom in init:
+            initially_true_literals.append(atom)
+        else:
+            initially_true_literals.append(atom.negate())
+    initial_pairs = compute_all_pairs(initially_true_literals)
     for pair in initial_pairs:
         assert pair not in closed
         open_list.append(pair)
