@@ -680,11 +680,13 @@ def pddl_to_sas(task):
                 assert options.expand_reduced_task
                 # Perform regular grounding in addition to the above symmetry-
                 # reduced one to compare the results.
+                print("Grounding again to assert equal grounding...")
                 (relaxed_reachable2, atoms2, actions2, axioms2,
                  reachable_action_params2) = instantiate.explore(task)
                 reduction.assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,
                 reachable_action_params, relaxed_reachable2, atoms2, actions2, axioms2,
                 reachable_action_params2)
+                print("Done asserting equal grounding")
         else:
             (relaxed_reachable, atoms, actions, axioms,
              reachable_action_params) = instantiate.explore(task)
