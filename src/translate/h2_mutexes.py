@@ -186,7 +186,7 @@ def handle_axiom(pairs, axiom, pair_to_rules, rules):
         if len(pair) == 1:
             literal = iter(pair).next()
             if literal == axiom.effect: # 2) axiom from which literal can be derived
-                condition_literals = extract_literals_from_condition(axiom.condition)
+                condition_literals = set(extract_literals_from_condition(axiom.condition))
                 condition_pairs = compute_all_pairs(condition_literals)
                 add_rule(pair_to_rules, pair_index, rules, condition_pairs)
         else:
@@ -194,14 +194,12 @@ def handle_axiom(pairs, axiom, pair_to_rules, rules):
             literal1 = literals[0]
             literal2 = literals[1]
             if literal1 == axiom.effect or literal2 == axiom.effect: #  3) axiom from which literal1 or literal2 can be derived
-                condition_literals = extract_literals_from_condition(axiom.condition)
+                condition_literals = set(extract_literals_from_condition(axiom.condition))
                 # Depending on which literal is made true by the axiom, add the other to condition_literals.
                 if literal1 == axiom.effect:
-                    if literal2 not in condition_literals:
-                        condition_literals.append(literal2)
+                    condition_literals.add(literal2)
                 else:
-                    if literal1 not in condition_literals:
-                        condition_literals.append(literal1)
+                    condition_literals.add(literal1)
                 condition_pairs = compute_all_pairs(condition_literals)
                 add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
