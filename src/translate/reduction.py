@@ -244,6 +244,16 @@ def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_se
     return result
 
 
+def compute_permutation_dicts_for_object_set(symmetric_object_set):
+    """Compute all permutations defined on the given symmetric object set."""
+    canonical_perm = tuple(symmetric_object_set)
+    permutation_dicts = []
+    for perm in itertools.permutations(symmetric_object_set):
+        if perm != canonical_perm: # skip the one identity permutation
+            permutation_dicts.append(dict(zip(canonical_perm, perm)))
+    return permutation_dicts
+
+
 def permute_literal(literal, permutation):
     """Compute a symmetric literal from the given one and the given permutation."""
     symmetric_args = []
@@ -262,13 +272,9 @@ def permute_literal(literal, permutation):
 def expand(model, symmetric_object_set):
     """Extend the model by all symmetric atoms, using all permutations created
     from the objects in *symmetric_object_set*."""
-    print("Expanding model for symmetric object set:")
+    print("Expanding task model for symmetric object set:")
     print(", ".join([x for x in symmetric_object_set]))
-    canonical_perm = tuple(symmetric_object_set)
-    permutation_dicts = []
-    for perm in itertools.permutations(symmetric_object_set):
-        if perm != canonical_perm: # skip the one identity permutation
-            permutation_dicts.append(dict(zip(canonical_perm, perm)))
+    permutation_dicts = compute_permutation_dicts_for_object_set(symmetric_object_set)
     closed = set(model)
     for atom in model:
         for perm in permutation_dicts:
@@ -289,13 +295,9 @@ def permute_mutex_pair(pair, permutation):
 def expand_h2_mutexes(mutex_pairs, symmetric_object_set):
     """Extend the model by all symmetric atoms, using all permutations created
     from the objects in *symmetric_object_set*."""
-    print("Expanding model for symmetric object set:")
+    print("Expanding h2 mutexes:")
     print(", ".join([x for x in symmetric_object_set]))
-    canonical_perm = tuple(symmetric_object_set)
-    permutation_dicts = []
-    for perm in itertools.permutations(symmetric_object_set):
-        if perm != canonical_perm: # skip the one identity permutation
-            permutation_dicts.append(dict(zip(canonical_perm, perm)))
+    permutation_dicts = compute_permutation_dicts_for_object_set(symmetric_object_set)
     closed = set(mutex_pairs)
     for pair in mutex_pairs:
         for perm in permutation_dicts:
