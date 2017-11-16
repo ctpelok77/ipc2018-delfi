@@ -74,9 +74,8 @@ def instantiate(task, model):
             sorted(instantiated_axioms), reachable_action_parameters)
 
 
-def explore(task, symmetric_object_sets = None):
+def explore(task, object_sets_and_preserved_subsets = []):
     timer = timers.Timer()
-    object_sets_and_preserved_subsets = reduction.compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_sets)
     to_be_removed_objects = set()
     for obj_set, preserved_subset in object_sets_and_preserved_subsets:
         to_be_removed_objects |= (obj_set - preserved_subset)

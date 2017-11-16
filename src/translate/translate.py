@@ -673,8 +673,9 @@ def pddl_to_sas(task):
     with timers.timing("Instantiating", block=True):
         if options.symmetry_reduced_grounding or options.symmetry_reduced_grounding_for_h2_mutexes:
             assert options.compute_symmetric_object_sets
+            object_sets_and_preserved_subsets = reduction.compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_sets)
             (relaxed_reachable, atoms, actions, axioms,
-             reachable_action_params) = instantiate.explore(task, symmetric_object_sets)
+             reachable_action_params) = instantiate.explore(task, object_sets_and_preserved_subsets)
             if options.assert_equal_grounding:
                 assert options.expand_reduced_task
                 # Perform regular grounding in addition to the above symmetry-
@@ -703,6 +704,10 @@ def pddl_to_sas(task):
         if options.h2_mutexes:
             mutex_pairs = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
             axioms, reachable_action_params, False)
+        if options.expand_reduced_h2_mutexes:
+            assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes
+            # TODO
+            #reduction.expand(mutex_pairs, object_sets_and_preserved_subsets)
 
     with timers.timing("Computing fact groups", block=True):
         groups, mutex_groups, translation_key = fact_groups.compute_groups(
