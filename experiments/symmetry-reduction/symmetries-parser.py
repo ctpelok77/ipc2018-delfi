@@ -45,6 +45,8 @@ parser.add_pattern('num_transpositions', 'Number of transpositions: (\d+)', requ
 #parser.add_pattern('max_axiom_arity_tight', 'Maximum axiom arity given largest symmetric object set tight: (\d+)', required=False, type=int)
 parser.add_pattern('num_used_symmetric_object_sets', 'Number of symmetric object sets used for symmetry reduction: (\d+)', required=False, type=int)
 parser.add_pattern('num_reachable_pairs', 'Found (\d+) reachable pairs of literals', required=False, type=int)
+parser.add_pattern('num_unreachable_pairs', 'Found (\d+) unreachable pairs of literals', required=False, type=int)
+parser.add_pattern('num_expanded_unreachable_pairs', 'Expanded h2 mutex pairs to (\d+)', required=False, type=int)
 
 
 def add_composed_attributes(content, props):
