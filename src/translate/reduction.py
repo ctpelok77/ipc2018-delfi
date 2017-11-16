@@ -1,8 +1,9 @@
 #! /usr/bin/env python
 
-from collections import defaultdict
+from collections import defaultdict, deque
 
 import build_model
+import itertools
 import normalize
 import options
 import pddl
@@ -241,6 +242,43 @@ def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_se
         print("Total time to compute bounds and determine subsets of symmetric object sets: {}s".format(bounds_timer.elapsed_time()))
     print("Number of symmetric object sets used for symmetry reduction: {}".format(len(result)))
     return result
+
+
+def permute_atom(atom, permutation):
+    """Compute a symmetric atom from the given one and the given permutation."""
+    symmetric_args = []
+    for arg in atom.args:
+        if arg in permutation:
+            symmetric_args.append(permutation[arg])
+        else:
+            symmetric_args.append(arg)
+    symmetric_atom = pddl.Atom(atom.predicate, symmetric_args)
+    return symmetric_atom
+
+
+def expand(model, symmetric_object_set):
+    """Extend the model by all symmetric atoms, using all permutations created
+    from the objects in *symmetric_object_set*."""
+    print("Expanding model for symmetric object set:")
+    print(", ".join([x for x in symmetric_object_set]))
+    canonical_perm = tuple(symmetric_object_set)
+    permutation_dicts = []
+    for perm in itertools.permutations(symmetric_object_set):
+        if perm != canonical_perm: # skip the one identity permutation
+            permutation_dicts.append(dict(zip(canonical_perm, perm)))
+    open_list = deque()
+    closed_list = set()
+    for atom in model:
+        open_list.append(atom)
+        closed_list.add(atom)
+    while len(open_list):
+        atom = open_list.popleft()
+        for perm in permutation_dicts:
+            symmetric_atom = permute_atom(atom, perm)
+            if not symmetric_atom in closed_list:
+                closed_list.add(symmetric_atom)
+                model.append(symmetric_atom)
+                open_list.append(symmetric_atom)
 
 
 def assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,

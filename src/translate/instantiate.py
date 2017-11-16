@@ -2,10 +2,9 @@
 
 from __future__ import print_function
 
-from collections import defaultdict, deque
+from collections import defaultdict
 
 import build_model
-import itertools
 import options
 import pddl_to_prolog
 import pddl
@@ -74,40 +73,6 @@ def instantiate(task, model):
     return (relaxed_reachable, fluent_facts, instantiated_actions,
             sorted(instantiated_axioms), reachable_action_parameters)
 
-def permute_atom(atom, permutation):
-    """Compute a symmetric atom from the given one and the given permutation."""
-    symmetric_args = []
-    for arg in atom.args:
-        if arg in permutation:
-            symmetric_args.append(permutation[arg])
-        else:
-            symmetric_args.append(arg)
-    symmetric_atom = pddl.Atom(atom.predicate, symmetric_args)
-    return symmetric_atom
-
-def expand(model, symmetric_object_set):
-    """Extend the model by all symmetric atoms, using all permutations created
-    from the objects in *symmetric_object_set*."""
-    print("Expanding model for symmetric object set:")
-    print(", ".join([x for x in symmetric_object_set]))
-    canonical_perm = tuple(symmetric_object_set)
-    permutation_dicts = []
-    for perm in itertools.permutations(symmetric_object_set):
-        if perm != canonical_perm: # skip the one identity permutation
-            permutation_dicts.append(dict(zip(canonical_perm, perm)))
-    open_list = deque()
-    closed_list = set()
-    for atom in model:
-        open_list.append(atom)
-        closed_list.add(atom)
-    while len(open_list):
-        atom = open_list.popleft()
-        for perm in permutation_dicts:
-            symmetric_atom = permute_atom(atom, perm)
-            if not symmetric_atom in closed_list:
-                closed_list.add(symmetric_atom)
-                model.append(symmetric_atom)
-                open_list.append(symmetric_atom)
 
 def explore(task, symmetric_object_sets = None):
     timer = timers.Timer()
@@ -121,7 +86,7 @@ def explore(task, symmetric_object_sets = None):
     if options.expand_reduced_task:
         assert options.symmetry_reduced_grounding
         for symm_obj_set, subset in object_sets_and_preserved_subsets:
-            expand(model, symm_obj_set)
+            reduction.expand(model, symm_obj_set)
     print ("Done building program and model: %ss" % time)
     with timers.timing("Completing instantiation"):
         return instantiate(task, model)
