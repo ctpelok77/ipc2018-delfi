@@ -244,16 +244,19 @@ def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_se
     return result
 
 
-def permute_atom(atom, permutation):
-    """Compute a symmetric atom from the given one and the given permutation."""
+def permute_literal(literal, permutation):
+    """Compute a symmetric literal from the given one and the given permutation."""
     symmetric_args = []
-    for arg in atom.args:
+    for arg in literal.args:
         if arg in permutation:
             symmetric_args.append(permutation[arg])
         else:
             symmetric_args.append(arg)
-    symmetric_atom = pddl.Atom(atom.predicate, symmetric_args)
-    return symmetric_atom
+    if literal.negated:
+        symmetric_literal = pddl.NegatedAtom(literal.predicate, symmetric_args)
+    else:
+        symmetric_literal = pddl.Atom(literal.predicate, symmetric_args)
+    return symmetric_literal
 
 
 def expand(model, symmetric_object_set):
@@ -269,25 +272,10 @@ def expand(model, symmetric_object_set):
     closed = set(model)
     for atom in model:
         for perm in permutation_dicts:
-            symmetric_atom = permute_atom(atom, perm)
+            symmetric_atom = permute_literal(atom, perm)
             if not symmetric_atom in closed:
                 closed.add(symmetric_atom)
                 model.append(symmetric_atom)
-
-
-def permute_literal(literal, permutation):
-    """Compute a symmetric literal from the given one and the given permutation."""
-    symmetric_args = []
-    for arg in literal.args:
-        if arg in permutation:
-            symmetric_args.append(permutation[arg])
-        else:
-            symmetric_args.append(arg)
-    if literal.negated:
-        symmetric_literal = pddl.NegatedAtom(literal.predicate, symmetric_args)
-    else:
-        symmetric_literal = pddl.Atom(literal.predicate, symmetric_args)
-    return symmetric_literal
 
 
 def permute_mutex_pair(pair, permutation):
