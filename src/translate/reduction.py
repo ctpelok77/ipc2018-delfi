@@ -275,6 +275,48 @@ def expand(model, symmetric_object_set):
                 model.append(symmetric_atom)
 
 
+def permute_literal(literal, permutation):
+    """Compute a symmetric literal from the given one and the given permutation."""
+    symmetric_args = []
+    for arg in literal.args:
+        if arg in permutation:
+            symmetric_args.append(permutation[arg])
+        else:
+            symmetric_args.append(arg)
+    if literal.negated:
+        symmetric_literal = pddl.NegatedAtom(literal.predicate, symmetric_args)
+    else:
+        symmetric_literal = pddl.Atom(literal.predicate, symmetric_args)
+    return symmetric_literal
+
+
+def permute_mutex_pair(pair, permutation):
+    """Compute a symmetric pair from the given one and the given permutation."""
+    symmetric_pair = []
+    for literal in pair:
+        symmetric_pair.append(permute_literal(literal, permutation))
+    return frozenset(symmetric_pair)
+
+
+def expand_h2_mutexes(mutex_pairs, symmetric_object_set):
+    """Extend the model by all symmetric atoms, using all permutations created
+    from the objects in *symmetric_object_set*."""
+    print("Expanding model for symmetric object set:")
+    print(", ".join([x for x in symmetric_object_set]))
+    canonical_perm = tuple(symmetric_object_set)
+    permutation_dicts = []
+    for perm in itertools.permutations(symmetric_object_set):
+        if perm != canonical_perm: # skip the one identity permutation
+            permutation_dicts.append(dict(zip(canonical_perm, perm)))
+    closed = set(mutex_pairs)
+    for pair in mutex_pairs:
+        for perm in permutation_dicts:
+            symmetric_pair = permute_mutex_pair(pair, perm)
+            if not symmetric_pair in closed:
+                closed.add(symmetric_pair)
+                mutex_pairs.append(symmetric_pair)
+
+
 def assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,
     reachable_action_params, relaxed_reachable2, atoms2, actions2, axioms2,
     reachable_action_params2):
