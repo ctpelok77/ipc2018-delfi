@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from collections import defaultdict, deque
+from collections import defaultdict
 
 import build_model
 import itertools
@@ -266,19 +266,13 @@ def expand(model, symmetric_object_set):
     for perm in itertools.permutations(symmetric_object_set):
         if perm != canonical_perm: # skip the one identity permutation
             permutation_dicts.append(dict(zip(canonical_perm, perm)))
-    open_list = deque()
-    closed_list = set()
+    closed = set(model)
     for atom in model:
-        open_list.append(atom)
-        closed_list.add(atom)
-    while len(open_list):
-        atom = open_list.popleft()
         for perm in permutation_dicts:
             symmetric_atom = permute_atom(atom, perm)
-            if not symmetric_atom in closed_list:
-                closed_list.add(symmetric_atom)
+            if not symmetric_atom in closed:
+                closed.add(symmetric_atom)
                 model.append(symmetric_atom)
-                open_list.append(symmetric_atom)
 
 
 def assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,
