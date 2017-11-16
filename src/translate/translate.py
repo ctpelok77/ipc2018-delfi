@@ -46,7 +46,7 @@ import variable_order
 
 DEBUG = False
 DUMP = False
-COMPARE_GROUNDINGS = True
+COMPARE_GROUNDINGS = False
 
 EXIT_MEMORY_ERROR = 100
 
@@ -672,7 +672,7 @@ def pddl_to_sas(task):
                     print("Initial transformation already filtered out a generator")
             print("Number of lifted generators mapping predicates or objects: {}".format(len(task.generators)))
     with timers.timing("Instantiating", block=True):
-        if options.symmetry_reduction:
+        if options.symmetry_reduced_grounding or options.symmetry_reduced_grounding_for_h2_mutexes:
             (relaxed_reachable, atoms, actions, axioms,
              reachable_action_params) = instantiate.explore(task, symmetric_object_sets)
             if COMPARE_GROUNDINGS:
