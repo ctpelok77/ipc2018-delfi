@@ -119,6 +119,7 @@ def explore(task, symmetric_object_sets = None):
     model = build_model.compute_model(prog)
     time = timer.elapsed_time()
     if options.expand_reduced_task:
+        assert options.symmetry_reduced_grounding
         for symm_obj_set, subset in object_sets_and_preserved_subsets:
             expand(model, symm_obj_set)
     print ("Done building program and model: %ss" % time)

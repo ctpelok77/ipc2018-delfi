@@ -46,7 +46,6 @@ import variable_order
 
 DEBUG = False
 DUMP = False
-COMPARE_GROUNDINGS = False
 
 EXIT_MEMORY_ERROR = 100
 
@@ -676,7 +675,8 @@ def pddl_to_sas(task):
             assert options.compute_symmetric_object_sets
             (relaxed_reachable, atoms, actions, axioms,
              reachable_action_params) = instantiate.explore(task, symmetric_object_sets)
-            if COMPARE_GROUNDINGS:
+            if options.assert_equal_grounding:
+                assert options.expand_reduced_task
                 # Perform regular grounding in addition to the above symmetry-
                 # reduced one to compare the results.
                 (relaxed_reachable2, atoms2, actions2, axioms2,

@@ -51,6 +51,8 @@ def parse_args():
     argparser.add_argument(
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
+
+    #### Options related to symmetries and h2-mutexes
     argparser.add_argument(
         "--compute-symmetries", action="store_true",
         help="compute symmetries on the normalized taks using bliss, dump "
@@ -81,7 +83,22 @@ def parse_args():
     argparser.add_argument(
         "--expand-reduced-task", action="store_true",
         help="If true, expand the model of a symmetry-reduced task before "
-        "instantiating it. (Set option --symmetry-reduction)")
+        "instantiating it. (Set option --symmetry-reduced-grounding)")
+    argparser.add_argument(
+        "--expand-reduced-h2-mutexes", action="store_true",
+        help="If true, expand the set of h2 mutexes computed on a "
+        "symmetry-reduced task. (Set options "
+        "--symmetry-reduced-grounding-for-h2-mutexes and --h2-mutexes)")
+    argparser.add_argument(
+        "--assert-equal-grounding", action="store_true",
+        help="If true, assert that using --symmetry-reduced-grounding + "
+        "--expand-reduced-task yields the same result as regular grounding. "
+        "(Set the two obvious options.)")
+    argparser.add_argument(
+        "--assert-equal-h2-mutexes", action="store_true",
+        help="If true, assert that using --symmetry-reduced-grounding-for-h2-mutexes "
+        "+ --expand-reduced-h2-mutexes yields the same result as regular "
+        "computation of h2-mutexes. (Set the two obvious options.)")
     argparser.add_argument(
         "--only-functions-from-initial-state", action="store_true",
         help="If true, include only the functions mentioned in the initial "
