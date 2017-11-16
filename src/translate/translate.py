@@ -703,11 +703,26 @@ def pddl_to_sas(task):
     with timers.timing("Computing h2 mutex groups", block=True):
         if options.h2_mutexes:
             mutex_pairs = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
-            axioms, reachable_action_params, False)
+            axioms, reachable_action_params, False) # TODO: add option
         if options.expand_reduced_h2_mutexes:
             assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes
-            # TODO
-            #reduction.expand(mutex_pairs, object_sets_and_preserved_subsets)
+            for symm_obj_set, subset in object_sets_and_preserved_subsets:
+                reduction.expand_h2_mutexes(mutex_pairs, symm_obj_set)
+            print("Expanded h2 mutex pairs to {}".format(len(mutex_pairs)))
+        if options.assert_equal_h2_mutexes:
+            assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes and options.expand_reduced_h2_mutexes
+            print("Grounding again to assert equal h2 mutex pairs...")
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task)
+            mutex_pairs2 = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
+            axioms, reachable_action_params, False) # TODO: add option
+            for mutex_pair in mutex_pairs:
+                assert mutex_pair in mutex_pairs2, "no match for {} from expanded-after-reduced mutex pairs in regular mutex pairs".format(mutex_pair)
+            for mutex_pair in mutex_pairs2:
+                assert mutex_pair in mutex_pairs, "no match for {} from regular mutex pairs in expanded-after-reduced mutex pairs".format(mutex_pair)
+            assert len(mutex_pairs) == len(mutex_pairs2)
+            print("Done asserting equal h2 mutex pairs")
+
 
     with timers.timing("Computing fact groups", block=True):
         groups, mutex_groups, translation_key = fact_groups.compute_groups(
