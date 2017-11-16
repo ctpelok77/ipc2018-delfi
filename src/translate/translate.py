@@ -700,7 +700,8 @@ def pddl_to_sas(task):
 
     with timers.timing("Computing h2 mutex groups", block=True):
         if options.h2_mutexes:
-            mutex_pairs = h2_mutexes.compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params)
+            mutex_pairs = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
+            axioms, reachable_action_params, False)
 
     with timers.timing("Computing fact groups", block=True):
         groups, mutex_groups, translation_key = fact_groups.compute_groups(
