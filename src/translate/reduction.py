@@ -202,7 +202,8 @@ def compute_max_axiom_arity_tight(axioms, model, object_set):
 
 def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_sets):
     result = []
-    if options.symmetry_reduction and symmetric_object_sets is not None:
+    if symmetric_object_sets is not None:
+        assert options.symmetry_reduced_grounding or options.symmetry_reduced_grounding_for_h2_mutexes
         bounds_timer = timers.Timer()
         for symm_obj_set in symmetric_object_sets:
             if len(symm_obj_set) <= 2:
@@ -219,6 +220,10 @@ def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_se
             max_ax_arity_tight = compute_max_axiom_arity_tight(task.axioms, model, symm_obj_set)
             print("Maximum axiom arity given symmetric object set tight: {}".format(max_ax_arity_tight))
             max_arity = max(max_pred_arity_tight, max_op_arity_tight, max_ax_arity_tight)
+
+            if options.symmetry_reduced_grounding_for_h2_mutexes:
+                max_arity += max_pred_arity_tight
+            print("Minimum object set size: {}".format(max_arity))
 
             if len(symm_obj_set) > max_arity:
                 to_be_preserved_objects = set()
