@@ -138,6 +138,10 @@ def parse_args():
     argparser.add_argument(
         "--h2-mutexes", action="store_true",
         help="If true, compute h2 mutex groups.")
+    argparser.add_argument(
+        "--only-positive-literals", action="store_true",
+        help="If true, relax the computation of h2 mutexes by not considering "
+        "negative literals. (Set option --h2-mutexes)")
     return argparser.parse_args()
 
 

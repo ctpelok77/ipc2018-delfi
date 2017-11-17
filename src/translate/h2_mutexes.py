@@ -17,20 +17,20 @@ def compute_all_pairs(elements):
     return pairs
 
 
-def extract_literals_from_condition(condition, only_positive_atoms=False):
+def extract_literals_from_condition(condition, only_positive_literals=False):
     if condition is None:
         return []
     condition_literals = []
     if isinstance(condition, list):
         for cond in condition:
             condition_literals.extend(extract_literals_from_condition(cond,
-                only_positive_atoms))
+                only_positive_literals))
     elif isinstance(condition, pddl.Conjunction):
         for literal in condition.parts:
-            if not only_positive_atoms or not literal.negated:
+            if not only_positive_literals or not literal.negated:
                 condition_literals.append(literal)
     elif isinstance(condition, pddl.Literal):
-        if not only_positive_atoms or not condition.negated:
+        if not only_positive_literals or not condition.negated:
             condition_literals.append(condition)
     else:
         print(condition)
@@ -183,7 +183,7 @@ def handle_operator_for_pair(literal1, literal2, operator, pair_to_rules, pair_i
         handle_operator_for_pair_single_effect(literal2, literal1, lit2_effects, operator, pair_to_rules, pair_index, rules)
 
 
-def handle_axiom(pairs, axiom, pair_to_rules, rules, only_positive_atoms):
+def handle_axiom(pairs, axiom, pair_to_rules, rules, only_positive_literals):
     assert isinstance(axiom.effect, pddl.Literal)
     for pair_index, pair in enumerate(pairs):
         if len(pair) == 1:
@@ -191,7 +191,7 @@ def handle_axiom(pairs, axiom, pair_to_rules, rules, only_positive_atoms):
             if literal == axiom.effect: # 2) axiom from which literal can be derived
                 condition_literals = \
                 set(extract_literals_from_condition(axiom.condition,
-                                                    only_positive_atoms))
+                                                    only_positive_literals))
                 condition_pairs = compute_all_pairs(condition_literals)
                 add_rule(pair_to_rules, pair_index, rules, condition_pairs)
         else:
@@ -199,7 +199,7 @@ def handle_axiom(pairs, axiom, pair_to_rules, rules, only_positive_atoms):
             literal1 = literals[0]
             literal2 = literals[1]
             if literal1 == axiom.effect or literal2 == axiom.effect: #  3) axiom from which literal1 or literal2 can be derived
-                condition_literals = set(extract_literals_from_condition(axiom.condition,only_positive_atoms))
+                condition_literals = set(extract_literals_from_condition(axiom.condition,only_positive_literals))
                 # Depending on which literal is made true by the axiom, add the other to condition_literals.
                 if literal1 == axiom.effect:
                     condition_literals.add(literal2)
@@ -318,15 +318,15 @@ def handle_operator_for_pair2(literal1, literal2, pair_to_rules, pair_index,
 
 
 
-def handle_operator(pairs, operator, pair_to_rules, rules, only_positive_atoms):
+def handle_operator(pairs, operator, pair_to_rules, rules, only_positive_literals):
     conditions_by_effect = defaultdict(set)
     for cond, eff in operator.add_effects:
-        condition_literals = extract_literals_from_condition(cond, only_positive_atoms)
+        condition_literals = extract_literals_from_condition(cond, only_positive_literals)
         conditions_by_effect[(eff, True)].add(frozenset(condition_literals))
     for cond, eff in operator.del_effects:
-        condition_literals = extract_literals_from_condition(cond, only_positive_atoms)
+        condition_literals = extract_literals_from_condition(cond, only_positive_literals)
         conditions_by_effect[(eff.negate(), False)].add(frozenset(condition_literals))
-    pre_set = set(extract_literals_from_condition(operator.precondition, only_positive_atoms))
+    pre_set = set(extract_literals_from_condition(operator.precondition, only_positive_literals))
 
     for pair_index, pair in enumerate(pairs):
         if len(pair) == 1:
@@ -338,10 +338,10 @@ def handle_operator(pairs, operator, pair_to_rules, rules, only_positive_atoms):
                 pair_index, rules, conditions_by_effect, pre_set)
 
 
-def compute_reachability_program(atoms, actions, axioms, only_positive_atoms):
+def compute_reachability_program(atoms, actions, axioms, only_positive_literals):
     #print(atoms)
     literals = list(atoms)
-    if not only_positive_atoms:
+    if not only_positive_literals:
         for atom in atoms:
             literals.append(atom.negate())
     # pair contains both "singleton pairs" and "real pairs".
@@ -356,16 +356,16 @@ def compute_reachability_program(atoms, actions, axioms, only_positive_atoms):
         pair_to_rules[pair] = []
 
     for op in actions:
-        handle_operator(pairs, op, pair_to_rules, rules, only_positive_atoms)
+        handle_operator(pairs, op, pair_to_rules, rules, only_positive_literals)
     for ax in axioms:
-        handle_axiom(pairs, ax, pair_to_rules, rules, only_positive_atoms)
+        handle_axiom(pairs, ax, pair_to_rules, rules, only_positive_literals)
     return pairs, pair_to_rules, rules
 
 
 def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params,
-    only_positive_atoms=False):
+    only_positive_literals=False):
     pairs, pair_to_rules, rules = compute_reachability_program(atoms, actions,
-        axioms, only_positive_atoms)
+        axioms, only_positive_literals)
 
     if DEBUG:
         for key,val in pair_to_rules.items():
@@ -385,7 +385,7 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params,
     for atom in atoms:
         if atom in init:
             initially_true_literals.append(atom)
-        elif not only_positive_atoms:
+        elif not only_positive_literals:
             initially_true_literals.append(atom.negate())
     initial_pairs = compute_all_pairs(initially_true_literals)
     for pair in initial_pairs:
