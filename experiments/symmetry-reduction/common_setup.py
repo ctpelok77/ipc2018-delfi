@@ -384,3 +384,25 @@ class IssueExperiment(FastDownwardExperiment):
                         make_scatter_plot(config.nick, rev1, rev2, attribute)
 
         self.add_step(step_name, make_scatter_plots)
+
+    def add_scatter_plot_report(self, algo_pair, attribute, relative=False):
+        if relative:
+            report_class = RelativeScatterPlotReport
+            scatter_dir = os.path.join(self.eval_dir, "scatter-relative")
+            step_name = "make-relative-scatter-plots"
+        else:
+            report_class = ScatterPlotReport
+            scatter_dir = os.path.join(self.eval_dir, "scatter-absolute")
+            step_name = "make-absolute-scatter-plots"
+
+        algo1 = algo_pair[0]
+        algo2 = algo_pair[1]
+        name = "-".join([self.name, attribute, algo1, algo2])
+
+        self.add_report(report_class(
+            filter_algorithm=[algo1, algo2],
+            attributes=[attribute],
+            get_category=lambda run1, run2: run1["domain"]),
+            name = step_name,
+            outfile = os.path.join(scatter_dir, name)
+        )
