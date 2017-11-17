@@ -267,27 +267,6 @@ def permute_literal(literal, permutation):
         symmetric_literal = pddl.Atom(literal.predicate, symmetric_args)
     return symmetric_literal
 
-
-def expand(model, symmetric_object_set):
-    """Extend the model by all symmetric atoms, using all permutations created
-    from the objects in *symmetric_object_set*."""
-    print("Expanding task model for symmetric object set:")
-    print(", ".join([x for x in symmetric_object_set]))
-    permutation_dicts = compute_permutation_dicts_for_object_set(symmetric_object_set)
-    open_list = deque()
-    closed = set(model)
-    for atom in model:
-        open_list.append(atom)
-    while len(open_list):
-        atom = open_list.popleft()
-        for perm in permutation_dicts:
-            symmetric_atom = permute_literal(atom, perm)
-            if not symmetric_atom in closed:
-                open_list.append(symmetric_atom)
-                closed.add(symmetric_atom)
-                model.append(symmetric_atom)
-
-
 def permute_mutex_pair(pair, permutation):
     """Compute a symmetric pair from the given one and the given permutation."""
     symmetric_pair = []
@@ -296,24 +275,28 @@ def permute_mutex_pair(pair, permutation):
     return frozenset(symmetric_pair)
 
 
-def expand_h2_mutexes(mutex_pairs, symmetric_object_set):
-    """Extend the model by all symmetric atoms, using all permutations created
-    from the objects in *symmetric_object_set*."""
-    print("Expanding h2 mutexes:")
+def expand(list_of_elements, symmetric_object_set, contains_pairs=False):
+    """Extend the given *list_of_elments* (which must either be literals or
+    (frozen)sets of literals) by all symmetric elements, using all permutations
+    created from the objects in *symmetric_object_set*."""
+    print("Expanding with symmetric object set:")
     print(", ".join([x for x in symmetric_object_set]))
     permutation_dicts = compute_permutation_dicts_for_object_set(symmetric_object_set)
     open_list = deque()
-    closed = set(mutex_pairs)
-    for pair in mutex_pairs:
-        open_list.append(pair)
+    closed = set(list_of_elements)
+    for element in list_of_elements:
+        open_list.append(element)
     while len(open_list):
-        pair = open_list.popleft()
+        element = open_list.popleft()
         for perm in permutation_dicts:
-            symmetric_pair = permute_mutex_pair(pair, perm)
-            if not symmetric_pair in closed:
-                open_list.append(symmetric_pair)
-                closed.add(symmetric_pair)
-                mutex_pairs.append(symmetric_pair)
+            if contains_pairs:
+                symmetric_element = permute_mutex_pair(element, perm)
+            else:
+                symmetric_element = permute_literal(element, perm)
+            if not symmetric_element in closed:
+                open_list.append(symmetric_element)
+                closed.add(symmetric_element)
+                list_of_elements.append(symmetric_element)
 
 
 def assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,
