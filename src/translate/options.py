@@ -69,10 +69,15 @@ def parse_args():
     argparser.add_argument(
         "--only-functions-from-initial-state", action="store_true",
         help="If true, include only the functions mentioned in the initial "
-        "states, but not the fluents or types.")
+        "states, but not the fluents or types. (Set option --compute-symmetries)")
+    argparser.add_argument(
+        "--do-not-stabilize-goal", action="store_true",
+        help="If true, literals in the goal are not colored with a special "
+        "color. (Set option --compute-symmetries)")
     argparser.add_argument(
         "--bliss-time-limit", default=300, type=int,
-        help="max time for bliss to search for automorphisms")
+        help="Max time for bliss to search for automorphisms. (Set option "
+        "--compute-symmetries)")
 
     # Options related to symmetry-based reduction and expansion
     argparser.add_argument(

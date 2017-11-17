@@ -620,8 +620,9 @@ def pddl_to_sas(task):
         if options.compute_symmetries:
             only_object_symmetries = options.only_object_symmetries
             stabilize_initial_state = not options.do_not_stabilize_initial_state
+            stabilize_goal = not options.do_not_stabilize_goal
             time_limit = options.bliss_time_limit
-            graph = symmetries_module.SymmetryGraph(task, only_object_symmetries, stabilize_initial_state)
+            graph = symmetries_module.SymmetryGraph(task, only_object_symmetries, stabilize_initial_state, stabilize_goal)
             if options.add_mutex_groups:
                 #graph.add_mutex_groups(mutex_groups)
                 print("Adding mutex group to the computation of symmetries currently not supported.")
