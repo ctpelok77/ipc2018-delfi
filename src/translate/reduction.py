@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from collections import defaultdict
+from collections import defaultdict, deque
 
 import build_model
 import itertools
@@ -245,12 +245,11 @@ def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_se
 
 
 def compute_permutation_dicts_for_object_set(symmetric_object_set):
-    """Compute all permutations defined on the given symmetric object set."""
-    canonical_perm = tuple(symmetric_object_set)
+    """Compute all permutations swapping two objects of the given symmetric
+    object set."""
     permutation_dicts = []
-    for perm in itertools.permutations(symmetric_object_set):
-        if perm != canonical_perm: # skip the one identity permutation
-            permutation_dicts.append(dict(zip(canonical_perm, perm)))
+    for perm in itertools.combinations(symmetric_object_set, 2):
+        permutation_dicts.append(dict(zip(perm, (perm[1], perm[0]))))
     return permutation_dicts
 
 
@@ -275,11 +274,16 @@ def expand(model, symmetric_object_set):
     print("Expanding task model for symmetric object set:")
     print(", ".join([x for x in symmetric_object_set]))
     permutation_dicts = compute_permutation_dicts_for_object_set(symmetric_object_set)
+    open_list = deque()
     closed = set(model)
     for atom in model:
+        open_list.append(atom)
+    while len(open_list):
+        atom = open_list.popleft()
         for perm in permutation_dicts:
             symmetric_atom = permute_literal(atom, perm)
             if not symmetric_atom in closed:
+                open_list.append(symmetric_atom)
                 closed.add(symmetric_atom)
                 model.append(symmetric_atom)
 
@@ -298,11 +302,16 @@ def expand_h2_mutexes(mutex_pairs, symmetric_object_set):
     print("Expanding h2 mutexes:")
     print(", ".join([x for x in symmetric_object_set]))
     permutation_dicts = compute_permutation_dicts_for_object_set(symmetric_object_set)
+    open_list = deque()
     closed = set(mutex_pairs)
     for pair in mutex_pairs:
+        open_list.append(pair)
+    while len(open_list):
+        pair = open_list.popleft()
         for perm in permutation_dicts:
             symmetric_pair = permute_mutex_pair(pair, perm)
             if not symmetric_pair in closed:
+                open_list.append(symmetric_pair)
                 closed.add(symmetric_pair)
                 mutex_pairs.append(symmetric_pair)
 
