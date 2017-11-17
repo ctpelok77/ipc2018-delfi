@@ -705,7 +705,7 @@ def pddl_to_sas(task):
     with timers.timing("Computing h2 mutex groups", block=True):
         if options.h2_mutexes:
             mutex_pairs = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
-            axioms, reachable_action_params, False) # TODO: add option
+            axioms, reachable_action_params, options.only_positive_literals)
         if options.expand_reduced_h2_mutexes:
             assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes
             for symm_obj_set, subset in object_sets_and_preserved_subsets:
@@ -717,7 +717,7 @@ def pddl_to_sas(task):
             (relaxed_reachable, atoms, actions, axioms,
              reachable_action_params) = instantiate.explore(task)
             mutex_pairs2 = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
-            axioms, reachable_action_params, False) # TODO: add option
+            axioms, reachable_action_params, options.only_positive_literals)
             for mutex_pair in mutex_pairs:
                 assert mutex_pair in mutex_pairs2, "no match for {} from expanded-after-reduced mutex pairs in regular mutex pairs".format(mutex_pair)
             for mutex_pair in mutex_pairs2:
