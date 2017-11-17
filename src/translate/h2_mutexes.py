@@ -10,7 +10,6 @@ DEBUG = False
 def compute_all_pairs(elements):
     """ Return a list of unordered pairs of elements from *elements*, including
     'singleton pairs'."""
-#    assert isinstance(elements, list)
     pairs = [frozenset([e]) for e in elements]
     for pair in combinations(elements, 2):
         pairs.append(frozenset(pair))
@@ -46,19 +45,6 @@ def add_rule(pair_to_rules, pair_index, rules, condition_pairs):
     if DEBUG:
         print("adding rule with body {}".format(condition_pairs))
     rules.append([pair_index, len(condition_pairs)])
-
-
-def add_literals_if_not_present(literals, condition):
-    for lit in extract_literals_from_condition(condition):
-        if lit not in literals:
-            literals.append(lit)
-
-
-def all_literals_contained(literals, condition):
-    for lit in extract_literals_from_condition(condition):
-        if lit not in literals:
-            return False
-    return True
 
 
 def handle_axiom(pairs, axiom, pair_to_rules, rules, only_positive_literals):
