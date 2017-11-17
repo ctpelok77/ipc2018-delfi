@@ -709,7 +709,7 @@ def pddl_to_sas(task):
         if options.expand_reduced_h2_mutexes:
             assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes
             for symm_obj_set, subset in object_sets_and_preserved_subsets:
-                reduction.expand_h2_mutexes(mutex_pairs, symm_obj_set)
+                reduction.expand(mutex_pairs, symm_obj_set, contains_pairs=True)
             print("Expanded h2 mutex pairs to {}".format(len(mutex_pairs)))
         if options.assert_equal_h2_mutexes:
             assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes and options.expand_reduced_h2_mutexes
