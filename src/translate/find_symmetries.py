@@ -10,7 +10,7 @@ WRITE_DOT_GRAPH = True
 
 if __name__ == "__main__":
     only_object_symmetries = options.only_object_symmetries
-    stabilize_initial_state = options.stabilize_initial_state
+    stabilize_initial_state = not options.do_not_stabilize_initial_state
     time_limit = options.bliss_time_limit
     task = pddl_parser.open()
     normalize.normalize(task)
