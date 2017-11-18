@@ -709,9 +709,11 @@ def pddl_to_sas(task):
             axioms, reachable_action_params, options.only_positive_literals)
         if options.expand_reduced_h2_mutexes:
             assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes
+            timer = timers.Timer()
             for symm_obj_set, subset in object_sets_and_preserved_subsets:
                 reduction.expand(mutex_pairs, symm_obj_set, contains_pairs=True)
             print("Expanded h2 mutex pairs to {}".format(len(mutex_pairs)))
+            print("Time to expand h2 mutexes: {}s".format(timer.elapsed_time()))
         if options.assert_equal_h2_mutexes:
             assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes and options.expand_reduced_h2_mutexes
             print("Grounding again to assert equal h2 mutex pairs...")

@@ -80,13 +80,16 @@ def explore(task, object_sets_and_preserved_subsets = []):
     for obj_set, preserved_subset in object_sets_and_preserved_subsets:
         to_be_removed_objects |= (obj_set - preserved_subset)
     prog = pddl_to_prolog.translate(task, to_be_removed_objects)
+    print("Time to generate prolog program: {}s".format(timer.elapsed_time()))
+    timer = timers.Timer()
     model = build_model.compute_model(prog)
-    time = timer.elapsed_time()
+    print("Time to compute model of prolog program: {}s".format(timer.elapsed_time()))
     if options.expand_reduced_task:
+        timer = timers.Timer()
         assert options.symmetry_reduced_grounding
         for symm_obj_set, subset in object_sets_and_preserved_subsets:
             reduction.expand(model, symm_obj_set)
-    print ("Done building program and model: %ss" % time)
+        print("Time to expand reduced model: {}s".format(timer.elapsed_time()))
     with timers.timing("Completing instantiation"):
         return instantiate(task, model)
 
