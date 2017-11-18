@@ -33,7 +33,7 @@ def main(revisions=None):
 
     configs = {
         #IssueConfig('translate', [], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-grounding', ['--translate-options', '--compute-symmetries', '--do-not-stabilize-goal', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--expand-reduced-task', '--bliss-time-limit', '300', ], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-reduced-grounding-nogoal', ['--translate-options', '--compute-symmetries', '--do-not-stabilize-goal', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--expand-reduced-task', '--bliss-time-limit', '300', ], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
     exp = IssueExperiment(
@@ -107,17 +107,9 @@ def main(revisions=None):
     exp.add_fetcher(name='parse-memory-error', parsers=['translator-memory-error-parser.py'])
 
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
-        '{}-translate'.format(REVISION),
-        '{}-translate-reduced-grounding'.format(REVISION),
+        #'{}-translate'.format(REVISION),
+        '{}-translate-reduced-grounding-nogoal'.format(REVISION),
     ])
-
-    exp.add_scatter_plot_report(
-        algo_pair=[
-            '{}-translate'.format(REVISION),
-            '{}-translate-reduced-grounding'.format(REVISION),
-        ],
-        attribute='translator_time_instantiating',
-    )
 
     exp.run_steps()
 

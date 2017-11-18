@@ -33,7 +33,7 @@ def main(revisions=None):
 
     configs = {
         #IssueConfig('translate-h2mutexes', ['--translate-options', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-h2mutexes', ['--translate-options', '--compute-symmetries', '--do-not-stabilize-goal', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--expand-reduced-h2-mutexes', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-reduced-h2mutexes-nogoal', ['--translate-options', '--compute-symmetries', '--do-not-stabilize-goal', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--expand-reduced-h2-mutexes', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
     exp = IssueExperiment(
@@ -113,17 +113,9 @@ def main(revisions=None):
     exp.add_fetcher(name='parse-memory-error', parsers=['translator-memory-error-parser.py'])
 
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
-        '{}-translate-h2mutexes'.format(REVISION),
-        '{}-translate-reduced-h2mutexes'.format(REVISION),
+        #'{}-translate-h2mutexes'.format(REVISION),
+        '{}-translate-reduced-h2mutexes-nogoal'.format(REVISION),
     ])
-
-    exp.add_scatter_plot_report(
-        algo_pair=[
-            '{}-translate-h2mutexes'.format(REVISION),
-            '{}-translate-reduced-h2mutexes'.format(REVISION),
-        ],
-        attribute='translator_time_computing_h2_mutex_groups',
-    )
 
     exp.run_steps()
 
