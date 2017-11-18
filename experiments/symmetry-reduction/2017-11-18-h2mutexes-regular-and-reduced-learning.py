@@ -19,19 +19,21 @@ REVISION = 'cb5995d31cca'
 def main(revisions=None):
     benchmarks_dir=os.path.expanduser('~/repos/downward/learning-benchmarks')
     # learning
-    suite = ['elevators', 'floortile', 'nomystery', 'parking', 'spanner',
-    'transport']
+    suite = ['learning-elevators', 'learning-floortile', 'learning-nomystery',
+    'learning-parking', 'learning-spanner', 'learning-transport']
     environment = BaselSlurmEnvironment(email="silvan.sievers@unibas.ch", export=["PATH"])
 
     if is_test_run():
-        suite = ['elevators:p24_40_1.pddl', 'floortile:p4-3-2.pddl',
-        'nomystery:p-c10-08.pddl', 'parking:p28-15.pddl',
-        'spanner:prob-130-130-80-1396209574.pddl', 'transport:p-2-50-20.pddl']
+        suite = ['learning-elevators:p24_40_1.pddl',
+        'learning-floortile:p4-3-2.pddl',
+        'learning-nomystery:p-c10-08.pddl', 'learning-parking:p28-15.pddl',
+        'learning-spanner:prob-130-130-80-1396209574.pddl',
+        'learning-transport:p-2-50-20.pddl']
         environment = LocalEnvironment(processes=4)
 
     configs = {
-        IssueConfig('translate-h2mutexes', ['--translate-options', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '1m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-h2mutexes', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--expand-reduced-h2-mutexes', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '1m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-h2mutexes', ['--translate-options', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-reduced-h2mutexes', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--expand-reduced-h2-mutexes', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
     exp = IssueExperiment(
