@@ -6,7 +6,6 @@ from lab.parser import Parser
 
 parser = Parser()
 parser.add_pattern('generator_count_lifted', 'Number of lifted generators: (\d+)', required=False, type=int)
-#parser.add_pattern('generator_count_lifted_mapping_objects_predicates', 'Number of lifted generators mapping predicates or objects: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_2', 'Lifted generator order 2: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_3', 'Lifted generator order 3: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_4', 'Lifted generator order 4: (\d+)', required=False, type=int)
@@ -16,25 +15,6 @@ parser.add_pattern('generator_order_lifted_7', 'Lifted generator order 7: (\d+)'
 parser.add_pattern('generator_order_lifted_8', 'Lifted generator order 8: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_9', 'Lifted generator order 9: (\d+)', required=False, type=int)
 parser.add_pattern('generator_order_lifted_max', 'Maximum generator order: (\d+)', required=False, type=int)
-parser.add_pattern('generator_count_grounded_1_after_grounding', '(\d+) out of \d+ generators left after grounding them', required=False, type=int)
-parser.add_pattern('generator_count_grounded_2_after_sas_task', '(\d+) out of \d+ generators left after the sas task has been created', required=False, type=int)
-parser.add_pattern('generator_count_grounded_3_after_filtering_props', '(\d+) out of \d+ generators left after filtering unreachable propositions', required=False, type=int)
-parser.add_pattern('generator_count_grounded_4_after_reordering_filtering_vars', '(\d+) out of \d+ generators left after reordering and filtering variables', required=False, type=int)
-parser.add_pattern('generator_count_grounded', 'Number of remaining grounded generators: (\d+)', required=False, type=int)
-parser.add_pattern('generator_count_removed', 'Number of removed generators: (\d+)', required=False, type=int)
-parser.add_pattern('time_symmetries1_symmetry_graph', 'Done creating symmetry graph: (.+)s', required=False, type=float)
-parser.add_pattern('time_symmetries2_bliss', 'Done searching for automorphisms: (.+)s', required=False, type=float)
-parser.add_pattern('time_symmetries3_translate_automorphisms', 'Done translating automorphisms: (.+)s', required=False, type=float)
-parser.add_pattern('time_bounds_and_subsets', 'Total time to compute bounds and determine subsets of symmetric object sets: (.+)s', required=False, type=float)
-parser.add_pattern('time_program_and_model', 'Done building program and model: (.+)s', required=False, type=float)
-parser.add_pattern('generator_order_grounded_2', 'Grounded generator order 2: (\d+)', required=False, type=int)
-parser.add_pattern('generator_order_grounded_3', 'Grounded generator order 3: (\d+)', required=False, type=int)
-parser.add_pattern('generator_order_grounded_4', 'Grounded generator order 4: (\d+)', required=False, type=int)
-parser.add_pattern('generator_order_grounded_5', 'Grounded generator order 5: (\d+)', required=False, type=int)
-parser.add_pattern('generator_order_grounded_6', 'Grounded generator order 6: (\d+)', required=False, type=int)
-parser.add_pattern('generator_order_grounded_7', 'Grounded generator order 7: (\d+)', required=False, type=int)
-parser.add_pattern('generator_order_grounded_8', 'Grounded generator order 8: (\d+)', required=False, type=int)
-parser.add_pattern('generator_order_grounded_9', 'Grounded generator order 9: (\d+)', required=False, type=int)
 parser.add_pattern('num_transpositions', 'Number of transpositions: (\d+)', required=False, type=int)
 #parser.add_pattern('size_largest_symmetric_object_set', 'Size of largest symmetric object set: (\d+)', required=False, type=int)
 #parser.add_pattern('max_predicate_arity_simple', 'Maximum predicate arity simple: (\d+)', required=False, type=int)
@@ -47,14 +27,17 @@ parser.add_pattern('num_used_symmetric_object_sets', 'Number of symmetric object
 parser.add_pattern('num_reachable_pairs', 'Found (\d+) reachable pairs of literals', required=False, type=int)
 parser.add_pattern('num_unreachable_pairs', 'Found (\d+) unreachable pairs of literals', required=False, type=int)
 parser.add_pattern('num_expanded_unreachable_pairs', 'Expanded h2 mutex pairs to (\d+)', required=False, type=int)
+parser.add_pattern('time_symmetries1_symmetry_graph', 'Done creating symmetry graph: (.+)s', required=False, type=float)
+parser.add_pattern('time_symmetries2_bliss', 'Done searching for automorphisms: (.+)s', required=False, type=float)
+parser.add_pattern('time_symmetries3_translate_automorphisms', 'Done translating automorphisms: (.+)s', required=False, type=float)
+parser.add_pattern('time_bounds_and_subsets', 'Total time to compute bounds and determine subsets of symmetric object sets: (.+)s', required=False, type=float)
+parser.add_pattern('time_grounding_program', 'Time to generate prolog program: (.+)s', required=False, type=float)
+parser.add_pattern('time_grounding_model', 'Time to compute model of prolog program: (.+)s', required=False, type=float)
+parser.add_pattern('time_grounding_expand', 'Time to expand reduced model: (.+)s', required=False, type=float)
+parser.add_pattern('time_h2mutexes_program', 'Time to compute h2 mutexes reachability program: (.+)s', required=False, type=float)
+parser.add_pattern('time_h2mutexes_model', 'Time to compute model of reachability program: (.+)s', required=False, type=float)
+parser.add_pattern('time_h2mutexes_expand', 'Time to expand h2 mutexes: (.+)s', required=False, type=float)
 
-
-def add_composed_attributes(content, props):
-    generator_count_lifted = props.get('generator_count_lifted', 0)
-    generator_count_grounded = props.get('generator_count_grounded', 0)
-    props['generator_count_lifted_grounded'] = "{}/{}".format(generator_count_lifted, generator_count_grounded)
-
-parser.add_function(add_composed_attributes)
 
 def parse_generator_orders(content, props):
     lifted_generator_orders = re.findall(r'Lifted generator orders: \[(.*)\]', content)
@@ -87,40 +70,12 @@ def parse_boolean_flags(content, props):
         if 'Bliss timeout' in line:
             bliss_timeout = True
 
-        if 'Generator affects operator or axiom' in line:
-            generator_lifted_affecting_actions_axioms = True
-
-        if 'Generator entirely maps operator or axioms' in line:
-            generator_lifted_mapping_actions_axioms = True
-
-        if 'Transformed generator contains -1' in line:
-            generator_not_well_defined_for_search = True
-
-        if 'Invalid mapping can be ignored because it affects none-of-those-values' in line:
-            ignore_none_of_those_mapping = True
-
-        if 'simplify: only one of from_var and to_var are removed, invalid generator' in line:
-            simplify_var_removed = True
-
-        if 'simplify: only one of from_val and to_val are mapped always_false, invalid generator' in line:
-            simplify_val_removed = True
-
-        if 'reorder: only one of from_var and to_var are removed, invalid generator' in line:
-            reorder_var_removed = True
-
         if line == 'Actually can perform a symmetry reduction':
             reduction = True
 
     props['bliss_out_of_memory'] = bliss_memory_out
     props['bliss_out_of_time'] = bliss_timeout
-    props['generator_lifted_affecting_actions_axioms'] = generator_lifted_affecting_actions_axioms
-    props['generator_lifted_mapping_actions_axioms'] = generator_lifted_mapping_actions_axioms
-    props['generator_not_well_defined_for_search'] = generator_not_well_defined_for_search
-    props['ignore_none_of_those_mapping'] = ignore_none_of_those_mapping
-    props['simplify_var_removed'] = simplify_var_removed
-    props['simplify_val_removed'] = simplify_val_removed
-    props['reorder_var_removed'] = reorder_var_removed
-    props['reduction'] = reduction
+    props['performed_reduction'] = reduction
 
 parser.add_function(parse_boolean_flags)
 
