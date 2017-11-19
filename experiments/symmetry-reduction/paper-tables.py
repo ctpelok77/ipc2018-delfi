@@ -95,6 +95,7 @@ attributes.extend(extra_attributes)
 attributes.append('translator_time_symmetries0_computing_symmetries')
 attributes.append('translator_time_computing_h2_mutex_groups')
 attributes.append('translator_time_instantiating')
+attributes.append('translator_time_completing_instantiation')
 
 exp.add_report(AbsoluteReport(attributes=attributes,filter_algorithm=[
     'translate',
@@ -108,19 +109,10 @@ exp.add_report(AbsoluteReport(attributes=attributes,filter_algorithm=[
     'translate-reduced-h2mutexes-nogoal',
 ]),name='h2mutexes',outfile=os.path.join(exp.eval_dir, 'h2mutexes.html'))
 
-exp.add_report(
-    ScatterPlotReport(
-        filter_algorithm=[
-            'translate',
-            'translate-reduced-grounding',
-        ],
-        attributes=['translator_time_instantiating'],
-        get_category=lambda run1, run2: run1["domain"],
-    )
-    ,
-    name='grounding-scatter',
-    outfile=os.path.join(exp.eval_dir, 'grounding-scatter.png')
-)
+def large_diff_translator_time_instantiating(run1, run2):
+    if abs(run1.get('translator_time_instantiating', float('inf')) - run2.get('translator_time_instantiating', float('inf'))) < 10:
+        return None
+    return run1['domain']
 
 exp.add_report(
     ScatterPlotReport(
@@ -129,26 +121,17 @@ exp.add_report(
             'translate-reduced-grounding-nogoal',
         ],
         attributes=['translator_time_instantiating'],
-        get_category=lambda run1, run2: run1["domain"],
-    )
-    ,
+        #get_category=large_diff_translator_time_instantiating,
+        format='tex',
+    ),
     name='grounding-nogoal-scatter',
-    outfile=os.path.join(exp.eval_dir, 'grounding-nogoal-scatter.png')
+    outfile=os.path.join(exp.eval_dir, 'grounding-nogoal-scatter')
 )
 
-exp.add_report(
-    ScatterPlotReport(
-        filter_algorithm=[
-            'translate-h2mutexes',
-            'translate-reduced-h2mutexes',
-        ],
-        attributes=['translator_time_computing_h2_mutex_groups'],
-        get_category=lambda run1, run2: run1["domain"],
-    )
-    ,
-    name='h2mutexes-scatter',
-    outfile=os.path.join(exp.eval_dir, 'h2mutexes-scatter.png')
-)
+def large_diff_translator_time_computing_h2_mutex_groups(run1, run2):
+    if abs(run1.get('translator_time_computing_h2_mutex_groups', float('inf')) - run2.get('translator_time_computing_h2_mutex_groups', float('inf'))) < 10:
+        return None
+    return run1['domain']
 
 exp.add_report(
     ScatterPlotReport(
@@ -157,11 +140,11 @@ exp.add_report(
             'translate-reduced-h2mutexes-nogoal',
         ],
         attributes=['translator_time_computing_h2_mutex_groups'],
-        get_category=lambda run1, run2: run1["domain"],
-    )
-    ,
+        #get_category=large_diff_translator_time_computing_h2_mutex_groups,
+        format='tex',
+    ),
     name='h2mutexes-nogoal-scatter',
-    outfile=os.path.join(exp.eval_dir, 'h2mutexes-nogoal-scatter.png')
+    outfile=os.path.join(exp.eval_dir, 'h2mutexes-nogoal-scatter')
 )
 
 exp.run_steps()
