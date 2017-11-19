@@ -190,23 +190,14 @@ def translate(task, to_be_removed_objects = None):
         translate_facts(prog, task, to_be_removed_objects)
         for conditions, effect in normalize.build_exploration_rules(task):
             assert isinstance(conditions, list)
-            new_conditions = []
             if to_be_removed_objects is not None:
+                new_conditions = []
                 for condition in conditions:
-                    skip_cond = False
-                    if to_be_removed_objects is not None:
-                        if does_atom_intersect_objects(condition, to_be_removed_objects):
-                            skip_cond = True
-                    if not skip_cond:
+                    if not does_atom_intersect_objects(condition, to_be_removed_objects):
                         new_conditions.append(condition)
-                #for atom in conditions:
-                    #if does_atom_intersect_objects(atom, to_be_removed_objects):
-                        #skip_rule = True
-                        #break
-            else:
-                new_conditions = conditions
-            if new_conditions:
                 prog.add_rule(Rule(new_conditions, effect))
+            else:
+                prog.add_rule(Rule(conditions, effect))
 
     with timers.timing("Normalizing Datalog program", block=True):
         # Using block=True because normalization can output some messages
