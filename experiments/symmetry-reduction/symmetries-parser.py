@@ -30,6 +30,7 @@ parser.add_pattern('num_expanded_unreachable_pairs', 'Expanded h2 mutex pairs to
 parser.add_pattern('time_symmetries1_symmetry_graph', 'Done creating symmetry graph: (.+)s', required=False, type=float)
 parser.add_pattern('time_symmetries2_bliss', 'Done searching for automorphisms: (.+)s', required=False, type=float)
 parser.add_pattern('time_symmetries3_translate_automorphisms', 'Done translating automorphisms: (.+)s', required=False, type=float)
+parser.add_pattern('time_symmetric_object_sets', 'Time to compute symmetric object sets: (.+)s', required=False, type=float)
 parser.add_pattern('time_bounds_and_subsets', 'Total time to compute bounds and determine subsets of symmetric object sets: (.+)s', required=False, type=float)
 parser.add_pattern('time_grounding_program', 'Time to generate prolog program: (.+)s', required=False, type=float)
 parser.add_pattern('time_grounding_model', 'Time to compute model of prolog program: (.+)s', required=False, type=float)
