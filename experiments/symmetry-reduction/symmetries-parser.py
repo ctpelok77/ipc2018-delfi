@@ -62,7 +62,6 @@ def parse_boolean_flags(content, props):
     simplify_var_removed = False
     simplify_val_removed = False
     reorder_var_removed = False
-    reduction = False
     lines = content.split('\n')
     for line in lines:
         if 'Bliss memory out' in line:
@@ -71,12 +70,13 @@ def parse_boolean_flags(content, props):
         if 'Bliss timeout' in line:
             bliss_timeout = True
 
-        if line == 'Actually can perform a symmetry reduction':
-            reduction = True
-
     props['bliss_out_of_memory'] = bliss_memory_out
     props['bliss_out_of_time'] = bliss_timeout
-    props['performed_reduction'] = reduction
+
+    performed_reduction = False
+    if props.get('num_used_symmetric_object_sets', 0):
+        performed_reduction = True
+    props['performed_reduction'] = performed_reduction
 
 parser.add_function(parse_boolean_flags)
 
