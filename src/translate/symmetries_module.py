@@ -673,6 +673,7 @@ def get_mapped_objects(generator):
 
 
 def compute_symmetric_object_sets(objects, transpositions):
+    timer = timers.Timer()
     symmetric_object_sets = set([frozenset([obj.name]) for obj in objects])
     #print(symmetric_object_sets)
     for transposition in transpositions:
@@ -698,4 +699,5 @@ def compute_symmetric_object_sets(objects, transpositions):
 
         union = set1 | set2
         symmetric_object_sets.add(union)
+    print("Time to compute symmetric object sets: {}s".format(timer.elapsed_time()))
     return symmetric_object_sets
