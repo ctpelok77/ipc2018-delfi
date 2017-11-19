@@ -3,6 +3,8 @@
 from collections import deque, defaultdict
 from itertools import combinations
 
+import sys
+
 import pddl
 import timers
 
@@ -226,6 +228,7 @@ def compute_reachability_program(atoms, actions, axioms, only_positive_literals)
     for ax in axioms:
         handle_axiom(pairs, ax, pair_to_rules, rules, only_positive_literals)
     print("Time to compute h2 mutexes reachability program: {}s".format(timer.elapsed_time()))
+    sys.stdout.flush()
     return pairs, pair_to_rules, rules
 
 
@@ -279,6 +282,7 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params,
                     open_list.append(new_pair)
 
     print("Found {} reachable pairs of literals".format(len(closed)))
+    sys.stdout.flush()
     if DEBUG:
         for pair in closed:
             for lit in pair:
@@ -297,4 +301,5 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params,
             print
 
     print("Time to compute model of reachability program: {}s".format(timer.elapsed_time()))
+    sys.stdout.flush()
     return mutex_pairs

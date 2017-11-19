@@ -700,4 +700,5 @@ def compute_symmetric_object_sets(objects, transpositions):
         union = set1 | set2
         symmetric_object_sets.add(union)
     print("Time to compute symmetric object sets: {}s".format(timer.elapsed_time()))
+    sys.stdout.flush()
     return symmetric_object_sets

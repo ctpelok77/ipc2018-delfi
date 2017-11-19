@@ -2,6 +2,8 @@
 
 from collections import defaultdict, deque
 
+import sys
+
 import build_model
 import itertools
 import normalize
@@ -237,10 +239,9 @@ def compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_se
                 result.append((symm_obj_set, to_be_preserved_objects))
             else:
                 print("Not large enough")
-        if result:
-            print("Actually can perform a symmetry reduction")
         print("Total time to compute bounds and determine subsets of symmetric object sets: {}s".format(bounds_timer.elapsed_time()))
-    print("Number of symmetric object sets used for symmetry reduction: {}".format(len(result)))
+        print("Number of symmetric object sets used for symmetry reduction: {}".format(len(result)))
+        sys.stdout.flush()
     return result
 
 

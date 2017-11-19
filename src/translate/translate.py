@@ -654,6 +654,7 @@ def pddl_to_sas(task):
 
             if transpositions:
                 print("Number of transpositions: {}".format(len(transpositions)))
+                sys.stdout.flush()
                 symmetric_object_sets = symmetries_module.compute_symmetric_object_sets(task.objects, transpositions)
                 print("Symmetric object sets:")
                 for obj_set in symmetric_object_sets:
@@ -714,6 +715,7 @@ def pddl_to_sas(task):
                 reduction.expand(mutex_pairs, symm_obj_set, contains_pairs=True)
             print("Expanded h2 mutex pairs to {}".format(len(mutex_pairs)))
             print("Time to expand h2 mutexes: {}s".format(timer.elapsed_time()))
+            sys.stdout.flush()
         if options.assert_equal_h2_mutexes:
             assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes and options.expand_reduced_h2_mutexes
             print("Grounding again to assert equal h2 mutex pairs...")
