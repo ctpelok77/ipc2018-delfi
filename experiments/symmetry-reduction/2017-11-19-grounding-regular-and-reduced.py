@@ -14,7 +14,7 @@ except ImportError:
     print 'matplotlib not availabe, scatter plots not available'
     matplotlib = False
 
-REVISION = '9c5b9d978a26'
+REVISION = '818d58790dc5'
 
 def main(revisions=None):
     benchmarks_dir=os.path.expanduser('~/repos/downward/benchmarks')
@@ -134,7 +134,7 @@ def main(revisions=None):
     attributes = ['error', 'run_dir'] # exp.DEFAULT_TABLE_ATTRIBUTES
     attributes.extend(extra_attributes)
     attributes.append('translator_time_symmetries0_computing_symmetries')
-    attributes.append('translator_time_instantiating')
+    attributes.append('translator_time_computing_h2_mutex_groups')
     attributes.append('translator_time_instantiating')
 
     exp.add_fetcher(name='parse-memory-error', parsers=['translator-memory-error-parser.py'])
