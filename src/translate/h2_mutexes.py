@@ -10,34 +10,34 @@ import timers
 
 DEBUG = False
 
-def compute_all_pairs(elements):
-    """ Return a list of unordered pairs of elements from *elements*, including
-    'singleton pairs'."""
-    pairs = [frozenset([e]) for e in elements]
-    for pair in combinations(elements, 2):
+
+def compute_all_pairs2(element_dict, only_positive_literals=False):
+    if only_positive_literals:
+        elements = dict(e for e in element_dict.items() if e[1] == True)
+    else:
+        elements = element_dict
+    pairs = [frozenset([e]) for e in elements.items()]
+    for pair in combinations(elements.items(), 2):
         pairs.append(frozenset(pair))
     return pairs
 
-
-def extract_literals_from_condition(condition, only_positive_literals):
-    if condition is None:
-        return []
-    condition_literals = []
-    if isinstance(condition, list):
+def extract_literals_from_condition2(condition):
+    result = dict()
+    if condition is None: # eg empty effect condition
+        return result
+    if isinstance(condition, list): # e.g. effect condition
         for cond in condition:
-            condition_literals.extend(extract_literals_from_condition(cond,
-                only_positive_literals))
-    elif isinstance(condition, pddl.Conjunction):
-        for literal in condition.parts:
-            if not only_positive_literals or not literal.negated:
-                condition_literals.append(literal)
+            result.update(extract_literals_from_condition2(cond))
     elif isinstance(condition, pddl.Literal):
-        if not only_positive_literals or not condition.negated:
-            condition_literals.append(condition)
+        if condition.negated:
+            result[condition.negate()] = False
+        else:
+            result[condition] = True
     else:
         print(condition)
         assert False
-    return condition_literals
+    return result
+
 
 
 def add_rule(pair_to_rules, pair_index, rules, condition_pairs):
@@ -57,110 +57,160 @@ def handle_axiom(pairs, axiom, pair_to_rules, rules, only_positive_literals):
             literal = iter(pair).next()
             if literal == axiom.effect: # 2) axiom from which literal can be derived
                 condition_literals = \
-                set(extract_literals_from_condition(axiom.condition,
-                                                    only_positive_literals))
-                condition_pairs = compute_all_pairs(condition_literals)
+                    extract_literals_from_condition2(axiom.condition)
+                condition_pairs = compute_all_pairs2(condition_literals,
+                                                     only_positive_literals)
                 add_rule(pair_to_rules, pair_index, rules, condition_pairs)
         else:
             literals = list(pair)
-            literal1 = literals[0]
+            literal1 = literals[0] # (atom, True) or (atom, False)
             literal2 = literals[1]
-            if literal1 == axiom.effect or literal2 == axiom.effect: #  3) axiom from which literal1 or literal2 can be derived
-                condition_literals = set(extract_literals_from_condition(axiom.condition,only_positive_literals))
+            if ((literal1[1] and literal1[0] == axiom.effect) or 
+                (literal2[1] and literal2[0] == axiom.effect)): #  3) axiom from which literal1 or literal2 can be derived
+                condition_literals = extract_literals_from_condition2(axiom.condition)
                 # Depending on which literal is made true by the axiom, add the other to condition_literals.
-                if literal1 == axiom.effect:
-                    condition_literals.add(literal2)
+                if (literal1[1] and literal1[0] == axiom.effect):
+                    if (literal1[0] in condition_literals and 
+                        condition_literals[literal1[0]] != literal1[1]):
+                            continue
+                    condition_literals[literal1[0]] = literal1[1]
                 else:
-                    condition_literals.add(literal1)
-                condition_pairs = compute_all_pairs(condition_literals)
+                    if (literal2[0] in condition_literals and 
+                        condition_literals[literal2[0]] != literal2[1]):
+                            continue
+                    condition_literals[literal2[0]] = literal2[1]
+                condition_pairs = compute_all_pairs2(condition_literals,
+                                                     only_positive_literals)
                 add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
 
+def is_consistent(literal_dict1, literal_dict2):
+    # assume that each dict is consistent
+    for (lit, val) in literal_dict1.items():
+        if lit in literal_dict2 and literal_dict2[lit] != val:
+            return False
+    for (lit, val) in literal_dict2.items():
+        if lit in literal_dict1 and literal_dict1[lit] != val:
+            return False
+    return True
+
 def handle_operator_for_literal(literal, pair_to_rules, pair_index,
-    rules, conditions_by_effect, pre_set):
+    rules, conditions_by_effect, pre_set, only_positive_literals):
 
     # Since l = l', there is no second effect phi' -> l', since l = l'.
-    atom = literal
-    negative = False
-    if literal.negated:
-        negative = True
-        atom = literal.negate()
+    atom = literal[0]
+    negative = not literal[1]
 
     for condition in conditions_by_effect[(atom,  not negative)]:
-        relevant_literals = pre_set | condition
+        # TODO the following four lines can be implemented more efficiently
+        # together
+        if not is_consistent(pre_set, condition):
+            continue
+        relevant_literals = pre_set.copy()
+        relevant_literals.update(condition)
 
         if negative:
             skip_rule = False
             for psi in conditions_by_effect[(atom, True)]:
-                if psi <= relevant_literals:
+                subset = True
+                for atom, negated in psi.items():
+                    if (not atom in relevant_literals or
+                        relevant_literals[atom] != negated):
+                        subset = False
+                        break
+                if subset:
                     skip_rule = True
                     break
             if skip_rule:
                 continue
 
-        condition_pairs = compute_all_pairs(relevant_literals)
+        condition_pairs = compute_all_pairs2(relevant_literals,
+                                             only_positive_literals)
         add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
 def handle_operator_for_pair_single_effect(literal, preserve_literal, pair_to_rules, pair_index,
-    rules, conditions_by_effect, pre_set):
+    rules, conditions_by_effect, pre_set, only_positive_literals):
 
-    atom = literal
-    negative = False
-    if literal.negated:
-        negative = True
-        atom = literal.negate()
+    atom = literal[0]
+    negative = not literal[1]
 
-    preserve_atom = preserve_literal
-    preserve_negative = False
-    if preserve_literal.negated:
-        preserve_negative = True
-        preserve_atom = preserve_literal.negate()
+    preserve_atom = preserve_literal[0]
+    preserve_negative = not preserve_literal[1]
 
     for phi in conditions_by_effect[(atom, not negative)]:
-        relevant_literals = pre_set | phi
+        if not is_consistent(pre_set, phi):
+            continue
+        relevant_literals = pre_set.copy()
+        relevant_literals.update(phi)
+
         skip_rule = False
         for psi in conditions_by_effect[(preserve_atom, preserve_negative)]:
-            if psi <= relevant_literals:
+            subset = True
+            for atom, negated in psi.items():
+                if (not atom in relevant_literals or
+                    relevant_literals[atom] != negated):
+                    subset = False
+                    break
+            if subset:
                 skip_rule = True
                 break
         if skip_rule:
             continue
 
-        relevant_literals.add(preserve_literal)
+        if (preserve_atom in relevant_literals and 
+            relevant_literals[preserve_atom] == preserve_negative):
+            # pre \land phi \land l' insconsistent
+            continue
+        relevant_literals[preserve_atom] = preserve_literal[1]
         if negative:
             for psi in conditions_by_effect[(atom, True)]:
-                if psi <= relevant_literals:
+                subset = True
+                for atom, negated in psi.items():
+                    if (not atom in relevant_literals or
+                        relevant_literals[atom] != negated):
+                        subset = False
+                        break
+                if subset:
                     skip_rule = True
                     break
             if skip_rule:
                 continue
 
-        condition_pairs = compute_all_pairs(relevant_literals)
+        condition_pairs = compute_all_pairs2(relevant_literals,
+                          only_positive_literals)
         add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
 
 def handle_operator_for_pair(literal1, literal2, pair_to_rules, pair_index,
-    rules, conditions_by_effect, pre_set):
+    rules, conditions_by_effect, pre_set, only_positive_literals):
 
     # first case: both possibly made true by operator
-    atom1, atom2 = literal1, literal2
-    negative1, negative2 = False, False
-    if literal1.negated:
-        negative1 = True
-        atom1 = literal1.negate()
-    if literal2.negated:
-        negative2 = True
-        atom2 = literal2.negate()
+    atom1, atom2 = literal1[0], literal2[0]
+    negative1, negative2 = not literal1[1], not literal2[1]
 
     for phi1 in conditions_by_effect[(atom1, not negative1)]:
-        for phi2 in conditions_by_effect[(atom2, not negative2)]:
+        if not is_consistent(pre_set, phi1):
+            continue
+        tmp_relevant_literals = pre_set.copy()
+        tmp_relevant_literals.update(phi1)
 
-            relevant_literals = pre_set | phi1 | phi2
+        for phi2 in conditions_by_effect[(atom2, not negative2)]:
+        
+            if not is_consistent(tmp_relevant_literals, phi2):
+                continue
+            relevant_literals = tmp_relevant_literals.copy()
+            relevant_literals.update(phi2) # pre \cup phi1 \cup phi2
 
             if negative1:
                 skip_rule = False
                 for psi in conditions_by_effect[(atom1, True)]:
-                    if psi <= relevant_literals:
+                    subset = True
+                    for atom, negated in psi.items():
+                        if (not atom in relevant_literals or
+                            relevant_literals[atom] != negated):
+                            subset = False
+                            break
+                    if subset:
                         skip_rule = True
                         break
                 if skip_rule:
@@ -168,52 +218,62 @@ def handle_operator_for_pair(literal1, literal2, pair_to_rules, pair_index,
             if negative2:
                 skip_rule = False
                 for psi in conditions_by_effect[(atom2, True)]:
-                    if psi <= relevant_literals:
+                    subset = True
+                    for atom, negated in psi.items():
+                        if (not atom in relevant_literals or
+                            relevant_literals[atom] != negated):
+                            subset = False
+                            break
+                    if subset:
                         skip_rule = True
                         break
                 if skip_rule:
                     continue
 
-            condition_pairs = compute_all_pairs(relevant_literals)
+            condition_pairs = compute_all_pairs2(relevant_literals,
+                only_positive_literals)
             add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
     # second case: one possibly made true whereas the other is preserved
     handle_operator_for_pair_single_effect(literal1, literal2, pair_to_rules,
-        pair_index, rules, conditions_by_effect, pre_set)
+        pair_index, rules, conditions_by_effect, pre_set, only_positive_literals)
     handle_operator_for_pair_single_effect(literal2, literal1, pair_to_rules,
-        pair_index, rules, conditions_by_effect, pre_set)
+        pair_index, rules, conditions_by_effect, pre_set, only_positive_literals)
 
 
 
 def handle_operator(pairs, operator, pair_to_rules, rules, only_positive_literals):
-    conditions_by_effect = defaultdict(set)
+    conditions_by_effect = defaultdict(list)
     for cond, eff in operator.add_effects:
-        condition_literals = extract_literals_from_condition(cond, only_positive_literals)
-        conditions_by_effect[(eff, True)].add(frozenset(condition_literals))
+        condition_literals = extract_literals_from_condition2(cond)
+        conditions_by_effect[(eff, True)].append(condition_literals)
     for cond, eff in operator.del_effects:
-        condition_literals = extract_literals_from_condition(cond, only_positive_literals)
-        conditions_by_effect[(eff.negate(), False)].add(frozenset(condition_literals))
-    pre_set = set(extract_literals_from_condition(operator.precondition, only_positive_literals))
+        condition_literals = extract_literals_from_condition2(cond)
+        conditions_by_effect[(eff.negate(), False)].append(condition_literals)
+    pre_set = extract_literals_from_condition2(operator.precondition)
 
     for pair_index, pair in enumerate(pairs):
         if len(pair) == 1:
             handle_operator_for_literal(iter(pair).next(), pair_to_rules,
-                pair_index, rules, conditions_by_effect, pre_set)
+                pair_index, rules, conditions_by_effect, pre_set,
+                only_positive_literals)
         else:
             literals = list(pair)
             handle_operator_for_pair(literals[0], literals[1], pair_to_rules,
-                pair_index, rules, conditions_by_effect, pre_set)
+                pair_index, rules, conditions_by_effect, pre_set,
+                only_positive_literals)
 
 
 def compute_reachability_program(atoms, actions, axioms, only_positive_literals):
     timer = timers.Timer()
     #print(atoms)
-    literals = list(atoms)
+    literals = dict((a,True) for a in atoms)
     if not only_positive_literals:
         for atom in atoms:
-            literals.append(atom.negate())
+            literals[atom] = False
     # pair contains both "singleton pairs" and "real pairs".
-    pairs = compute_all_pairs(literals)
+    pairs = compute_all_pairs2(literals, only_positive_literals)
+    # TODO only positive literals should not make a difference here
 #    print(pairs)
 
     rules = []
@@ -251,13 +311,10 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params,
     closed = set()
     init = set(task.init)
     init &= atoms
-    initially_true_literals = []
+    initially_true_literals = dict()
     for atom in atoms:
-        if atom in init:
-            initially_true_literals.append(atom)
-        elif not only_positive_literals:
-            initially_true_literals.append(atom.negate())
-    initial_pairs = compute_all_pairs(initially_true_literals)
+        initially_true_literals[atom] = (atom in init)
+    initial_pairs = compute_all_pairs2(initially_true_literals)
     for pair in initial_pairs:
         assert pair not in closed
         open_list.append(pair)
