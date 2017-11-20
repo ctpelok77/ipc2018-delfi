@@ -134,7 +134,7 @@ class DomainsWithLargeDifferencesReport(PlanningReport):
                 for attribute, threshold in self.attribute_threshold_pairs:
                     val1 = algo_domain_problem_algorithm[algo1][domain][problem][attribute]
                     val2 = algo_domain_problem_algorithm[algo2][domain][problem][attribute]
-                    if val1 is not None and val2 is not None and abs(val1 - val2) > threshold:
+                    if val1 is not None and val2 is not None and (val1 >= threshold * val2 or val2 >= threshold * val1):
                         attribute_to_domains_with_large_diff[attribute].add(domain)
 
         lines = []
@@ -149,63 +149,130 @@ class DomainsWithLargeDifferencesReport(PlanningReport):
 
 exp.add_report(
     DomainsWithLargeDifferencesReport(
-        [('translator_time_instantiating', 3)],
+        [('translator_time_instantiating', 10)],
         filter_algorithm=[
             'translate',
             'translate-reduced-grounding--noexpandnogoal',
         ],
     ),
-    name='domains-with-large-differences-time-grounding',
-    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-grounding'),
+    name='domains-with-large-differences-time-grounding-reduced',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-grounding-reduced'),
 )
 
 exp.add_report(
     DomainsWithLargeDifferencesReport(
-        [('translator_time_computing_h2_mutex_groups', 120)],
+        [('translator_time_instantiating', 10)],
+        filter_algorithm=[
+            'translate',
+            'translate-reduced-grounding-nogoal',
+        ],
+    ),
+    name='domains-with-large-differences-time-grounding-reducedexpand',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-grounding-reducedexpand'),
+)
+
+exp.add_report(
+    DomainsWithLargeDifferencesReport(
+        [('translator_time_computing_h2_mutex_groups', 10)],
+        filter_algorithm=[
+            'translate-h2mutexes',
+            'translate-reduced-h2mutexes-nogoal',
+        ],
+    ),
+    name='domains-with-large-differences-time-mutexes-reduced',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexes-reduced'),
+)
+
+exp.add_report(
+    DomainsWithLargeDifferencesReport(
+        [('translator_time_computing_h2_mutex_groups', 10)],
         filter_algorithm=[
             'translate-h2mutexes',
             'translate-reduced-h2mutexes--noexpand-nogoal',
         ],
     ),
-    name='domains-with-large-differences-time-mutexes',
-    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexes'),
+    name='domains-with-large-differences-time-mutexes-reducedexpand',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexes-reducedexpand'),
 )
 
 ################### regular reports ########################################
 
 exp.add_report(AbsoluteReport(attributes=attributes,filter_algorithm=[
     'translate',
-    'translate-reduced-grounding',
-    'translate-reduced-grounding-noexpand',
+    #'translate-reduced-grounding',
+    #'translate-reduced-grounding-noexpand',
     'translate-reduced-grounding-nogoal',
     'translate-reduced-grounding--noexpandnogoal',
 ]),name='grounding',outfile=os.path.join(exp.eval_dir, '2017-11-19-grounding.html'))
 
 exp.add_report(AbsoluteReport(attributes=attributes,filter_algorithm=[
     'translate-h2mutexes',
-    'translate-reduced-h2mutexes',
-    'translate-reduced-h2mutexes-noexpand',
+    #'translate-reduced-h2mutexes',
+    #'translate-reduced-h2mutexes-noexpand',
     'translate-reduced-h2mutexes-nogoal',
     'translate-reduced-h2mutexes--noexpand-nogoal',
 ]),name='h2mutexes',outfile=os.path.join(exp.eval_dir, '2017-11-19-h2mutexes.html'))
 
 ################### scatter plots ########################################
 
-# generated with above DomainsWithLargeDifferencesReport
-domains_with_diff_of_translator_time_instantiating_larger_3 = [
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_grounding_reduced_larger_10 = [
+  'psr-small',
   'satellite',
-  'pipesworld-tankage',
-  'trucks',
-  'openstacks-strips',
-  'logistics98',
-  'learning-elevators',
-  'tpp',
-  'psr-large',
+  'childsnack-sat14-strips',
+  'blocks',
+  'gripper',
+  'miconic-simpleadl',
+  'movie',
+  'visitall-opt11-strips',
+  'childsnack-opt14-strips',
+  'miconic',
   'learning-spanner',
 ]
 
-def large_diff_translator_time_instantiating(run1, run2):
-    if run1['domain'] in domains_with_diff_of_translator_time_instantiating_larger_3:
+def domain_category_for_grounding_reduced(run1, run2):
+    if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_grounding_reduced_larger_10:
+        return run1['domain']
+    return None
+
+exp.add_report(
+    ScatterPlotReport(
+        filter_algorithm=[
+            'translate',
+            'translate-reduced-grounding--noexpandnogoal',
+        ],
+        attributes=['translator_time_instantiating'],
+        get_category=domain_category_for_grounding_reduced,
+        format='tex',
+    ),
+    name='scatter-grounding-time-regular-vs-reduced',
+    outfile=os.path.join(exp.eval_dir, 'scatter-grounding-time-regular-vs-reduced')
+)
+
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_grounding_reducedexpand_larger_10 = [
+  'psr-small',
+  'satellite',
+  'childsnack-sat14-strips',
+  'gripper',
+  'sokoban-sat11-strips',
+  'miconic-simpleadl',
+  'movie',
+  'sokoban-opt11-strips',
+  'visitall-opt11-strips',
+  'barman-sat14-strips',
+  'childsnack-opt14-strips',
+  'logistics98',
+  'miconic',
+  'learning-spanner',
+  'sokoban-sat08-strips',
+  'sokoban-opt08-strips',
+]
+
+def domain_category_for_grounding_reducedexpand(run1, run2):
+    if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_grounding_reducedexpand_larger_10:
         return run1['domain']
     return None
 
@@ -216,46 +283,64 @@ exp.add_report(
             'translate-reduced-grounding-nogoal',
         ],
         attributes=['translator_time_instantiating'],
-        get_category=large_diff_translator_time_instantiating,
+        get_category=domain_category_for_grounding_reducedexpand,
         format='tex',
     ),
     name='scatter-grounding-time-regular-vs-reducedandexpand',
     outfile=os.path.join(exp.eval_dir, 'scatter-grounding-time-regular-vs-reducedandexpand')
 )
 
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_mutexes_reduced_larger_10 = [
+  'satellite',
+  'childsnack-sat14-strips',
+  'gripper',
+  'miconic-simpleadl',
+  'visitall-opt11-strips',
+  'barman-sat11-strips',
+  'barman-sat14-strips',
+  'childsnack-opt14-strips',
+  'tpp',
+  'miconic',
+]
+
+def domain_category_for_mutexes_reduced(run1, run2):
+    if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexes_reduced_larger_10:
+        return run1['domain']
+    return None
+
 exp.add_report(
     ScatterPlotReport(
         filter_algorithm=[
-            'translate',
-            'translate-reduced-grounding--noexpandnogoal',
+            'translate-h2mutexes',
+            'translate-reduced-h2mutexes--noexpand-nogoal',
         ],
-        attributes=['translator_time_instantiating'],
-        get_category=large_diff_translator_time_instantiating,
+        attributes=['translator_time_computing_h2_mutex_groups'],
+        get_category=domain_category_for_mutexes_reduced,
         format='tex',
     ),
-    name='scatter-grounding-time-regular-vs-reduced',
-    outfile=os.path.join(exp.eval_dir, 'scatter-grounding-time-regular-vs-reduced')
+    name='scatter-h2mutexes-time-regular-vs-reduced',
+    outfile=os.path.join(exp.eval_dir, 'scatter-h2mutexes-time-regular-vs-reduced')
 )
 
 # generated with above DomainsWithLargeDifferencesReport, ignoring those cases
 # where one algo did not finish the computation.
-domains_with_diff_of_translator_time_computing_h2_mutex_groups_larger_120 = [
-  'woodworking-sat08-strips',
+domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10 = [
   'satellite',
-  'parcprinter-sat11-strips',
-  'trucks',
-  'childsnack-opt14-strips',
+  'childsnack-sat14-strips',
+  'gripper',
+  'miconic-simpleadl',
+  'visitall-opt11-strips',
   'barman-sat11-strips',
   'barman-sat14-strips',
-  'parcprinter-08-strips',
-  'childsnack-sat14-strips',
-  'logistics98',
-  'woodworking-opt08-strips',
-  'nomystery-sat11-strips',
+  'childsnack-opt14-strips',
+  'tpp',
+  'miconic',
 ]
 
-def large_diff_translator_time_computing_h2_mutex_groups(run1, run2):
-    if run1['domain'] in domains_with_diff_of_translator_time_computing_h2_mutex_groups_larger_120:
+def domain_category_for_mutexes_reducedexpand(run1, run2):
+    if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10:
         return run1['domain']
     return None
 
@@ -266,25 +351,11 @@ exp.add_report(
             'translate-reduced-h2mutexes-nogoal',
         ],
         attributes=['translator_time_computing_h2_mutex_groups'],
-        get_category=large_diff_translator_time_computing_h2_mutex_groups,
+        get_category=domain_category_for_mutexes_reducedexpand,
         format='tex',
     ),
     name='scatter-h2mutexes-time-regular-vs-reducedandexpand',
     outfile=os.path.join(exp.eval_dir, 'scatter-h2mutexes-time-regular-vs-reducedandexpand')
-)
-
-exp.add_report(
-    ScatterPlotReport(
-        filter_algorithm=[
-            'translate-h2mutexes',
-            'translate-reduced-h2mutexes--noexpand-nogoal',
-        ],
-        attributes=['translator_time_computing_h2_mutex_groups'],
-        get_category=large_diff_translator_time_computing_h2_mutex_groups,
-        format='tex',
-    ),
-    name='scatter-h2mutexes-time-regular-vs-reduced',
-    outfile=os.path.join(exp.eval_dir, 'scatter-h2mutexes-time-regular-vs-reduced')
 )
 
 exp.run_steps()
