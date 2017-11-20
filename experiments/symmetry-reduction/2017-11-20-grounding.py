@@ -62,9 +62,9 @@ def main(revisions=None):
 
     configs = {
         IssueConfig('translate', [], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-grounding', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        #IssueConfig('translate-reduced-grounding', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-grounding-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-grounding-expand', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--expand-reduced-task'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        #IssueConfig('translate-reduced-grounding-expand', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--expand-reduced-task'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-grounding-expand-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--expand-reduced-task', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
@@ -144,9 +144,9 @@ def main(revisions=None):
 
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
         '{}-translate'.format(REVISION),
-        '{}-translate-reduced-grounding'.format(REVISION),
+        #'{}-translate-reduced-grounding'.format(REVISION),
         '{}-translate-reduced-grounding-nogoal'.format(REVISION),
-        '{}-translate-reduced-grounding-expand'.format(REVISION),
+        #'{}-translate-reduced-grounding-expand'.format(REVISION),
         '{}-translate-reduced-grounding-expand-nogoal'.format(REVISION),
     ])
 

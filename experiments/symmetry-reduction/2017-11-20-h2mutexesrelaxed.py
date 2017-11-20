@@ -62,9 +62,9 @@ def main(revisions=None):
 
     configs = {
         IssueConfig('translate-h2mutexesrelaxed', ['--translate-options', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-h2mutexesrelaxed', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        #IssueConfig('translate-reduced-h2mutexesrelaxed', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-h2mutexesrelaxed-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--only-positive-literals', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-h2mutexesrelaxed-expand', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--only-positive-literals', '--expand-reduced-h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        #IssueConfig('translate-reduced-h2mutexesrelaxed-expand', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--only-positive-literals', '--expand-reduced-h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-h2mutexesrelaxed-expand-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--only-positive-literals', '--expand-reduced-h2-mutexes', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
@@ -156,9 +156,9 @@ def main(revisions=None):
 
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
         '{}-translate-h2mutexesrelaxed'.format(REVISION),
-        '{}-translate-reduced-h2mutexesrelaxed'.format(REVISION),
+        #'{}-translate-reduced-h2mutexesrelaxed'.format(REVISION),
         '{}-translate-reduced-h2mutexesrelaxed-nogoal'.format(REVISION),
-        '{}-translate-reduced-h2mutexesrelaxed-expand'.format(REVISION),
+        #'{}-translate-reduced-h2mutexesrelaxed-expand'.format(REVISION),
         '{}-translate-reduced-h2mutexesrelaxed-expand-nogoal'.format(REVISION),
     ])
 

@@ -62,9 +62,9 @@ def main(revisions=None):
 
     configs = {
         IssueConfig('translate-h2mutexes', ['--translate-options', '--h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-h2mutexes', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        #IssueConfig('translate-reduced-h2mutexes', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-h2mutexes-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        IssueConfig('translate-reduced-h2mutexes-expand', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--expand-reduced-h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        #IssueConfig('translate-reduced-h2mutexes-expand', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--expand-reduced-h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-h2mutexes-expand-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--expand-reduced-h2-mutexes', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
@@ -156,9 +156,9 @@ def main(revisions=None):
 
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
         '{}-translate-h2mutexes'.format(REVISION),
-        '{}-translate-reduced-h2mutexes'.format(REVISION),
+        #'{}-translate-reduced-h2mutexes'.format(REVISION),
         '{}-translate-reduced-h2mutexes-nogoal'.format(REVISION),
-        '{}-translate-reduced-h2mutexes-expand'.format(REVISION),
+        #'{}-translate-reduced-h2mutexes-expand'.format(REVISION),
         '{}-translate-reduced-h2mutexes-expand-nogoal'.format(REVISION),
     ])
 
