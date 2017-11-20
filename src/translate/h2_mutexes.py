@@ -116,6 +116,15 @@ def is_subset(literal_dict1, literal_dict2):
     return True
 
 
+def effect_makes_opposite_literal_true(literal, conditions_by_effect, relevant_literals):
+    # Go over the effects that make the negated literal true and check
+    # if any of the effects can trigger; if so, return true.
+    for psi in conditions_by_effect[(get_atom(literal), not is_positive(literal))]:
+        if is_subset(psi, relevant_literals):
+            return True
+    return False
+
+
 def handle_operator_for_literal(literal, pair_to_rules, pair_index,
     rules, conditions_by_effect, pre_literals, only_positive_literals):
     # Since l = l', there is no second effect phi' -> l', since l = l'.
@@ -126,22 +135,17 @@ def handle_operator_for_literal(literal, pair_to_rules, pair_index,
             continue
 
         if not is_positive(literal):
-            skip_rule = False
-            # go over the add effects that add the positive literal and check
-            # if the add effect can trigger; if so, skip the rule
-            for psi in conditions_by_effect[(get_atom(literal), True)]:
-                if is_subset(psi, relevant_literals):
-                    skip_rule = True
-                    break
-            if skip_rule:
+            if effect_makes_opposite_literal_true(literal, conditions_by_effect, relevant_literals):
+                # ~literal can become true, skip rule
                 continue
 
         condition_pairs = compute_all_pairs(relevant_literals,
                                             only_positive_literals)
         add_rule(pair_to_rules, pair_index, rules, condition_pairs)
 
-def handle_operator_for_pair_single_effect(literal, preserve_literal, pair_to_rules, pair_index,
-    rules, conditions_by_effect, pre_literals, only_positive_literals):
+
+def handle_operator_for_pair_single_effect(literal, preserve_literal, pair_to_rules,
+    pair_index, rules, conditions_by_effect, pre_literals, only_positive_literals):
 
     for phi in conditions_by_effect[literal]:
         relevant_literals = combine_dicts_if_consistent(pre_literals, phi)
@@ -149,31 +153,19 @@ def handle_operator_for_pair_single_effect(literal, preserve_literal, pair_to_ru
             # pre \land phi is inconsistent, skip rule
             continue
 
-        skip_rule = False
-        # go over the effects that make the negated literal true and check
-        # if the effect can trigger; if so, skip the rule
-        for psi in conditions_by_effect[(get_atom(preserve_literal), not is_positive(preserve_literal))]:
-            subset = True
-            if is_subset(psi, relevant_literals):
-                skip_rule = True
-                break
-        if skip_rule:
+        if effect_makes_opposite_literal_true(preserve_literal, conditions_by_effect, relevant_literals):
+            # ~preserve_literal can become true, skip rule
             continue
 
         if (get_atom(preserve_literal) in relevant_literals and
             relevant_literals[get_atom(preserve_literal)] != is_positive(preserve_literal)):
-            # pre \land phi \land l' is inconsistent
+            # pre \land phi \land l' is inconsistent, skip rule
             continue
         relevant_literals[get_atom(preserve_literal)] = is_positive(preserve_literal)
 
         if not is_positive(literal):
-            # go over the add effects that add the positive literal and check
-            # if the add effect can trigger; if so, skip the rule
-            for psi in conditions_by_effect[(get_atom(literal), True)]:
-                if is_subset(psi, relevant_literals):
-                    skip_rule = True
-                    break
-            if skip_rule:
+            if effect_makes_opposite_literal_true(literal, conditions_by_effect, relevant_literals):
+                # ~literal can become true, skip rule
                 continue
 
         condition_pairs = compute_all_pairs(relevant_literals,
@@ -183,7 +175,6 @@ def handle_operator_for_pair_single_effect(literal, preserve_literal, pair_to_ru
 
 def handle_operator_for_pair(literal1, literal2, pair_to_rules, pair_index,
     rules, conditions_by_effect, pre_literals, only_positive_literals):
-
     # first case: both possibly made true by operator
     for phi1 in conditions_by_effect[literal1]:
         tmp_relevant_literals = combine_dicts_if_consistent(pre_literals, phi1)
@@ -198,21 +189,13 @@ def handle_operator_for_pair(literal1, literal2, pair_to_rules, pair_index,
                 continue
 
             if not is_positive(literal1):
-                skip_rule = False
-                for psi in conditions_by_effect[(get_atom(literal1), True)]:
-                    if is_subset(psi, relevant_literals):
-                        skip_rule = True
-                        break
-                if skip_rule:
+                if effect_makes_opposite_literal_true(literal1, conditions_by_effect, relevant_literals):
+                    # ~literal1 can become true, skip rule
                     continue
 
             if not is_positive(literal2):
-                skip_rule = False
-                for psi in conditions_by_effect[(get_atom(literal2), True)]:
-                    if is_subset(psi, relevant_literals):
-                        skip_rule = True
-                        break
-                if skip_rule:
+                if effect_makes_opposite_literal_true(literal2, conditions_by_effect, relevant_literals):
+                    # ~literal2 can become true, skip rule
                     continue
 
             condition_pairs = compute_all_pairs(relevant_literals,
@@ -224,7 +207,6 @@ def handle_operator_for_pair(literal1, literal2, pair_to_rules, pair_index,
         pair_index, rules, conditions_by_effect, pre_literals, only_positive_literals)
     handle_operator_for_pair_single_effect(literal2, literal1, pair_to_rules,
         pair_index, rules, conditions_by_effect, pre_literals, only_positive_literals)
-
 
 
 def handle_operator(pairs, operator, pair_to_rules, rules, only_positive_literals):
