@@ -319,7 +319,13 @@ def compute_mutex_pairs(task, atoms, actions, axioms, reachable_action_params,
     mutex_pairs = []
     for pair in pairs:
         if pair not in closed:
-            mutex_pairs.append(pair)
+            new_pair = []
+            for literal in pair:
+                if is_positive(literal):
+                    new_pair.append(get_atom(literal))
+                else:
+                    new_pair.append(get_atom(literal).negate())
+            mutex_pairs.append(new_pair)
     print("Found {} unreachable pairs of literals".format(len(mutex_pairs)))
     if DEBUG:
         for pair in mutex_pairs:
