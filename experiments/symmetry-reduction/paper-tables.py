@@ -16,7 +16,7 @@ from lab.reports import Attribute, geometric_mean
 
 exp = FastDownwardExperiment()
 
-REVISION = '818d58790dc5'
+REVISION = '212720d86b23'
 
 def rename_revision(run):
     algo = run['algorithm']
@@ -24,10 +24,9 @@ def rename_revision(run):
     run['algorithm'] = algo
     return run
 
-exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-19-grounding-regular-and-reduced-eval'),filter=[rename_revision])
-exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-19-grounding-reduced-noexpand-eval'),filter=[rename_revision],merge=True)
-exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-19-h2mutexes-regular-and-reduced-eval'),filter=[rename_revision],merge=True)
-exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-19-h2mutexes-reduced-noexpand-eval'),filter=[rename_revision],merge=True)
+exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-20-grounding-eval'),filter=[rename_revision])
+exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-20-h2mutexesrelaxed-eval'),filter=[rename_revision],merge=True)
+exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-20-h2mutexes-eval'),filter=[rename_revision],merge=True)
 
 generator_count_lifted = Attribute('generator_count_lifted', absolute=True, min_wins=False)
 generator_orders_lifted = Attribute('generator_orders_lifted', absolute=True)
@@ -158,7 +157,7 @@ exp.add_report(
         [('translator_time_instantiating', 10)],
         filter_algorithm=[
             'translate',
-            'translate-reduced-grounding--noexpandnogoal',
+            'translate-reduced-grounding-nogoal',
         ],
     ),
     name='domains-with-large-differences-time-grounding-reduced',
@@ -170,11 +169,35 @@ exp.add_report(
         [('translator_time_instantiating', 10)],
         filter_algorithm=[
             'translate',
-            'translate-reduced-grounding-nogoal',
+            'translate-reduced-grounding-expand-nogoal',
         ],
     ),
     name='domains-with-large-differences-time-grounding-reducedexpand',
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-grounding-reducedexpand'),
+)
+
+exp.add_report(
+    DomainsWithLargeDifferencesReport(
+        [('translator_time_computing_h2_mutex_groups', 10)],
+        filter_algorithm=[
+            'translate-h2mutexesrelaxed',
+            'translate-reduced-h2mutexesrelaxed-nogoal',
+        ],
+    ),
+    name='domains-with-large-differences-time-mutexesrelaxed-reduced',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexesrelaxed-reduced'),
+)
+
+exp.add_report(
+    DomainsWithLargeDifferencesReport(
+        [('translator_time_computing_h2_mutex_groups', 10)],
+        filter_algorithm=[
+            'translate-h2mutexesrelaxed',
+            'translate-reduced-h2mutexesrelaxed-expand-nogoal',
+        ],
+    ),
+    name='domains-with-large-differences-time-mutexesrelaxed-reducedexpand',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexesrelaxed-reducedexpand'),
 )
 
 exp.add_report(
@@ -194,7 +217,7 @@ exp.add_report(
         [('translator_time_computing_h2_mutex_groups', 10)],
         filter_algorithm=[
             'translate-h2mutexes',
-            'translate-reduced-h2mutexes--noexpand-nogoal',
+            'translate-reduced-h2mutexes-expand-nogoal',
         ],
     ),
     name='domains-with-large-differences-time-mutexes-reducedexpand',
@@ -205,21 +228,25 @@ exp.add_report(
 
 exp.add_report(AbsoluteReport(attributes=attributes,filter_algorithm=[
     'translate',
-    #'translate-reduced-grounding',
-    #'translate-reduced-grounding-noexpand',
     'translate-reduced-grounding-nogoal',
-    'translate-reduced-grounding--noexpandnogoal',
-]),name='grounding',outfile=os.path.join(exp.eval_dir, '2017-11-19-grounding.html'))
+    'translate-reduced-grounding-expand-nogoal',
+]),name='grounding',outfile=os.path.join(exp.eval_dir, '2017-11-20-grounding.html'))
+
+exp.add_report(AbsoluteReport(attributes=attributes,filter_algorithm=[
+    'translate-h2mutexesrelaxed',
+    'translate-reduced-h2mutexesrelaxed-nogoal',
+    'translate-reduced-h2mutexesrelaxed-expand-nogoal',
+]),name='h2mutexes',outfile=os.path.join(exp.eval_dir, '2017-11-20-h2mutexesrelaxed.html'))
 
 exp.add_report(AbsoluteReport(attributes=attributes,filter_algorithm=[
     'translate-h2mutexes',
-    #'translate-reduced-h2mutexes',
-    #'translate-reduced-h2mutexes-noexpand',
     'translate-reduced-h2mutexes-nogoal',
-    'translate-reduced-h2mutexes--noexpand-nogoal',
-]),name='h2mutexes',outfile=os.path.join(exp.eval_dir, '2017-11-19-h2mutexes.html'))
+    'translate-reduced-h2mutexes-expand-nogoal',
+]),name='h2mutexes',outfile=os.path.join(exp.eval_dir, '2017-11-20-h2mutexes.html'))
 
 ################### scatter plots ########################################
+
+### grounding ###
 
 # generated with above DomainsWithLargeDifferencesReport, ignoring those cases
 # where one algo did not finish the computation.
@@ -230,7 +257,6 @@ domains_with_diff_of_translator_time_instantiating_for_grounding_reduced_larger_
   'blocks',
   'gripper',
   'miconic-simpleadl',
-  'movie',
   'visitall-opt11-strips',
   'childsnack-opt14-strips',
   'miconic',
@@ -246,7 +272,7 @@ exp.add_report(
     ScatterPlotReport(
         filter_algorithm=[
             'translate',
-            'translate-reduced-grounding--noexpandnogoal',
+            'translate-reduced-grounding-nogoal',
         ],
         attributes=['translator_time_instantiating'],
         get_category=domain_category_for_grounding_reduced,
@@ -261,20 +287,11 @@ exp.add_report(
 domains_with_diff_of_translator_time_instantiating_for_grounding_reducedexpand_larger_10 = [
   'psr-small',
   'satellite',
-  'childsnack-sat14-strips',
-  'gripper',
-  'sokoban-sat11-strips',
+  'blocks',
   'miconic-simpleadl',
-  'movie',
-  'sokoban-opt11-strips',
   'visitall-opt11-strips',
-  'barman-sat14-strips',
-  'childsnack-opt14-strips',
-  'logistics98',
   'miconic',
   'learning-spanner',
-  'sokoban-sat08-strips',
-  'sokoban-opt08-strips',
 ]
 
 def domain_category_for_grounding_reducedexpand(run1, run2):
@@ -286,7 +303,7 @@ exp.add_report(
     ScatterPlotReport(
         filter_algorithm=[
             'translate',
-            'translate-reduced-grounding-nogoal',
+            'translate-reduced-grounding-expand-nogoal',
         ],
         attributes=['translator_time_instantiating'],
         get_category=domain_category_for_grounding_reducedexpand,
@@ -296,19 +313,86 @@ exp.add_report(
     outfile=os.path.join(exp.eval_dir, 'scatter-grounding-time-regular-vs-reducedandexpand')
 )
 
+### mutexesrelaxed ###
+
 # generated with above DomainsWithLargeDifferencesReport, ignoring those cases
 # where one algo did not finish the computation.
-domains_with_diff_of_translator_time_instantiating_for_mutexes_reduced_larger_10 = [
+domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reduced_larger_10 = [
   'satellite',
   'childsnack-sat14-strips',
   'gripper',
   'miconic-simpleadl',
+  'movie',
+  'miconic-fulladl',
   'visitall-opt11-strips',
   'barman-sat11-strips',
   'barman-sat14-strips',
   'childsnack-opt14-strips',
   'tpp',
   'miconic',
+]
+
+def domain_category_for_mutexesrelaxed_reduced(run1, run2):
+    if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reduced_larger_10:
+        return run1['domain']
+    return None
+
+exp.add_report(
+    ScatterPlotReport(
+        filter_algorithm=[
+            'translate-h2mutexesrelaxed',
+            'translate-reduced-h2mutexesrelaxed-nogoal',
+        ],
+        attributes=['translator_time_computing_h2_mutex_groups'],
+        get_category=domain_category_for_mutexesrelaxed_reduced,
+        format='tex',
+    ),
+    name='scatter-h2mutexesrelaxed-time-regular-vs-reduced',
+    outfile=os.path.join(exp.eval_dir, 'scatter-h2mutexesrelaxed-time-regular-vs-reduced')
+)
+
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reducedexpand_larger_10 = [
+  'satellite',
+  'childsnack-sat14-strips',
+  'gripper',
+  'miconic-simpleadl',
+  'movie',
+  'miconic-fulladl',
+  'visitall-opt11-strips',
+  'barman-sat11-strips',
+  'barman-sat14-strips',
+  'childsnack-opt14-strips',
+  'tpp',
+  'miconic',
+]
+
+def domain_category_for_mutexesrelaxed_reducedexpand(run1, run2):
+    if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reducedexpand_larger_10:
+        return run1['domain']
+    return None
+
+exp.add_report(
+    ScatterPlotReport(
+        filter_algorithm=[
+            'translate-h2mutexesrelaxed',
+            'translate-reduced-h2mutexesrelaxed-expand-nogoal',
+        ],
+        attributes=['translator_time_computing_h2_mutex_groups'],
+        get_category=domain_category_for_mutexesrelaxed_reducedexpand,
+        format='tex',
+    ),
+    name='scatter-h2mutexesrelaxed-time-regular-vs-reducedandexpand',
+    outfile=os.path.join(exp.eval_dir, 'scatter-h2mutexesrelaxed-time-regular-vs-reducedandexpand')
+)
+
+### mutexes ###
+
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10 = [
+
 ]
 
 def domain_category_for_mutexes_reduced(run1, run2):
@@ -320,7 +404,7 @@ exp.add_report(
     ScatterPlotReport(
         filter_algorithm=[
             'translate-h2mutexes',
-            'translate-reduced-h2mutexes--noexpand-nogoal',
+            'translate-reduced-h2mutexes-nogoal',
         ],
         attributes=['translator_time_computing_h2_mutex_groups'],
         get_category=domain_category_for_mutexes_reduced,
@@ -333,16 +417,7 @@ exp.add_report(
 # generated with above DomainsWithLargeDifferencesReport, ignoring those cases
 # where one algo did not finish the computation.
 domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10 = [
-  'satellite',
-  'childsnack-sat14-strips',
-  'gripper',
-  'miconic-simpleadl',
-  'visitall-opt11-strips',
-  'barman-sat11-strips',
-  'barman-sat14-strips',
-  'childsnack-opt14-strips',
-  'tpp',
-  'miconic',
+
 ]
 
 def domain_category_for_mutexes_reducedexpand(run1, run2):
@@ -354,7 +429,7 @@ exp.add_report(
     ScatterPlotReport(
         filter_algorithm=[
             'translate-h2mutexes',
-            'translate-reduced-h2mutexes-nogoal',
+            'translate-reduced-h2mutexes-expand-nogoal',
         ],
         attributes=['translator_time_computing_h2_mutex_groups'],
         get_category=domain_category_for_mutexes_reducedexpand,
