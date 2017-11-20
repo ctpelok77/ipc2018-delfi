@@ -249,9 +249,12 @@ def compute_permutation_dicts_for_object_set(symmetric_object_set):
     """Compute all permutations swapping two objects of the given symmetric
     object set."""
     permutation_dicts = []
+    object_to_permutation_indices = defaultdict(list)
     for perm in itertools.combinations(symmetric_object_set, 2):
+        object_to_permutation_indices[perm[0]].append(len(permutation_dicts))
+        object_to_permutation_indices[perm[1]].append(len(permutation_dicts))
         permutation_dicts.append(dict(zip(perm, (perm[1], perm[0]))))
-    return permutation_dicts
+    return permutation_dicts, object_to_permutation_indices
 
 
 def permute_literal(literal, permutation):
@@ -276,24 +279,37 @@ def permute_mutex_pair(pair, permutation):
     return frozenset(symmetric_pair)
 
 
+def get_relevant_perm_indices_for_literal(literal, object_to_permutation_indices, relevant_perm_indices):
+    for obj in literal.args:
+        relevant_perm_indices.extend(object_to_permutation_indices[obj])
+
+
 def expand(list_of_elements, symmetric_object_set, contains_pairs=False):
     """Extend the given *list_of_elments* (which must either be literals or
     (frozen)sets of literals) by all symmetric elements, using all permutations
     created from the objects in *symmetric_object_set*."""
     print("Expanding with symmetric object set:")
     print(", ".join([x for x in symmetric_object_set]))
-    permutation_dicts = compute_permutation_dicts_for_object_set(symmetric_object_set)
+    permutation_dicts, object_to_permutation_indices = compute_permutation_dicts_for_object_set(symmetric_object_set)
     open_list = deque()
     closed = set(list_of_elements)
     for element in list_of_elements:
         open_list.append(element)
     while len(open_list):
         element = open_list.popleft()
-        for perm in permutation_dicts:
+
+        relevant_perm_indices = []
+        if contains_pairs:
+            for literal in element:
+                get_relevant_perm_indices_for_literal(literal, object_to_permutation_indices, relevant_perm_indices)
+        else:
+            get_relevant_perm_indices_for_literal(element, object_to_permutation_indices, relevant_perm_indices)
+
+        for perm_index in relevant_perm_indices:
             if contains_pairs:
-                symmetric_element = permute_mutex_pair(element, perm)
+                symmetric_element = permute_mutex_pair(element, permutation_dicts[perm_index])
             else:
-                symmetric_element = permute_literal(element, perm)
+                symmetric_element = permute_literal(element, permutation_dicts[perm_index])
             if not symmetric_element in closed:
                 open_list.append(symmetric_element)
                 closed.add(symmetric_element)
