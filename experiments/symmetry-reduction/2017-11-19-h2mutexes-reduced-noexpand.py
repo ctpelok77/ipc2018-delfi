@@ -103,6 +103,9 @@ def main(revisions=None):
     bliss_out_of_time = Attribute('bliss_out_of_time', absolute=True, min_wins=True)
     num_transpositions = Attribute('num_transpositions', absolute=True, min_wins=False)
     num_used_symmetric_object_sets = Attribute('num_used_symmetric_object_sets', absolute=True, min_wins=False)
+    num_reachable_pairs = Attribute('num_reachable_pairs', absolute=True, min_wins=False)
+    num_unreachable_pairs = Attribute('num_unreachable_pairs', absolute=True, min_wins=False)
+    num_expanded_unreachable_pairs = Attribute('num_expanded_unreachable_pairs', absolute=True, min_wins=False)
     performed_reduction = Attribute('performed_reduction', absolute=True, min_wins=False)
 
 
@@ -134,6 +137,9 @@ def main(revisions=None):
         bliss_out_of_time,
         num_transpositions,
         num_used_symmetric_object_sets,
+        num_reachable_pairs,
+        num_unreachable_pairs,
+        num_expanded_unreachable_pairs,
         performed_reduction,
     ]
     attributes = ['error', 'run_dir'] # exp.DEFAULT_TABLE_ATTRIBUTES
@@ -141,6 +147,7 @@ def main(revisions=None):
     attributes.append('translator_time_symmetries0_computing_symmetries')
     attributes.append('translator_time_computing_h2_mutex_groups')
     attributes.append('translator_time_instantiating')
+    attributes.append('translator_time_completing_instantiation')
 
     exp.add_fetcher(name='parse-memory-error', parsers=['translator-memory-error-parser.py'])
 
