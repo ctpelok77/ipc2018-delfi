@@ -16,7 +16,7 @@ from lab.reports import Attribute, geometric_mean
 
 exp = FastDownwardExperiment()
 
-REVISIONS = ['212720d86b23', '8313b31db88f']
+REVISIONS = ['212720d86b23', 'd3481591b3d3']
 
 tex_or_png = 'tex'
 
@@ -28,8 +28,8 @@ def rename_revision(run):
     return run
 
 exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-20-grounding-eval'),filter=[rename_revision])
-exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-21-h2mutexesrelaxed-eval'),filter=[rename_revision],merge=True)
-exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-21-h2mutexes-eval'),filter=[rename_revision],merge=True)
+exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-22-h2mutexesrelaxed-eval'),filter=[rename_revision],merge=True)
+exp.add_fetcher(os.path.expanduser('~/repos/downward/symmetry-reduction/experiments/symmetry-reduction/data/2017-11-22-h2mutexes-eval'),filter=[rename_revision],merge=True)
 
 generator_count_lifted = Attribute('generator_count_lifted', absolute=True, min_wins=False)
 generator_orders_lifted = Attribute('generator_orders_lifted', absolute=True)
@@ -338,8 +338,8 @@ exp.add_report(
         filter_domain=suite,
         attributes=[performed_reduction]
     ),
-    name='domains-with-performed-reduction-h2mutexes',
-    outfile=os.path.join(exp.eval_dir, 'domains-with-performed-reduction-h2mutexes'),
+    name='domains-with-performed-reduction-h2mutexesrelaxed',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-performed-reduction-h2mutexesrelaxed'),
 )
 
 # result of above report
@@ -447,6 +447,15 @@ exp.add_report(
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-grounding-reduced'),
 )
 
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_grounding_reduced_larger_10 = [
+  'childsnack-opt14-strips',
+  'childsnack-sat14-strips',
+  'satellite',
+  'miconic-simpleadl',
+]
+
 exp.add_report(
     DomainsWithLargeDifferencesReport(
         [('translator_time_instantiating', 10)],
@@ -461,6 +470,14 @@ exp.add_report(
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-grounding-reducedexpand'),
 )
 
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_grounding_reducedexpand_larger_10 = [
+  'maintenance-sat14-adl',
+  'satellite',
+  'miconic-simpleadl',
+]
+
 exp.add_report(
     DomainsWithLargeDifferencesReport(
         [('translator_time_computing_h2_mutex_groups', 10)],
@@ -469,11 +486,22 @@ exp.add_report(
             'translate-reduced-h2mutexesrelaxed-nogoal',
         ],
         filter=[filter_learning_domains],
-        filter_domain=domains_with_performed_reduction_h2mutexesrelaxed, # does not matter if using suite or reduced set of course
+        filter_domain=suite,
     ),
     name='domains-with-large-differences-time-mutexesrelaxed-reduced',
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexesrelaxed-reduced'),
 )
+
+# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
+# where one algo did not finish the computation.
+domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reduced_larger_10 = [
+  'satellite',
+  'childsnack-sat14-strips',
+  'gripper',
+  'barman-sat14-strips',
+  'childsnack-opt14-strips',
+  'woodworking-sat11-strips',
+]
 
 exp.add_report(
     DomainsWithLargeDifferencesReport(
@@ -483,11 +511,24 @@ exp.add_report(
             'translate-reduced-h2mutexesrelaxed-expand-nogoal',
         ],
         filter=[filter_learning_domains],
-        filter_domain=domains_with_performed_reduction_h2mutexesrelaxed, # does not matter if using suite or reduced set of course
+        filter_domain=suite,
     ),
     name='domains-with-large-differences-time-mutexesrelaxed-reducedexpand',
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexesrelaxed-reducedexpand'),
 )
+
+# result of above report
+domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reducedexpand_larger_10 = [
+  'satellite',
+  'childsnack-sat14-strips',
+  'gripper',
+  'miconic-fulladl',
+  'barman-sat14-strips',
+  'childsnack-opt14-strips',
+  'citycar-sat14-adl',
+  'tpp',
+  'woodworking-sat11-strips',
+]
 
 exp.add_report(
     DomainsWithLargeDifferencesReport(
@@ -503,6 +544,10 @@ exp.add_report(
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexes-reduced'),
 )
 
+# result of above report
+domains_with_diff_of_translator_time_instantiating_for_mutexes_reduced_larger_10 = [
+]
+
 exp.add_report(
     DomainsWithLargeDifferencesReport(
         [('translator_time_computing_h2_mutex_groups', 10)],
@@ -516,6 +561,10 @@ exp.add_report(
     name='domains-with-large-differences-time-mutexes-reducedexpand',
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexes-reducedexpand'),
 )
+
+# result of above report
+domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10 = [
+]
 
 ################### regular reports ########################################
 
@@ -544,7 +593,7 @@ exp.add_report(
         filter_domain=suite,
     ),
     name='h2mutexesrelaxed',
-    outfile=os.path.join(exp.eval_dir, '2017-11-21-h2mutexesrelaxed.html')
+    outfile=os.path.join(exp.eval_dir, '2017-11-22-h2mutexesrelaxed.html')
 )
 
 exp.add_report(
@@ -558,25 +607,12 @@ exp.add_report(
         filter_domain=suite,
     ),
     name='h2mutexes',
-    outfile=os.path.join(exp.eval_dir, '2017-11-21-h2mutexes.html')
+    outfile=os.path.join(exp.eval_dir, '2017-11-22-h2mutexes.html')
 )
 
 ################### scatter plots ########################################
 
 ### grounding ###
-
-# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
-# where one algo did not finish the computation.
-domains_with_diff_of_translator_time_instantiating_for_grounding_reduced_larger_10 = [
-  'psr-small',
-  'satellite',
-  'childsnack-sat14-strips',
-  'blocks',
-  'gripper',
-  'miconic-simpleadl',
-  'childsnack-opt14-strips',
-  'miconic',
-]
 
 def domain_category_for_grounding_reduced(run1, run2):
     if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_grounding_reduced_larger_10:
@@ -598,16 +634,6 @@ exp.add_report(
     name='scatter-grounding-time-regular-vs-reduced',
     outfile=os.path.join(exp.eval_dir, 'scatter-grounding-time-regular-vs-reduced')
 )
-
-# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
-# where one algo did not finish the computation.
-domains_with_diff_of_translator_time_instantiating_for_grounding_reducedexpand_larger_10 = [
-  'psr-small',
-  'miconic',
-  'satellite',
-  'blocks',
-  'miconic-simpleadl',
-]
 
 def domain_category_for_grounding_reducedexpand(run1, run2):
     if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_grounding_reducedexpand_larger_10:
@@ -632,17 +658,6 @@ exp.add_report(
 
 ### mutexesrelaxed ###
 
-# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
-# where one algo did not finish the computation.
-domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reduced_larger_10 = [
-  'satellite',
-  'childsnack-sat14-strips',
-  'gripper',
-  'barman-sat14-strips',
-  'childsnack-opt14-strips',
-  'woodworking-sat11-strips',
-]
-
 def domain_category_for_mutexesrelaxed_reduced(run1, run2):
     if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reduced_larger_10:
         return run1['domain']
@@ -663,17 +678,6 @@ exp.add_report(
     name='scatter-h2mutexesrelaxed-time-regular-vs-reduced',
     outfile=os.path.join(exp.eval_dir, 'scatter-h2mutexesrelaxed-time-regular-vs-reduced')
 )
-
-# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
-# where one algo did not finish the computation.
-domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reducedexpand_larger_10 = [
-  'satellite',
-  'childsnack-sat14-strips',
-  'gripper',
-  'barman-sat14-strips',
-  'childsnack-opt14-strips',
-  'woodworking-sat11-strips',
-]
 
 def domain_category_for_mutexesrelaxed_reducedexpand(run1, run2):
     if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reducedexpand_larger_10:
@@ -698,20 +702,6 @@ exp.add_report(
 
 ### mutexes ###
 
-# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
-# where one algo did not finish the computation.
-domains_with_diff_of_translator_time_instantiating_for_mutexes_reduced_larger_10 = [
-  'nomystery-opt11-strips',
-  'satellite',
-  'childsnack-sat14-strips',
-  'sokoban-sat11-strips',
-  'gripper',
-  'woodworking-opt11-strips',
-  'barman-sat14-strips',
-  'childsnack-opt14-strips',
-  'parcprinter-sat11-strips',
-]
-
 def domain_category_for_mutexes_reduced(run1, run2):
     if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexes_reduced_larger_10:
         return run1['domain']
@@ -732,19 +722,6 @@ exp.add_report(
     name='scatter-h2mutexes-time-regular-vs-reduced',
     outfile=os.path.join(exp.eval_dir, 'scatter-h2mutexes-time-regular-vs-reduced')
 )
-
-# generated with above DomainsWithLargeDifferencesReport, ignoring those cases
-# where one algo did not finish the computation.
-domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10 = [
-  'woodworking-opt11-strips',
-  'childsnack-sat14-strips',
-  'sokoban-sat11-strips',
-  'gripper',
-  'satellite',
-  'barman-sat14-strips',
-  'childsnack-opt14-strips',
-  'parcprinter-sat11-strips',
-]
 
 def domain_category_for_mutexes_reducedexpand(run1, run2):
     if run1['domain'] in domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10:
