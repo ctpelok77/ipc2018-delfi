@@ -245,6 +245,135 @@ suite = [domain for domain in suite_all_opt_sat if domain not in duplicates]
 def filter_learning_domains(run):
     return not run['domain'].startswith("learning")
 
+################### reports to generate extra data ##########################
+
+class DomainsReport(PlanningReport):
+    def __init__(self, specific_value, **kwargs):
+        self.specific_value = specific_value
+        PlanningReport.__init__(self, **kwargs)
+
+    def get_text(self):
+        if len(self.attributes) > 1:
+            print("please pass exactly one attribute")
+            sys.exit(1)
+
+        attribute = self.attributes[0]
+        domains_with_value_for_attribute = set()
+        for (domain, task), runs in self.problem_runs.items():
+            for run in runs:
+                run_value = run.get(attribute, None)
+                if run_value == self.specific_value:
+                    domains_with_value_for_attribute.add(domain)
+
+        formatted_result = []
+        for domain in sorted(domains_with_value_for_attribute):
+            formatted_result.append("'{}',".format(domain))
+        return '\n'.join(formatted_result)
+
+exp.add_report(
+    DomainsReport(
+        1,
+        filter_algorithm=[
+            'translate-reduced-grounding-expand-nogoal', # same # of reductions as without expand
+        ],
+        filter=[filter_learning_domains],
+        filter_domain=suite,
+        attributes=[performed_reduction]
+    ),
+    name='domains-with-performed-reduction-grounding',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-performed-reduction-grounding'),
+)
+
+# result of above report
+domains_with_performed_reduction_grounding = [
+    'assembly',
+    'barman-opt14-strips',
+    'barman-sat14-strips',
+    'blocks',
+    'childsnack-opt14-strips',
+    'childsnack-sat14-strips',
+    'citycar-opt14-adl',
+    'citycar-sat14-adl',
+    'depot',
+    'driverlog',
+    'elevators-opt11-strips',
+    'elevators-sat11-strips',
+    'gripper',
+    'hiking-opt14-strips',
+    'hiking-sat14-strips',
+    'logistics00',
+    'logistics98',
+    'maintenance-opt14-adl',
+    'movie',
+    'mprime',
+    'mystery',
+    'nomystery-opt11-strips',
+    'nomystery-sat11-strips',
+    'openstacks-opt08-adl',
+    'openstacks-sat08-adl',
+    'parcprinter-opt11-strips',
+    'parcprinter-sat11-strips',
+    'pathways',
+    'pathways-noneg',
+    'pipesworld-notankage',
+    'pipesworld-tankage',
+    'satellite',
+    'sokoban-opt11-strips',
+    'sokoban-sat11-strips',
+    'tpp',
+    'transport-sat14-strips',
+    'trucks',
+    'woodworking-opt11-strips',
+    'woodworking-sat11-strips',
+    'zenotravel',
+]
+
+exp.add_report(
+    DomainsReport(
+        1,
+        filter_algorithm=[
+            'translate-reduced-h2mutexesrelaxed-expand-nogoal', # same # of reductions as without expand
+        ],
+        filter=[filter_learning_domains],
+        filter_domain=suite,
+        attributes=[performed_reduction]
+    ),
+    name='domains-with-performed-reduction-h2mutexes',
+    outfile=os.path.join(exp.eval_dir, 'domains-with-performed-reduction-h2mutexes'),
+)
+
+# result of above report
+domains_with_performed_reduction_h2mutexesrelaxed = [
+    'assembly',
+    'barman-opt14-strips',
+    'barman-sat14-strips',
+    'childsnack-opt14-strips',
+    'childsnack-sat14-strips',
+    'citycar-opt14-adl',
+    'citycar-sat14-adl',
+    'elevators-sat11-strips',
+    'gripper',
+    'logistics98',
+    'movie',
+    'mprime',
+    'mystery',
+    'nomystery-opt11-strips',
+    'nomystery-sat11-strips',
+    'parcprinter-opt11-strips',
+    'parcprinter-sat11-strips',
+    'pathways',
+    'pathways-noneg',
+    'pipesworld-tankage',
+    'satellite',
+    'sokoban-opt11-strips',
+    'sokoban-sat11-strips',
+    'tpp',
+    'trucks',
+    'woodworking-opt11-strips',
+    'woodworking-sat11-strips',
+    'zenotravel',
+]
+
 ################### reports to generate lists of doains #####################
 
 class DomainsWithLargeDifferencesReport(PlanningReport):
@@ -285,7 +414,13 @@ class DomainsWithLargeDifferencesReport(PlanningReport):
                 for attribute, threshold in self.attribute_threshold_pairs:
                     val1 = algo_domain_problem_algorithm[algo1][domain][problem][attribute]
                     val2 = algo_domain_problem_algorithm[algo2][domain][problem][attribute]
-                    if val1 is not None and val2 is not None and (val1 >= threshold * val2 or val2 >= threshold * val1):
+                    if val1 is None and val2 is None:
+                        continue
+                    if val1 == 0:
+                        val1 = 0.01
+                    if val2 == 0:
+                        val2 = 0.01
+                    if val1 is None or val2 is None or (val1 >= threshold * val2 or val2 >= threshold * val1):
                         attribute_to_domains_with_large_diff[attribute].add(domain)
 
         lines = []
@@ -334,7 +469,7 @@ exp.add_report(
             'translate-reduced-h2mutexesrelaxed-nogoal',
         ],
         filter=[filter_learning_domains],
-        filter_domain=suite,
+        filter_domain=domains_with_performed_reduction_h2mutexesrelaxed, # does not matter if using suite or reduced set of course
     ),
     name='domains-with-large-differences-time-mutexesrelaxed-reduced',
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexesrelaxed-reduced'),
@@ -348,7 +483,7 @@ exp.add_report(
             'translate-reduced-h2mutexesrelaxed-expand-nogoal',
         ],
         filter=[filter_learning_domains],
-        filter_domain=suite,
+        filter_domain=domains_with_performed_reduction_h2mutexesrelaxed, # does not matter if using suite or reduced set of course
     ),
     name='domains-with-large-differences-time-mutexesrelaxed-reducedexpand',
     outfile=os.path.join(exp.eval_dir, 'domains-with-large-differences-time-mutexesrelaxed-reducedexpand'),
@@ -503,12 +638,9 @@ domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reduced_la
   'satellite',
   'childsnack-sat14-strips',
   'gripper',
-  'miconic-simpleadl',
-  'movie',
   'barman-sat14-strips',
   'childsnack-opt14-strips',
-  'tpp',
-  'miconic',
+  'woodworking-sat11-strips',
 ]
 
 def domain_category_for_mutexesrelaxed_reduced(run1, run2):
@@ -523,7 +655,7 @@ exp.add_report(
             'translate-reduced-h2mutexesrelaxed-nogoal',
         ],
         filter=[filter_learning_domains],
-        filter_domain=suite,
+        filter_domain=domains_with_performed_reduction_h2mutexesrelaxed,
         attributes=['translator_time_computing_h2_mutex_groups'],
         get_category=domain_category_for_mutexesrelaxed_reduced,
         format=tex_or_png
@@ -538,12 +670,9 @@ domains_with_diff_of_translator_time_instantiating_for_mutexesrelaxed_reducedexp
   'satellite',
   'childsnack-sat14-strips',
   'gripper',
-  'miconic-simpleadl',
-  'movie',
   'barman-sat14-strips',
   'childsnack-opt14-strips',
-  'tpp',
-  'miconic',
+  'woodworking-sat11-strips',
 ]
 
 def domain_category_for_mutexesrelaxed_reducedexpand(run1, run2):
@@ -558,7 +687,7 @@ exp.add_report(
             'translate-reduced-h2mutexesrelaxed-expand-nogoal',
         ],
         filter=[filter_learning_domains],
-        filter_domain=suite,
+        filter_domain=domains_with_performed_reduction_h2mutexesrelaxed,
         attributes=['translator_time_computing_h2_mutex_groups'],
         get_category=domain_category_for_mutexesrelaxed_reducedexpand,
         format=tex_or_png
@@ -572,12 +701,15 @@ exp.add_report(
 # generated with above DomainsWithLargeDifferencesReport, ignoring those cases
 # where one algo did not finish the computation.
 domains_with_diff_of_translator_time_instantiating_for_mutexes_reduced_larger_10 = [
+  'nomystery-opt11-strips',
   'satellite',
   'childsnack-sat14-strips',
+  'sokoban-sat11-strips',
   'gripper',
-  'miconic-simpleadl',
+  'woodworking-opt11-strips',
+  'barman-sat14-strips',
   'childsnack-opt14-strips',
-  'miconic',
+  'parcprinter-sat11-strips',
 ]
 
 def domain_category_for_mutexes_reduced(run1, run2):
@@ -604,12 +736,14 @@ exp.add_report(
 # generated with above DomainsWithLargeDifferencesReport, ignoring those cases
 # where one algo did not finish the computation.
 domains_with_diff_of_translator_time_instantiating_for_mutexes_reducedexpand_larger_10 = [
-  'satellite',
+  'woodworking-opt11-strips',
   'childsnack-sat14-strips',
+  'sokoban-sat11-strips',
   'gripper',
-  'miconic-simpleadl',
+  'satellite',
+  'barman-sat14-strips',
   'childsnack-opt14-strips',
-  'miconic',
+  'parcprinter-sat11-strips',
 ]
 
 def domain_category_for_mutexes_reducedexpand(run1, run2):
