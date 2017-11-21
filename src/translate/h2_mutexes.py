@@ -66,11 +66,11 @@ def handle_axiom(pairs, axiom, pair_to_rules, rules, only_positive_literals):
     for pair_index, pair in enumerate(pairs):
         if len(pair) == 1:
             literal = iter(pair).next()
-            if literal == axiom.effect: # 2) axiom from which literal can be derived
+            if get_atom(literal) == axiom.effect: # 2) axiom from which literal can be derived
                 condition_literals = \
                     extract_literals_from_condition(axiom.condition)
                 condition_pairs = compute_all_pairs(condition_literals,
-                                                     only_positive_literals)
+                                                    only_positive_literals)
                 add_rule(pair_to_rules, pair_index, rules, condition_pairs)
         else:
             literals = list(pair)
