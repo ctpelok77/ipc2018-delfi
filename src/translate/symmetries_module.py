@@ -11,6 +11,7 @@ import pybind11_blissmodule as bliss
 
 import PIL
 from PIL import Image
+import numpy as np
 
 import options
 import timers
@@ -584,136 +585,58 @@ class SymmetryGraph:
                 file.write("\"%s\" -> \"%s\";\n" % (vertex, succ))
         file.write("}\n")
         
-    def write_matrix_representation_raw(self, file, hide_equal_predicates=False):
-        self.write_matrix_representation_padding(file, hide_equal_predicates, len(self.graph.get_vertices()))
         
-    def write_matrix_representation_padding(self, file, hide_equal_predicates=False, image_size=64):
-        """Write the graph into a file in matrix representation, nodes ordered."""
-        """ Padding with 0s, since the number of vertices smaller than size"""
-        
-        def vertex_pair_value(from_vertex, to_vertex):
-            if to_vertex in self.graph.get_successors(from_vertex):
-                return "1"
-            return "0"
-        ## Counting the padding 
-        padding_size = image_size
-        for vertex in self.graph.get_vertices():
-            if hide_equal_predicates and vertex in self.graph.excluded_vertices:
-                continue
-            padding_size -= 1
-        
-        for vertex in self.graph.get_vertices():
-            if hide_equal_predicates and vertex in self.graph.excluded_vertices:
-                continue
-            # Writing row
-            for to_vertex in self.graph.get_vertices():
-                if hide_equal_predicates and to_vertex in self.graph.excluded_vertices:
-                    continue
-                file.write(vertex_pair_value(vertex, to_vertex)) 
-            file.write("%s\n" % "0" * padding_size)
-        padding_row = "%s\n" % "0" * image_size
-        file.write(padding_row * padding_size)
-            
-    def write_matrix_image(self, hide_equal_predicates=False):
-        """Write the graph into a grayscale image"""
-        """ Assuming no self loops!!!
-        Partitioned into squares of 3, to turn binaries into numbers [0,64]
-        [[0,a,b],[c,0,d],[e,f,0]] is turned into 2^0 * a + 2^1 * b + ...
-        """
-        def get_number_or_zero(ri, ci, m):
-            if len(m) > ri and len(m) > ci:
-                return m[ri][ci]
-            return "0"
-
-        def get_number_for_square(ri, ci, m):
-            str_rep = get_number_or_zero(ri + 2, ci + 1, m) + \
-                      get_number_or_zero(ri + 2, ci, m) + \
-                      get_number_or_zero(ri + 1, ci + 2, m) + \
-                      get_number_or_zero(ri + 1, ci, m) + \
-                      get_number_or_zero(ri, ci + 2, m) + \
-                      get_number_or_zero(ri, ci + 1, m) 
-
-            return int(str_rep, 2)
-
-        sorted_vertices = []
+    def create_raw_matrix_for_image(self, hide_equal_predicates=False, bolded=False):
+        """Create raw 0/1 matrix, bolding by adding 1s around existing ones """
+        def make_bolder(i, j, m):
+            if i < 0 or i >= len(m) or j < 0 or j >= len(m):
+                return
+            m[i][j] = 1
+                
+        sz = 0
         vertex_indices = {}
         for vertex in self.graph.get_vertices():
             if hide_equal_predicates and vertex in self.graph.excluded_vertices:           
                 continue
-            vertex_indices[vertex] = len(sorted_vertices)
-            sorted_vertices.append(vertex) 
+            vertex_indices[vertex] = sz
+            sz += 1
         ## Creating a matrix
-        print("Creating matrix..")
-        matrix = []
-        
-        for vertex in sorted_vertices:
-            row = ["0" for i in range(len(sorted_vertices))]
-            for to_vertex in self.graph.get_successors(vertex):
-                if hide_equal_predicates and to_vertex in self.graph.excluded_vertices:
-                    continue
-                row[vertex_indices[to_vertex]] = "1"
-            matrix.append(row)
-            
-        ## Going over the matrix, 
-        print("Shrinking matrix..")
-        sz = len(matrix)
-        image_data = []
-        for row_ind in range(0, sz, 3):
-            for col_ind in range(0, sz, 3):
-                num = get_number_for_square(row_ind, col_ind, matrix)
-                #print num, 
-                image_data.append(255 - num)
-            #print
-        shrinked_sz = int(sz/3) + 1
-        print("Writing image of size %sx%s .." % (shrinked_sz, shrinked_sz))
-        im = Image.new('L', (shrinked_sz, shrinked_sz), "white")
-        im.putdata(image_data)
-        im.save('graph-gs-variable.png','png') 
-        
-    def write_matrix_image_raw(self, hide_equal_predicates=False):
-        """Write the graph into a grayscale image"""
-        """ raw 0/1 matrix
-        """
-        sorted_vertices = []
-        vertex_indices = {}
-        for vertex in self.graph.get_vertices():
-            if hide_equal_predicates and vertex in self.graph.excluded_vertices:           
-                continue
-            vertex_indices[vertex] = len(sorted_vertices)
-            sorted_vertices.append(vertex) 
-        ## Creating a matrix
-        print("Creating image data..")
-       
-        image_data = []
-        sz = len(sorted_vertices)
-        for vertex in sorted_vertices:
-            row = [0 for i in range(sz)]
-            for to_vertex in self.graph.get_successors(vertex):
-                if hide_equal_predicates and to_vertex in self.graph.excluded_vertices:
-                    continue
-                row[vertex_indices[to_vertex]] = 1
-            image_data.extend(row)    
-            
-        print("Writing raw image of size %sx%s .." % (sz, sz))
-        im = Image.new('1', (sz, sz), "white")
-        im.putdata(image_data)
-        im.save('graph-gs-raw.png','png') 
-        size = 128, 128
-        im.thumbnail(size, Image.NEAREST)
-        im.save('graph-gs-raw-thumbnail.png', "png")
+        print("Creating matrix for a graph with %s nodes.." % sz)
+        matrix_data = np.zeros((sz,sz), dtype=int)
+        print("Matrix created, filling with values for edges..")
+        for edge in self.graph.edges:
+            assert type(edge) is tuple
+            assert len(edge) == 2
+            if edge[0] in vertex_indices and edge[1] in vertex_indices:
+                i = vertex_indices[edge[0]]
+                j = vertex_indices[edge[1]]
+                matrix_data[i][j] = 1
+                if bolded:
+                    ## Try to make wider
+                    make_bolder(i+1, j, matrix_data)
+                    make_bolder(i-1, j, matrix_data)
+                    make_bolder(i, j+1, matrix_data)
+                    make_bolder(i, j-1, matrix_data)
+
+        return matrix_data
+
                         
-        
-    def write_matrix_image_gen(self, hide_equal_predicates=False, image_size=256):
-        """Write the graph into a grayscale image"""
+    def print_graph_statistics(self, hide_equal_predicates=False):
+        matrix_data = self.create_raw_matrix_for_image(hide_equal_predicates, bolded=False)
+        print("Number of graph vertices: %s" % len(matrix_data))
+        print("Number of graph edges: %s" % matrix_data.count_nonzero())
+                        
+
+    def shrink_matrix_raw_to_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
         """ Assuming no self loops!!!
-        Partitioned into squares of variable size, to shrink the graph into target image size.
+        Partitioned into squares of size 6, to shrink the graph into target image size:
         Turning binaries into numbers up to 32bit signed - [0, 2147483647 = 2^31 - 1]
         Therefore the maximal square possible is 6x6 (without the diagonal, 30 entries)
         [[0,a1,a2, ...],[b1,0,b2, ...],[c1,c2,0, c3, ...], ...] is turned into 2^0 * a1 + 2^1 * a2 + ...
         """
         def get_number_or_zero(ri, ci, m):
             if len(m) > ri and len(m) > ci:
-                return m[ri][ci]
+                return str(m[ri][ci])
             return "0"
 
         def get_number_for_square(ri, ci, m, buff):
@@ -722,64 +645,82 @@ class SymmetryGraph:
                 for j in range(buff):
                     if i == j:
                         continue
-                    str_rep += get_number_or_zero(ri + buff - i, ci + buff - j, m)
+                    str_rep += get_number_or_zero(ri + buff - 1 - i, ci + buff - 1 - j, m)
 
             return int(str_rep, 2)
 
-        sorted_vertices = []
-        vertex_indices = {}
-        for vertex in self.graph.get_vertices():
-            if hide_equal_predicates and vertex in self.graph.excluded_vertices:           
-                continue
-            vertex_indices[vertex] = len(sorted_vertices)
-            sorted_vertices.append(vertex) 
-
-        print("Number of graph nodes: %s" % len(sorted_vertices))
-        print("Target image size: %s" % image_size)
-
-        shrink_ratio = min(6, int(math.ceil( len(sorted_vertices)* 1.0 / image_size)))    
-        print("Shrink ratio: %s" % shrink_ratio)
-
-        ## Checking whether the shrink is possible    
-        if image_size * 6 < len(sorted_vertices):
-            print("Not possible to shrink without loosing information. Number of graph nodes is %s, while target image size is %s" % (len(sorted_vertices), image_size))
-
-        ## Creating a matrix
-        print("Creating matrix..")
-        matrix = []
+        assert(shrink_ratio > 0)
+        assert(shrink_ratio <= 6)
         
-        for vertex in sorted_vertices:
-            row = ["0" for i in range(len(sorted_vertices))]
-            for to_vertex in self.graph.get_successors(vertex):
-                if hide_equal_predicates and to_vertex in self.graph.excluded_vertices:
+        matrix_data = self.create_raw_matrix_for_image(hide_equal_predicates, bolded)
+        sz = len(matrix_data)
+
+        print("Number of graph nodes: %s" % sz)
+        print("Shrink ratio: %s" % shrink_ratio)
+        if shrink_ratio == 1:
+            return matrix_data
+        
+        shrinked_sz = int(math.ceil(float(sz)/shrink_ratio))     
+        n = 0
+        print("Shrinking matrix to size %sx%s.." % (shrinked_sz,shrinked_sz))
+        shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
+        for i in range(shrink_ratio):
+            for j in range(shrink_ratio):
+                if i == j:
                     continue
-                row[vertex_indices[to_vertex]] = "1"
-            matrix.append(row)
+                m = (2**n) * matrix_data[j::3, i::3]                 
+                shrinked_matrix_data_test += np.resize(m,(shrinked_sz,shrinked_sz))
+                n += 1 
+        return shrinked_matrix_data_test
+        
+        """ TODO: Check why the following does not give the same result! 
+                  Probably something to do with the order in which the entries are traversed. 
+        print("Shrinking matrix to size %sx%s.." % (shrinked_sz,shrinked_sz))
+        shrinked_matrix_data = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
+        for shrinked_row_ind in range(shrinked_sz):
+            row_ind = shrinked_row_ind * shrink_ratio
+            for shrinked_col_ind in range(shrinked_sz):
+                col_ind = shrinked_col_ind * shrink_ratio
+                num = get_number_for_square(row_ind, col_ind, matrix_data, shrink_ratio)
+                shrinked_matrix_data[shrinked_row_ind][shrinked_col_ind] = num
+
+        print shrinked_matrix_data_test - shrinked_matrix_data
+        return shrinked_matrix_data
+        """
+
+    def write_matrix_image_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
+        """Write the graph into a grayscale image"""
+        """If shrink_ratio of 1 is used, using raw [0, 1] values for each pixel. 
+            If shrink_ratio of up to 3 is used, using [0, 255] values for each pixel. 
+            Otherwise, a 32bit signed int is used"""
+        fname_base = 'graph-gs'
+        grayscale_type_opts = { 1 : '1', 2 : 'L', 3 : 'L', 4 : 'I', 5 : 'I', 6 : 'I'}
+        grayscale_color_opts = { '1' : 1, 'L' : 255, 'I' : 2147483647}
+        
+        grayscale_type = grayscale_type_opts[shrink_ratio]
+        grayscale_color = grayscale_color_opts[grayscale_type]
+        print("Grayscale color: %s" % grayscale_color)
+        nm = '%s-%s-%s.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
+        nm_thumbnail = '%s-%s-%s-thumbnail.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
+        
+        matrix_data = self.shrink_matrix_raw_to_grayscale(hide_equal_predicates, bolded, shrink_ratio)
+        #print matrix_data[matrix_data.nonzero()]
+        ## For grayscale_type "L", sharpen the image by 4 (there are only 6 entries used, so the maximal number is 63)
+        if grayscale_type == 'L':
+            matrix_data = 4 * matrix_data
             
-        ## Going over the matrix, 
-        print("Shrinking matrix..")
-        sz = len(matrix)
-        shrinked_sz = int(math.ceil(sz*1.0/shrink_ratio))     
-        image_data = []
-        for row_ind in range(0, sz, shrink_ratio):
-            for col_ind in range(0, sz, shrink_ratio):
-                num = get_number_for_square(row_ind, col_ind, matrix, shrink_ratio)
-                #print num, 
-                image_data.append(num)
-            for i in range(image_size - shrinked_sz):
-                image_data.append(2147483647)
+        #print matrix_data[matrix_data.nonzero()]
+        matrix_data = grayscale_color - matrix_data
                 
-        for i in range(image_size - shrinked_sz):
-            for j in range(image_size):
-                image_data.append(2147483647)
-            #print
-            
-        assert(shrinked_sz <= image_size)
-        shrinked_sz = image_size
-        print("Writing image of size %sx%s .." % (shrinked_sz, shrinked_sz))
-        im = Image.new('I', (shrinked_sz, shrinked_sz), "white")
-        im.putdata(image_data)
-        im.save('graph-gs-constant.png','png')
+        sz = len(matrix_data)
+        print("Writing grayscale image of size %sx%s .." % (sz, sz))
+        im = Image.new(grayscale_type, (sz, sz), grayscale_color)
+        im.putdata(matrix_data.flatten()) 
+                   
+        im.save(nm,'png') 
+        size = 128, 128
+        im.thumbnail(size, Image.NEAREST)
+        im.save(nm_thumbnail, "png")
         
 
     def find_automorphisms(self, time_limit):

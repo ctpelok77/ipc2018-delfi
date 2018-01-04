@@ -6,10 +6,15 @@ import pddl_parser
 from symmetries_module import SymmetryGraph
 import sys
 
-WRITE_DOT_GRAPH = True
-WRITE_MATRIX_IMAGE = True
+WRITE_DOT_GRAPH = False
 WRITE_MATRIX_IMAGE_RAW = True
-WRITE_MATRIX_REPRESENTATION = False
+WRITE_MATRIX_IMAGE_RAW = False
+WRITE_MATRIX_IMAGE_REG = True
+#WRITE_MATRIX_IMAGE_REG = False
+WRITE_MATRIX_IMAGE_INT = True
+WRITE_MATRIX_IMAGE_INT = False
+USE_BOLDING = True
+FIND_AUTOMORPHISMS = False
 
 if __name__ == "__main__":
     only_object_symmetries = options.only_object_symmetries
@@ -20,8 +25,8 @@ if __name__ == "__main__":
     task = pddl_parser.open()
     print("Normalizing task..")
     normalize.normalize(task)
-    print("Dumping task..")
-    task.dump()
+    #print("Dumping task..")
+    #task.dump()
     print("Creating symmetry graph..")
     graph = SymmetryGraph(task, only_object_symmetries, stabilize_initial_state, stabilize_goal)
     if options.add_mutex_groups:
@@ -31,19 +36,18 @@ if __name__ == "__main__":
         f = open('out.dot', 'w')
         graph.write_dot_graph(f, hide_equal_predicates=True)
         f.close()
-    if WRITE_MATRIX_REPRESENTATION:
-        print("Writing symmetry graph representation as a matrix..")
-        f = open('out.matrix', 'w')
-        graph.write_matrix_representation_raw(f, hide_equal_predicates=True)
-        f.close()
-    if WRITE_MATRIX_IMAGE:
-        print("Writing symmetry graph image..")
-        graph.write_matrix_image_gen(hide_equal_predicates=True, image_size=256)
     if WRITE_MATRIX_IMAGE_RAW:
         print("Writing symmetry graph raw image..")
-        graph.write_matrix_image_raw(hide_equal_predicates=True)
-        
-    automorphisms = graph.find_automorphisms(time_limit)
-    graph.write_or_print_automorphisms(automorphisms, hide_equal_predicates=True, write=False, dump=False)
+        graph.write_matrix_image_grayscale(hide_equal_predicates=True, shrink_ratio=1, bolded=USE_BOLDING)
+    if WRITE_MATRIX_IMAGE_REG:
+        print("Writing symmetry graph 255 image..")
+        graph.write_matrix_image_grayscale(hide_equal_predicates=True, shrink_ratio=3, bolded=USE_BOLDING)
+    if WRITE_MATRIX_IMAGE_INT:
+        print("Writing symmetry graph int image..")
+        graph.write_matrix_image_grayscale(hide_equal_predicates=True, shrink_ratio=6, bolded=USE_BOLDING)
+
+    if FIND_AUTOMORPHISMS:
+        automorphisms = graph.find_automorphisms(time_limit)
+        graph.write_or_print_automorphisms(automorphisms, hide_equal_predicates=True, write=False, dump=False)
     sys.stdout.flush()
 
