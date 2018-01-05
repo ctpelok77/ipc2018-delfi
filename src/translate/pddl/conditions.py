@@ -71,6 +71,12 @@ class Condition(object):
             if part.has_universal_part():
                 return True
         return False
+    def get_constants(self):
+        result = set()
+        for part in self.parts:
+            result |= part.get_constants()
+        return result
+
 
 class ConstantCondition(Condition):
     # Defining __eq__ blocks inheritance of __hash__, so must set it explicitly.
@@ -262,6 +268,8 @@ class Literal(Condition):
         return self.__class__(self.predicate, new_args)
     def free_variables(self):
         return set(arg for arg in self.args if arg[0] == "?")
+    def get_constants(self):
+        return set(arg for arg in self.args if arg[0] != "?")
 
 class Atom(Literal):
     negated = False

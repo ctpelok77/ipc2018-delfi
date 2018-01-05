@@ -150,7 +150,10 @@ def translate_typed_object(prog, obj, type_dict):
     for type_name in [obj.type_name] + supertypes:
         prog.add_fact(pddl.TypedObject(obj.name, type_name).get_atom())
 
-def translate_facts(prog, task):
+def does_atom_intersect_objects(atom, objects):
+    return len(objects & atom.get_constants())
+
+def translate_facts(prog, task, to_be_removed_objects = None):
     type_dict = dict((type.name, type) for type in task.types)
     for obj in task.objects:
         translate_typed_object(prog, obj, type_dict)
@@ -160,7 +163,12 @@ def translate_facts(prog, task):
     for fact in init:
         assert isinstance(fact, pddl.Atom) or isinstance(fact, pddl.Assign)
         if isinstance(fact, pddl.Atom):
-            prog.add_fact(fact)
+            skip_fact = False
+            if to_be_removed_objects is not None:
+                if does_atom_intersect_objects(fact, to_be_removed_objects):
+                    skip_fact = True
+            if not skip_fact:
+                prog.add_fact(fact)
 
 def all_symmetric_atoms(init, generators):
     open_list = list(init)
@@ -175,13 +183,22 @@ def all_symmetric_atoms(init, generators):
             closed.add(atom)
     return closed
 
-def translate(task):
+def translate(task, to_be_removed_objects = None):
     # Note: The function requires that the task has been normalized.
-    with timers.timing("Generating Datalog program"):
+    with timers.timing("Generating Datalog program", block=True):
         prog = PrologProgram()
-        translate_facts(prog, task)
+        translate_facts(prog, task, to_be_removed_objects)
         for conditions, effect in normalize.build_exploration_rules(task):
-            prog.add_rule(Rule(conditions, effect))
+            assert isinstance(conditions, list)
+            if to_be_removed_objects is not None:
+                new_conditions = []
+                for condition in conditions:
+                    if not does_atom_intersect_objects(condition, to_be_removed_objects):
+                        new_conditions.append(condition)
+                prog.add_rule(Rule(new_conditions, effect))
+            else:
+                prog.add_rule(Rule(conditions, effect))
+
     with timers.timing("Normalizing Datalog program", block=True):
         # Using block=True because normalization can output some messages
         # in rare cases.
