@@ -4,9 +4,13 @@ from __future__ import print_function
 
 from collections import defaultdict
 
+import sys
+
 import build_model
+import options
 import pddl_to_prolog
 import pddl
+import reduction
 import timers
 
 def get_fluent_facts(task, model):
@@ -71,12 +75,26 @@ def instantiate(task, model):
     return (relaxed_reachable, fluent_facts, instantiated_actions,
             sorted(instantiated_axioms), reachable_action_parameters)
 
-def explore(task):
+
+def explore(task, object_sets_and_preserved_subsets = []):
     timer = timers.Timer()
-    prog = pddl_to_prolog.translate(task)
+    to_be_removed_objects = set()
+    for obj_set, preserved_subset in object_sets_and_preserved_subsets:
+        to_be_removed_objects |= (obj_set - preserved_subset)
+    prog = pddl_to_prolog.translate(task, to_be_removed_objects)
+    print("Time to generate prolog program: {}s".format(timer.elapsed_time()))
+    sys.stdout.flush()
+    timer = timers.Timer()
     model = build_model.compute_model(prog)
-    time = timer.elapsed_time()
-    print ("Done building program and model: %ss" % time)
+    print("Time to compute model of prolog program: {}s".format(timer.elapsed_time()))
+    sys.stdout.flush()
+    if options.expand_reduced_task:
+        timer = timers.Timer()
+        assert options.symmetry_reduced_grounding
+        for symm_obj_set, subset in object_sets_and_preserved_subsets:
+            reduction.expand(model, symm_obj_set)
+        print("Time to expand reduced model: {}s".format(timer.elapsed_time()))
+        sys.stdout.flush()
     with timers.timing("Completing instantiation"):
         return instantiate(task, model)
 

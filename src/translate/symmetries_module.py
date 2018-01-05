@@ -136,9 +136,10 @@ class Color:
     number = None # will be set by Symmetry Graph
 
 class SymmetryGraph:
-    def __init__(self, task, only_object_symmetries, stabilize_initial_state):
+    def __init__(self, task, only_object_symmetries, stabilize_initial_state, stabilize_goal):
         self.only_object_symmetries = only_object_symmetries
         self.stabilize_initial_state = stabilize_initial_state
+        self.stabilize_goal = stabilize_goal
         self.graph = PyblissModuleWrapper(only_object_symmetries)
         self.numbers = set()
         self.constant_functions = dict()
@@ -172,7 +173,8 @@ class SymmetryGraph:
         self._add_predicates(task)
         self._add_functions(task)
         self._add_init(task)
-        self._add_goal(task)
+        if self.stabilize_goal:
+            self._add_goal(task)
         self._add_operators(task)
         self._add_axioms(task)
 
@@ -585,6 +587,7 @@ class SymmetryGraph:
         automorphisms = self.graph.find_automorphisms(time_limit)
         return automorphisms
 
+
     def print_generator(self, generator, hide_equal_predicates=False):
         keys = sorted(generator.keys())
         for from_vertex in keys:
@@ -629,3 +632,73 @@ class SymmetryGraph:
                 lit_node = self._add_literal(NodeType.mutex_group, Color.mutex_group, atom, (index))
                 self.graph.add_edge(group_node, lit_node)
 
+
+
+def gcd(a, b):
+    """Return greatest common divisor using Euclid's Algorithm."""
+    while b:
+        a, b = b, a % b
+    return a
+
+
+def lcm(a, b):
+    """Return lowest common multiple."""
+    return a * b // gcd(a, b)
+
+
+def compute_order(generator):
+    visited_keys = set()
+    order = 1
+    for start_key in generator.keys():
+        if not start_key in visited_keys:
+            cycle_size = 1
+            visited_keys.add(start_key)
+            current_key = generator[start_key]
+            while current_key != start_key:
+                current_key = tuple(generator[current_key])
+                visited_keys.add(current_key)
+                cycle_size += 1
+            order = lcm(order, cycle_size)
+    return order
+
+
+def get_mapped_objects(generator):
+    keys = sorted(generator.keys())
+    mapped_objects = []
+    for from_vertex in keys:
+        to_vertex = generator[from_vertex]
+        if from_vertex != to_vertex and from_vertex[0] == 0:
+            mapped_objects.append(from_vertex[1])
+    return mapped_objects
+
+
+def compute_symmetric_object_sets(objects, transpositions):
+    timer = timers.Timer()
+    symmetric_object_sets = set([frozenset([obj.name]) for obj in objects])
+    #print(symmetric_object_sets)
+    for transposition in transpositions:
+        mapped_objects = get_mapped_objects(transposition)
+        assert len(mapped_objects) == 2
+        #print(mapped_objects)
+
+        set1 = None
+        for symm_obj_set in symmetric_object_sets:
+            if mapped_objects[0] in symm_obj_set:
+                set1 = frozenset(symm_obj_set)
+                symmetric_object_sets.remove(symm_obj_set)
+                break
+        assert set1 is not None
+
+        set2 = None
+        for symm_obj_set in symmetric_object_sets:
+            if mapped_objects[1] in symm_obj_set:
+                set2 = frozenset(symm_obj_set)
+                symmetric_object_sets.remove(symm_obj_set)
+                break
+        assert set2 is not None
+
+        union = set1 | set2
+        symmetric_object_sets.add(union)
+    print("Time to compute symmetric object sets: {}s".format(timer.elapsed_time()))
+    sys.stdout.flush()
+    return symmetric_object_sets

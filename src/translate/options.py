@@ -51,6 +51,8 @@ def parse_args():
     argparser.add_argument(
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
+
+    #### Options related to symmetries
     argparser.add_argument(
         "--compute-symmetries", action="store_true",
         help="compute symmetries on the normalized taks using bliss, dump "
@@ -58,15 +60,61 @@ def parse_args():
     argparser.add_argument(
         "--only-object-symmetries", action="store_true",
         help="HACK! Only allow objects to be permuted, but not "
-        "predicates operators, axioms or functions.")
+        "predicates, operators, axioms or functions. (Set option "
+        "--compute-symmetries)")
     argparser.add_argument(
-        "--stabilize-initial-state", action="store_true",
-        help="If false, only those atoms in the initial state mentioning "
-        "static predicates are added.")
+        "--do-not-stabilize-initial-state", action="store_true",
+        help="If true, only those atoms in the initial state mentioning "
+        "static predicates are added. (Set option --compute-symmetries)")
     argparser.add_argument(
         "--only-functions-from-initial-state", action="store_true",
         help="If true, include only the functions mentioned in the initial "
-        "states, but not the fluents or types.")
+        "states, but not the fluents or types. (Set option --compute-symmetries)")
+    argparser.add_argument(
+        "--do-not-stabilize-goal", action="store_true",
+        help="If true, literals in the goal are not colored with a special "
+        "color. (Set option --compute-symmetries)")
+    argparser.add_argument(
+        "--bliss-time-limit", default=300, type=int,
+        help="Max time for bliss to search for automorphisms. (Set option "
+        "--compute-symmetries)")
+
+    # Options related to symmetry-based reduction and expansion
+    argparser.add_argument(
+        "--compute-symmetric-object-sets", action="store_true",
+        help="If true, compute symmetric object sets of object symmetry "
+        "generators. (Set option --only-object-symmetries)")
+    argparser.add_argument(
+        "--symmetry-reduced-grounding", action="store_true",
+        help="If true, compute a task reduction based on all large enough "
+        "symemtric object sets. (Set option --compute-symmetric-object-sets)")
+    argparser.add_argument(
+        "--symmetry-reduced-grounding-for-h2-mutexes", action="store_true",
+        help="If true, compute a task reduction based on all large enough "
+        "symemtric object sets, computing the minimum size as required for "
+        "computing h2 mutexes on the reduction. (Set option "
+        "--compute-symmetric-object-sets)")
+    argparser.add_argument(
+        "--expand-reduced-task", action="store_true",
+        help="If true, expand the model of a symmetry-reduced task before "
+        "instantiating it. (Set option --symmetry-reduced-grounding)")
+    argparser.add_argument(
+        "--expand-reduced-h2-mutexes", action="store_true",
+        help="If true, expand the set of h2 mutexes computed on a "
+        "symmetry-reduced task. (Set options "
+        "--symmetry-reduced-grounding-for-h2-mutexes and --h2-mutexes)")
+    argparser.add_argument(
+        "--assert-equal-grounding", action="store_true",
+        help="If true, assert that using --symmetry-reduced-grounding + "
+        "--expand-reduced-task yields the same result as regular grounding. "
+        "(Set the two obvious options.)")
+    argparser.add_argument(
+        "--assert-equal-h2-mutexes", action="store_true",
+        help="If true, assert that using --symmetry-reduced-grounding-for-h2-mutexes "
+        "+ --expand-reduced-h2-mutexes yields the same result as regular "
+        "computation of h2-mutexes. (Set the two obvious options.)")
+
+    # Options related to grounding of symmetries
     argparser.add_argument(
         "--preserve-symmetries-during-grounding", action="store_true",
         help="If true, grounding preserves unreachable structures (axioms, "
@@ -90,9 +138,15 @@ def parse_args():
         "If this option is used, generators that map none-of-those values to "
         "none-of-those values of other variables are *not* filtered out as "
         "they would otherwise be.")
+
+    # Options related to computation of h2 mutexes
     argparser.add_argument(
-        "--bliss-time-limit", default=300, type=int,
-        help="max time for bliss to search for automorphisms")
+        "--h2-mutexes", action="store_true",
+        help="If true, compute h2 mutex groups.")
+    argparser.add_argument(
+        "--only-positive-literals", action="store_true",
+        help="If true, relax the computation of h2 mutexes by not considering "
+        "negative literals. (Set option --h2-mutexes)")
     return argparser.parse_args()
 
 
