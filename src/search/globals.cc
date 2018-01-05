@@ -5,6 +5,7 @@
 #include "global_state.h"
 
 #include "algorithms/int_packer.h"
+#include "structural_symmetries/permutation.h"
 #include "task_utils/causal_graph.h"
 #include "task_utils/successor_generator.h"
 #include "tasks/root_task.h"
@@ -228,6 +229,48 @@ void read_axioms(istream &in) {
     g_axiom_evaluator = new AxiomEvaluator(TaskProxy(*g_root_task()));
 }
 
+void read_symmetry_generators(istream &in) {
+    int count;
+    in >> count;
+    if (count) {
+        check_magic(in, "begin_dom_sum_by_var");
+        int size;
+        in >> size;
+        g_dom_sum_by_var.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            int val;
+            in >> val;
+            g_dom_sum_by_var.push_back(val);
+        }
+        check_magic(in, "end_dom_sum_by_var");
+
+        check_magic(in, "begin_var_by_val");
+        in >> size;
+        g_var_by_val.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            int val;
+            in >> val;
+            g_var_by_val.push_back(val);
+        }
+        check_magic(in, "end_var_by_val");
+
+        g_permutation_length = g_variable_domain.size() + size;
+
+        g_permutations.reserve(count);
+        for (int i = 0; i < count; ++i) {
+            check_magic(in, "begin_generator");
+            RawPermutation permutation(g_permutation_length);
+            for (int i = 0; i < g_permutation_length; ++i) {
+                int val;
+                in >> val;
+                permutation[i] = val;
+            }
+            g_permutations.push_back(move(permutation));
+            check_magic(in, "end_generator");
+        }
+    }
+}
+
 void read_everything(istream &in) {
     cout << "reading input... [t=" << utils::g_timer << "]" << endl;
     read_and_verify_version(in);
@@ -245,6 +288,7 @@ void read_everything(istream &in) {
     read_goal(in);
     read_operators(in);
     read_axioms(in);
+    read_symmetry_generators(in);
 
     /* TODO: We should be stricter here and verify that we
        have reached the end of "in". */
@@ -378,6 +422,10 @@ vector<pair<int, int>> g_goal;
 vector<GlobalOperator> g_operators;
 vector<GlobalOperator> g_axioms;
 AxiomEvaluator *g_axiom_evaluator;
+vector<RawPermutation> g_permutations;
+std::vector<int> g_dom_sum_by_var;
+std::vector<int> g_var_by_val;
+int g_permutation_length;
 successor_generator::SuccessorGenerator *g_successor_generator;
 
 string g_plan_filename = "sas_plan";
