@@ -25,6 +25,7 @@ Group::Group(const options::Options &opts)
       time_bound(opts.get<int>("time_bound")),
       dump_symmetry_graph(opts.get<bool>("dump_symmetry_graph")),
       search_symmetries(SearchSymmetries(opts.get_enum("search_symmetries"))),
+      sos(static_cast<SourceOfSymmetries>(opts.get_enum("source_of_symmetries"))),
       dump_permutations(opts.get<bool>("dump_permutations")),
       num_vars(0),
       permutation_length(0),
@@ -49,12 +50,28 @@ void Group::compute_symmetries(const TaskProxy &task_proxy) {
         cerr << "Already computed symmetries" << endl;
         exit_with(ExitCode::CRITICAL_ERROR);
     }
-    GraphCreator graph_creator;
-    bool success = graph_creator.compute_symmetries(
-        task_proxy, stabilize_initial_state, time_bound, dump_symmetry_graph, this);
-    if (!success) {
-        generators.clear();
+    if (sos == SourceOfSymmetries::NoSource) {
+        cerr << "no source of symmetries given" << endl;
+        exit_with(ExitCode::INPUT_ERROR);
+    } else if (sos == SourceOfSymmetries::GraphCreator) {
+        GraphCreator graph_creator;
+        bool success = graph_creator.compute_symmetries(
+            task_proxy, stabilize_initial_state, time_bound, dump_symmetry_graph, this);
+        if (!success) {
+            generators.clear();
+        }
+    } else if (sos == SourceOfSymmetries::Translator) {
+        dom_sum_by_var = move(g_dom_sum_by_var);
+        var_by_val = move(g_var_by_val);
+        num_vars = g_variable_domain.size();
+        permutation_length = g_permutation_length;
+        for (const RawPermutation &raw_permutation : g_permutations) {
+            generators.emplace_back(*this, raw_permutation);
+        }
+        vector<RawPermutation>().swap(g_permutations);
+        statistics();
     }
+
     // Set initialized to true regardless of whether symmetries have been
     // found or not to avoid future attempts at computing symmetries if
     // none can be found.
@@ -295,6 +312,17 @@ static shared_ptr<Group> _parse(OptionParser &parser) {
                            "search or DKS for storing the canonical "
                            "representative of every state during search",
                            "NONE");
+
+    // Source of symmetries
+    vector<string> source_of_symmetries;
+    source_of_symmetries.push_back("nosource");
+    source_of_symmetries.push_back("graphcreator");
+    source_of_symmetries.push_back("translator");
+    parser.add_enum_option(
+        "source_of_symmetries",
+        source_of_symmetries,
+        "the source of symmetries",
+        "graphcreator");
 
     parser.add_option<bool>("dump_permutations",
                            "Dump the generators",

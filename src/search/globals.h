@@ -14,6 +14,7 @@ class AxiomEvaluator;
 struct FactPair;
 class GlobalOperator;
 class GlobalState;
+class Permutation;
 class StateRegistry;
 class TaskProxy;
 
@@ -75,6 +76,10 @@ extern std::vector<std::pair<int, int>> g_goal;
 extern std::vector<GlobalOperator> g_operators;
 extern std::vector<GlobalOperator> g_axioms;
 extern AxiomEvaluator *g_axiom_evaluator;
+extern std::vector<std::vector<int>> g_permutations;
+extern std::vector<int> g_dom_sum_by_var;
+extern std::vector<int> g_var_by_val;
+extern int g_permutation_length;
 extern successor_generator::SuccessorGenerator *g_successor_generator;
 extern std::string g_plan_filename;
 extern int g_num_previously_generated_plans;

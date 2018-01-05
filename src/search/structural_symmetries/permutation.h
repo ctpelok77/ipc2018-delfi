@@ -1,6 +1,7 @@
 #ifndef STRUCTURAL_SYMMETRIES_PERMUTATION_H
 #define STRUCTURAL_SYMMETRIES_PERMUTATION_H
 
+#include <iosfwd>
 #include <vector>
 
 #include "group.h"

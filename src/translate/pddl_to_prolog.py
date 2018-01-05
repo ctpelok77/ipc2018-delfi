@@ -3,9 +3,11 @@
 from __future__ import print_function
 
 import itertools
+import options
 
 import normalize
 import pddl
+import symmetries_module
 import timers
 
 class PrologProgram:
@@ -152,10 +154,26 @@ def translate_facts(prog, task):
     type_dict = dict((type.name, type) for type in task.types)
     for obj in task.objects:
         translate_typed_object(prog, obj, type_dict)
-    for fact in task.init:
+    init = task.init
+    if options.preserve_symmetries_during_grounding:
+        init = all_symmetric_atoms(init, task.generators)
+    for fact in init:
         assert isinstance(fact, pddl.Atom) or isinstance(fact, pddl.Assign)
         if isinstance(fact, pddl.Atom):
             prog.add_fact(fact)
+
+def all_symmetric_atoms(init, generators):
+    open_list = list(init)
+    closed = set()
+    while open_list:
+        atom = open_list.pop()
+        if isinstance(atom, pddl.Atom):
+            if atom not in closed:
+                for generator in generators:
+                    succ = generator.apply_to_atom(atom)
+                    open_list.append(succ)
+            closed.add(atom)
+    return closed
 
 def translate(task):
     # Note: The function requires that the task has been normalized.

@@ -19,6 +19,12 @@ enum class SearchSymmetries {
     DKS
 };
 
+enum class SourceOfSymmetries {
+    NoSource,
+    GraphCreator,
+    Translator
+};
+
 // Permutation of bliss graph vertices.
 using RawPermutation = std::vector<int>;
 
@@ -28,6 +34,7 @@ class Group {
     const int time_bound;
     const bool dump_symmetry_graph;
     const SearchSymmetries search_symmetries;
+    const SourceOfSymmetries sos;
     const bool dump_permutations;
 
     // Group properties

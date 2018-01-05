@@ -121,6 +121,7 @@ def build(config_name, cmake_parameters, make_parameters):
         else:
             raise
 
+    try_run([MAKE], cwd='src/translate/pybliss-0.73')
     try_run([CMAKE, "-G", CMAKE_GENERATOR] + cmake_parameters + [rel_src_path],
             cwd=build_path)
     try_run([MAKE] + make_parameters, cwd=build_path)
