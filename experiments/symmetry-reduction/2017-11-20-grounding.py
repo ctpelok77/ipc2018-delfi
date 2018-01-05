@@ -77,7 +77,7 @@ def main(revisions=None):
     exp.add_resource('symmetries_parser', 'symmetries-parser.py', dest='symmetries-parser.py')
     exp.add_command('symmetries-parser', ['{symmetries_parser}'])
     del exp.commands['parse-search']
-    del exp.commands['compress-output-sas']
+    # del exp.commands['compress-output-sas']
 
     generator_count_lifted = Attribute('generator_count_lifted', absolute=True, min_wins=False)
     generator_orders_lifted = Attribute('generator_orders_lifted', absolute=True)

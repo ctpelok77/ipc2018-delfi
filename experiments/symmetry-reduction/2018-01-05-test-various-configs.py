@@ -5,6 +5,7 @@ import os
 
 from lab.environments import LocalEnvironment, BaselSlurmEnvironment
 from lab.reports import Attribute, geometric_mean
+from downward.reports.compare import ComparativeReport
 
 from common_setup import IssueConfig, IssueExperiment, DEFAULT_OPTIMAL_SUITE, is_test_run
 try:
@@ -14,7 +15,7 @@ except ImportError:
     print 'matplotlib not availabe, scatter plots not available'
     matplotlib = False
 
-REVISION = 'd3481591b3d3'
+REVISION = 'ba26049edfb4'
 
 def main(revisions=None):
     benchmarks_dir=os.path.expanduser('~/repos/downward/benchmarks')
@@ -61,10 +62,19 @@ def main(revisions=None):
         environment = LocalEnvironment(processes=4)
 
     configs = {
+        # reduced grounding
+        IssueConfig('translate', [], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-reduced-grounding-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-reduced-grounding-expand-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding', '--expand-reduced-task', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+
+        # reduced mutexes
+        IssueConfig('translate-h2mutexes', ['--translate-options', '--h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-reduced-h2mutexes-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+        IssueConfig('translate-reduced-h2mutexes-expand-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--expand-reduced-h2-mutexes', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
+
+        # reduced relaxed mutexes
         IssueConfig('translate-h2mutexesrelaxed', ['--translate-options', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        #IssueConfig('translate-reduced-h2mutexesrelaxed', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--only-positive-literals'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-h2mutexesrelaxed-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--only-positive-literals', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
-        #IssueConfig('translate-reduced-h2mutexesrelaxed-expand', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes', '--h2-mutexes', '--only-positive-literals', '--expand-reduced-h2-mutexes'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
         IssueConfig('translate-reduced-h2mutexesrelaxed-expand-nogoal', ['--translate-options', '--compute-symmetries', '--bliss-time-limit', '300', '--only-object-symmetries', '--compute-symmetric-object-sets', '--symmetry-reduced-grounding-for-h2-mutexes','--h2-mutexes', '--only-positive-literals', '--expand-reduced-h2-mutexes', '--do-not-stabilize-goal'], driver_options=['--translate', '--translate-time-limit', '30m', '--translate-memory-limit', '3G']),
     }
 
@@ -77,7 +87,6 @@ def main(revisions=None):
     exp.add_resource('symmetries_parser', 'symmetries-parser.py', dest='symmetries-parser.py')
     exp.add_command('symmetries-parser', ['{symmetries_parser}'])
     del exp.commands['parse-search']
-    # del exp.commands['compress-output-sas']
 
     generator_count_lifted = Attribute('generator_count_lifted', absolute=True, min_wins=False)
     generator_orders_lifted = Attribute('generator_orders_lifted', absolute=True)
@@ -154,13 +163,37 @@ def main(revisions=None):
 
     exp.add_fetcher(name='parse-memory-error', parsers=['translator-memory-error-parser.py'])
 
-    exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
-        '{}-translate-h2mutexesrelaxed'.format(REVISION),
-        #'{}-translate-reduced-h2mutexesrelaxed'.format(REVISION),
-        '{}-translate-reduced-h2mutexesrelaxed-nogoal'.format(REVISION),
-        #'{}-translate-reduced-h2mutexesrelaxed-expand'.format(REVISION),
-        '{}-translate-reduced-h2mutexesrelaxed-expand-nogoal'.format(REVISION),
-    ])
+    algorithm_nicks = [
+        'translate',
+        'translate-reduced-grounding-nogoal',
+        'translate-reduced-grounding-expand-nogoal',
+        'translate-h2mutexes',
+        'translate-reduced-h2mutexes-nogoal',
+        'translate-reduced-h2mutexes-expand-nogoal',
+        'translate-h2mutexesrelaxed',
+        'translate-reduced-h2mutexesrelaxed-nogoal',
+        'translate-reduced-h2mutexesrelaxed-expand-nogoal',
+    ]
+
+    exp.add_absolute_report_step(attributes=attributes,filter_algorithm=['{}-{}'.format(REVISION, x) for x in algorithm_nicks])
+
+    OLD_REV1 = '212720d86b23'
+    old_rev_algos = ['{}-{}'.format(OLD_REV1, x) for x in algorithm_nicks]
+    exp.add_fetcher('data/2017-11-20-grounding-eval',filter_algorithm=old_rev_algos)
+    OLD_REV2 = 'd3481591b3d3'
+    old_rev_algos = ['{}-{}'.format(OLD_REV2, x) for x in algorithm_nicks]
+    exp.add_fetcher('data/2017-11-22-h2mutexes-eval',filter_algorithm=old_rev_algos)
+    exp.add_fetcher('data/2017-11-22-h2mutexesrelaxed-eval',filter_algorithm=old_rev_algos)
+
+    algo_pairs = [('{}-{}'.format(OLD_REV1, x), '{}-{}'.format(REVISION, x)) for x in algorithm_nicks[:3]]
+    algo_pairs.extend([('{}-{}'.format(OLD_REV2, x), '{}-{}'.format(REVISION, x)) for x in algorithm_nicks[3:]])
+    exp.add_report(
+        ComparativeReport(
+            algorithm_pairs=algo_pairs,
+            attributes=attributes,
+        ),
+        outfile=os.path.join(exp.eval_dir, 'compare.html'),
+    )
 
     exp.run_steps()
 
