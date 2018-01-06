@@ -21,7 +21,7 @@ From: ubuntu
 
     ## Install all necessary dependencies.
     apt update
-    apt -y install cmake g++ g++-multilib make python
+    apt -y install cmake g++ g++-multilib make python python-dev
 
     ## Build your planner
     cd /planner
