@@ -45,6 +45,17 @@ public:
     explicit MergeStrategy(const FactoredTransitionSystem &fts);
     virtual ~MergeStrategy() = default;
     virtual std::pair<int, int> get_next() = 0;
+
+    // tiebreaking statistics
+    virtual std::pair<int, int> get_tiebreaking_statistics() const {
+        return std::make_pair(0, 0);
+    }
+    virtual bool started_merging_for_symmetries() const {
+        return false;
+    }
+    virtual bool ended_merging_for_symmetries() const {
+        return false;
+    }
 };
 }
 

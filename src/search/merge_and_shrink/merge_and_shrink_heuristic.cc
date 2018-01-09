@@ -17,6 +17,7 @@
 #include "../plugin.h"
 
 #include "../task_utils/task_properties.h"
+#include "../utils/logging.h"
 #include "../utils/markup.h"
 #include "../utils/math.h"
 #include "../utils/system.h"
@@ -46,6 +47,7 @@ MergeAndShrinkHeuristic::MergeAndShrinkHeuristic(const Options &opts)
       shrink_threshold_before_merge(opts.get<int>("threshold_before_merge")),
       prune_unreachable_states(opts.get<bool>("prune_unreachable_states")),
       prune_irrelevant_states(opts.get<bool>("prune_irrelevant_states")),
+      pruning_as_abstraction(opts.get<bool>("pruning_as_abstraction")),
       verbosity(static_cast<Verbosity>(opts.get_enum("verbosity"))),
       starting_peak_memory(-1),
       mas_representation(nullptr) {
@@ -162,48 +164,6 @@ void MergeAndShrinkHeuristic::warn_on_unusual_options() const {
     }
 }
 
-bool MergeAndShrinkHeuristic::shrink_before_merge(
-    FactoredTransitionSystem &fts, int index1, int index2) {
-    /*
-      Compute the size limit for both transition systems as imposed by
-      max_states and max_states_before_merge.
-    */
-    pair<int, int> new_sizes = compute_shrink_sizes(
-        fts.get_ts(index1).get_size(),
-        fts.get_ts(index2).get_size(),
-        max_states_before_merge,
-        max_states);
-
-    /*
-      For both transition systems, possibly compute and apply an
-      abstraction.
-      TODO: we could better use the given limit by increasing the size limit
-      for the second shrinking if the first shrinking was larger than
-      required.
-    */
-    bool shrunk1 = shrink_factor(
-        fts,
-        index1,
-        new_sizes.first,
-        shrink_threshold_before_merge,
-        *shrink_strategy,
-        verbosity);
-    if (verbosity >= Verbosity::VERBOSE && shrunk1) {
-        fts.statistics(index1);
-    }
-    bool shrunk2 = shrink_factor(
-        fts,
-        index2,
-        new_sizes.second,
-        shrink_threshold_before_merge,
-        *shrink_strategy,
-        verbosity);
-    if (verbosity >= Verbosity::VERBOSE && shrunk2) {
-        fts.statistics(index2);
-    }
-    return shrunk1 || shrunk2;
-}
-
 void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
     const bool compute_init_distances =
         shrink_strategy->requires_init_distances() ||
@@ -227,11 +187,12 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
     */
     for (int index = 0; index < fts.get_size(); ++index) {
         if (prune_unreachable_states || prune_irrelevant_states) {
-            prune_factor(
+            prune_step(
                 fts,
                 index,
                 prune_unreachable_states,
                 prune_irrelevant_states,
+                pruning_as_abstraction,
                 verbosity);
         }
         if (!fts.is_factor_solvable(index)) {
@@ -241,6 +202,28 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
     }
     print_time(timer, "after computation of atomic transition systems");
     cout << endl;
+    int maximum_intermediate_size = 0;
+    for (int i = 0; i < fts.get_size(); ++i) {
+        int size = fts.get_ts(i).get_size();
+        if (size > maximum_intermediate_size) {
+            maximum_intermediate_size = size;
+        }
+    }
+
+    vector<int> init_hvalue_increase;
+    vector<int> remaining_labels;
+    remaining_labels.push_back(fts.get_labels().compute_number_active_labels());
+    int iteration_counter = 0;
+    bool still_perfect = true;
+    vector<pair<int, int>> merge_order;
+    vector<double> relative_pruning_per_iteration;
+    int num_attempts_merging_for_symmetries = 0;
+    int num_imperfect_shrinking_merging_for_symmetries = 0;
+    int num_pruning_merging_for_symmetries = 0;
+    int num_failed_merging_for_symmetries = 0;
+    bool merging_for_symmetries = true;
+    bool currently_shrink_perfect_for_symmetries = true;
+    bool currently_prune_perfect_for_symmetries = true;
 
     if (unsolvable_index == -1) { // All atomic transition systems are solvable.
         unique_ptr<MergeStrategy> merge_strategy =
@@ -250,9 +233,29 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
         while (fts.get_num_active_entries() > 1) {
             // Choose next transition systems to merge
             pair<int, int> merge_indices = merge_strategy->get_next();
+            if (merge_strategy->ended_merging_for_symmetries()) {
+                merging_for_symmetries = false;
+                if (!currently_shrink_perfect_for_symmetries) {
+                    ++num_imperfect_shrinking_merging_for_symmetries;
+                }
+                if (!currently_prune_perfect_for_symmetries) {
+                    ++num_pruning_merging_for_symmetries;
+                }
+                if (!currently_shrink_perfect_for_symmetries ||
+                    !currently_prune_perfect_for_symmetries) {
+                    ++num_failed_merging_for_symmetries;
+                }
+            }
+            if (merge_strategy->started_merging_for_symmetries()) {
+                ++num_attempts_merging_for_symmetries;
+                merging_for_symmetries = true;
+                currently_shrink_perfect_for_symmetries = true;
+                currently_prune_perfect_for_symmetries = true;
+            }
             int merge_index1 = merge_indices.first;
             int merge_index2 = merge_indices.second;
             assert(merge_index1 != merge_index2);
+            merge_order.push_back(merge_indices);
             if (verbosity >= Verbosity::NORMAL) {
                 cout << "Next pair of indices: ("
                      << merge_index1 << ", " << merge_index2 << ")" << endl;
@@ -269,13 +272,37 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
                 if (verbosity >= Verbosity::NORMAL && reduced) {
                     print_time(timer, "after label reduction");
                 }
+                remaining_labels.push_back(fts.get_labels().compute_number_active_labels());
             }
 
             // Shrinking
-            bool shrunk = shrink_before_merge(
-                fts, merge_index1, merge_index2);
+            bool shrunk = shrink_before_merge_step(
+                fts,
+                merge_index1,
+                merge_index2,
+                max_states,
+                max_states_before_merge,
+                shrink_threshold_before_merge,
+                *shrink_strategy,
+                verbosity);
             if (verbosity >= Verbosity::NORMAL && shrunk) {
                 print_time(timer, "after shrinking");
+            }
+            if (merging_for_symmetries && currently_shrink_perfect_for_symmetries && shrunk) {
+                currently_shrink_perfect_for_symmetries = false;
+            }
+
+            const vector<double> &miss_qualified_states_ratios =
+                shrink_strategy->get_miss_qualified_states_ratios();
+            int size = miss_qualified_states_ratios.size();
+            if (size >= 2 && still_perfect &&
+                (miss_qualified_states_ratios[size - 1]
+                 || miss_qualified_states_ratios[size - 2])) {
+                // The test for size >= 2 is to ensure we actually record
+                // this kind of statistics -- currently only with bisimulation
+                // shrinking.
+                cout << "not perfect anymore in iteration " << iteration_counter << endl;
+                still_perfect = false;
             }
 
             // Label reduction (before merging)
@@ -284,30 +311,54 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
                 if (verbosity >= Verbosity::NORMAL && reduced) {
                     print_time(timer, "after label reduction");
                 }
+                remaining_labels.push_back(fts.get_labels().compute_number_active_labels());
             }
+
+            int init_dist1 = fts.get_init_state_goal_distance(merge_index1);
+            int init_dist2 = fts.get_init_state_goal_distance(merge_index2);
 
             // Merging
             int merged_index = fts.merge(merge_index1, merge_index2, verbosity);
+            int abs_size = fts.get_ts(merged_index).get_size();
+            if (abs_size > maximum_intermediate_size) {
+                maximum_intermediate_size = abs_size;
+            }
+            int new_init_dist = fts.get_init_state_goal_distance(merged_index);
+            int difference = new_init_dist - max(init_dist1, init_dist2);
+            init_hvalue_increase.push_back(difference);
+
             if (verbosity >= Verbosity::NORMAL) {
                 if (verbosity >= Verbosity::VERBOSE) {
                     fts.statistics(merged_index);
+                    cout << "Difference of init h values: " << difference << endl;
                 }
                 print_time(timer, "after merging");
             }
 
             // Pruning
             if (prune_unreachable_states || prune_irrelevant_states) {
-                bool pruned = prune_factor(
+                int old_size = fts.get_ts(merged_index).get_size();
+                pair<bool, bool> pruned_and_pruned_unreachable = prune_step(
                     fts,
                     merged_index,
                     prune_unreachable_states,
                     prune_irrelevant_states,
+                    pruning_as_abstraction,
                     verbosity);
-                if (verbosity >= Verbosity::NORMAL && pruned) {
+                double new_size = fts.get_ts(merged_index).get_size();
+                assert(new_size <= old_size);
+                relative_pruning_per_iteration.push_back(1 - new_size / static_cast<double>(old_size));
+                if (verbosity >= Verbosity::NORMAL && pruned_and_pruned_unreachable.first) {
                     if (verbosity >= Verbosity::VERBOSE) {
                         fts.statistics(merged_index);
                     }
                     print_time(timer, "after pruning");
+                }
+                if (pruned_and_pruned_unreachable.first &&
+                    pruned_and_pruned_unreachable.second &&
+                    merging_for_symmetries &&
+                    currently_prune_perfect_for_symmetries) {
+                    currently_prune_perfect_for_symmetries = false;
                 }
             }
 
@@ -327,7 +378,16 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
                 unsolvable_index = merged_index;
                 break;
             }
+
+            ++iteration_counter;
         }
+
+        pair<int, int> dfp_tiebreaking =
+            merge_strategy->get_tiebreaking_statistics();
+        cout << "Iterations with merge tiebreaking: "
+             << dfp_tiebreaking.first << endl;
+        cout << "Total tiebreaking merge candidates: "
+             << dfp_tiebreaking.second << endl;
     }
 
     int final_index;
@@ -358,6 +418,69 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
     final_entry = fts.extract_factor(final_index);
     mas_representation = move(final_entry.first);
     mas_representation->set_distances(*final_entry.second);
+
+    cout << "Maximum intermediate abstraction size: "
+         << maximum_intermediate_size << endl;
+    cout << "Init h value improvements: " << init_hvalue_increase << endl;
+    cout << "Course of label reduction: " << remaining_labels << endl;
+    const vector<double> &miss_qualified_states_ratios =
+        shrink_strategy->get_miss_qualified_states_ratios();
+    cout << "Course of miss qualified states shrinking: "
+         << miss_qualified_states_ratios << endl;
+    double summed_values = 0;
+    for (double value : miss_qualified_states_ratios) {
+        summed_values += value;
+    }
+    size_t number_of_shrinks = miss_qualified_states_ratios.size();
+    double average_imperfect_shrinking = 0;
+    if (number_of_shrinks) {
+        average_imperfect_shrinking = summed_values / static_cast<double>(number_of_shrinks);
+    }
+    cout << "Average imperfect shrinking: " << average_imperfect_shrinking << endl;
+    cout << "Merge order: [";
+    bool linear_order = true;
+    int next_index = task_proxy.get_variables().size();
+    for (size_t i = 0; i < merge_order.size(); ++i) {
+        pair<int, int> merge = merge_order[i];
+        cout << "(" << merge.first << ", " << merge.second << ")";
+        if (i != merge_order.size() - 1) {
+            cout << ", ";
+        }
+        if (linear_order && i != 0) {
+            if (merge.first != next_index && merge.second != next_index) {
+                linear_order = false;
+            }
+            ++next_index;
+        }
+    }
+    cout << "]" << endl;
+    if (linear_order) {
+        cout << "Linear merge order" << endl;
+    } else {
+         cout << "Non-linear merge order" << endl;
+    }
+    cout << "Relative pruning per iteration: " << relative_pruning_per_iteration << endl;
+    double summed_pruning = 0;
+    for (double pruning : relative_pruning_per_iteration) {
+        summed_pruning += pruning;
+    }
+    // If relative_pruning_per_iteration are empty, then because the instance is unsolvable.
+    // In this case, we return 0, which is the worst value possible for pruning.
+    double average_pruning = 0;
+    if (!relative_pruning_per_iteration.empty()) {
+        average_pruning =  summed_pruning / static_cast<double>(relative_pruning_per_iteration.size());
+    }
+    cout << "Average relative pruning: " << average_pruning << endl;
+
+    cout << "Number of attempts to merge for symmetries: "
+         << num_attempts_merging_for_symmetries << endl;
+    cout << "Number of times non-perfect shrinking interfered merging for symmetries: "
+         << num_imperfect_shrinking_merging_for_symmetries << endl;
+    cout << "Number of times pruning interfered merging for symmetries: "
+         << num_pruning_merging_for_symmetries << endl;
+    cout << "Number of times merging for symmetries failed for any reason: "
+         << num_failed_merging_for_symmetries << endl;
+
     shrink_strategy = nullptr;
     label_reduction = nullptr;
 }
@@ -551,6 +674,12 @@ static Heuristic *_parse(OptionParser &parser) {
         "If true, prune abstract states from which no goal state can be "
         "reached.",
         "true");
+    parser.add_option<bool>(
+        "pruning_as_abstraction",
+        "If true, perform pruning by not removing pruned states, but mapping "
+        "them to two single states representing unreachable and irrelevant "
+        "states respectively.",
+        "false");
 
     MergeAndShrinkHeuristic::add_shrink_limit_options_to_parser(parser);
     Heuristic::add_options_to_parser(parser);

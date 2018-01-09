@@ -32,6 +32,7 @@ public:
         std::vector<int> indices_of_merged_sccs);
     virtual ~MergeStrategySCCs() override;
     virtual std::pair<int, int> get_next() override;
+    virtual std::pair<int, int> get_tiebreaking_statistics() const override;
 };
 }
 

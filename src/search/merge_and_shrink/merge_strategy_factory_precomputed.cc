@@ -4,6 +4,11 @@
 #include "merge_tree_factory.h"
 #include "merge_tree.h"
 
+// HACK! For MIASM to have a fallback merge strategy.
+#include "merge_selector.h"
+#include "merge_strategy_stateless.h"
+#include "merge_tree_factory_miasm.h"
+
 #include "../options/option_parser.h"
 #include "../options/options.h"
 #include "../options/plugin.h"
@@ -24,6 +29,16 @@ unique_ptr<MergeStrategy> MergeStrategyFactoryPrecomputed::compute_merge_strateg
     const FactoredTransitionSystem &fts) {
     unique_ptr<MergeTree> merge_tree =
         merge_tree_factory->compute_merge_tree(task_proxy);
+    if (merge_tree_factory->get_name() == "miasm") {
+        // HACK! For MIASM to have a fallback merge strategy.
+        MergeTreeFactoryMiasm *miasm_factory = dynamic_cast<MergeTreeFactoryMiasm *>(merge_tree_factory.get());
+        assert(miasm_factory);
+        if (miasm_factory->is_trivial_partitioning() && miasm_factory->has_fallback_merge_selector()) {
+            shared_ptr<MergeSelector> fallback_merge_selector = miasm_factory->get_fallback_merge_selector();
+            fallback_merge_selector->initialize(task_proxy);
+            return utils::make_unique_ptr<MergeStrategyStateless>(fts, fallback_merge_selector);
+        }
+    }
     return utils::make_unique_ptr<MergeStrategyPrecomputed>(fts, move(merge_tree));
 }
 

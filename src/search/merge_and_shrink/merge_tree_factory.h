@@ -43,6 +43,9 @@ public:
     virtual bool requires_goal_distances() const = 0;
     // Derived classes must call this method in their parsing methods.
     static void add_options_to_parser(options::OptionParser &parser);
+    std::string get_name() const {
+        return name();
+    }
 };
 }
 
