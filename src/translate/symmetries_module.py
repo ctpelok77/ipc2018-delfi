@@ -668,7 +668,7 @@ class SymmetryGraph:
             for j in range(shrink_ratio):
                 if i == j:
                     continue
-                m = (2**n) * matrix_data[j::3, i::3]                 
+                m = (2**n) * matrix_data[j::shrink_ratio, i::shrink_ratio]                 
                 shrinked_matrix_data_test += np.resize(m,(shrinked_sz,shrinked_sz))
                 n += 1 
         return shrinked_matrix_data_test
@@ -702,6 +702,7 @@ class SymmetryGraph:
         print("Grayscale color: %s" % grayscale_color)
         nm = '%s-%s-%s.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
         nm_thumbnail = '%s-%s-%s-thumbnail.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
+        nm_constant_size = '%s-%s-%s-cs.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
         
         matrix_data = self.shrink_matrix_raw_to_grayscale(hide_equal_predicates, bolded, shrink_ratio)
         #print matrix_data[matrix_data.nonzero()]
@@ -719,8 +720,12 @@ class SymmetryGraph:
                    
         im.save(nm,'png') 
         size = 128, 128
-        im.thumbnail(size, Image.NEAREST)
-        im.save(nm_thumbnail, "png")
+        
+        newimg = im.resize(size, Image.ANTIALIAS)
+        newimg.save(nm_constant_size, "png")
+        
+        #im.thumbnail(size, Image.ANTIALIAS)
+        #im.save(nm_thumbnail, "png")
         
 
     def find_automorphisms(self, time_limit):
