@@ -31,6 +31,10 @@ public:
     virtual bool requires_goal_distances() const {
         return false;
     }
+
+    virtual std::pair<int, int> get_tiebreaking_statistics() const {
+        return std::make_pair(0, 0);
+    }
 };
 }
 

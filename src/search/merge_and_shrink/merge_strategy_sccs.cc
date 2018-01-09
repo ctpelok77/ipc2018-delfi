@@ -83,4 +83,12 @@ pair<int, int> MergeStrategySCCs::get_next() {
     }
     return next_pair;
 }
+
+pair<int, int> MergeStrategySCCs::get_tiebreaking_statistics() const {
+    if (merge_selector) {
+        return merge_selector->get_tiebreaking_statistics();
+    } else {
+        return make_pair(0, 0);
+    }
+}
 }
