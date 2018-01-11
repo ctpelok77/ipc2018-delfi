@@ -1,5 +1,6 @@
 #include "stubborn_sets.h"
 
+#include "../options/bounds.h"
 #include "../options/option_parser.h"
 #include "../task_utils/task_properties.h"
 #include "../utils/collections.h"
@@ -152,10 +153,11 @@ void StubbornSets::print_statistics() const {
 }
 
 void StubbornSets::add_options_to_parser(options::OptionParser &parser) {
-    parser.add_option<double>
-        ("minimum_pruning_ratio",
-          "The minium ratio of pruned states that must "
-          "be achieved to not turn pruning off.",
-          0);
+    parser.add_option<double>(
+        "minimum_pruning_ratio",
+        "The minium ratio of pruned states that must "
+        "be achieved to not turn pruning off.",
+        "0.0",
+        options::Bounds("0", "1"));
 }
 }
