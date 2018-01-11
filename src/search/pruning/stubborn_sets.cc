@@ -137,12 +137,12 @@ void StubbornSets::prune_operators(
 
 bool StubbornSets::pruning_below_minimum_ratio() const {
     if (num_unpruned_successors_generated == 0) {
-        return true;
+        return false;
     }
     return (
         (num_pruned_successors_generated /
          static_cast<double>(num_unpruned_successors_generated))
-        < (1 - minimum_pruning_ratio));
+        >= (1 - minimum_pruning_ratio));
 }
 
 void StubbornSets::print_statistics() const {
