@@ -27,6 +27,8 @@ class EagerSearch : public SearchEngine {
     std::vector<Heuristic *> preferred_operator_heuristics;
 
     std::shared_ptr<PruningMethod> pruning_method;
+    const int num_por_probes;
+    bool pruning_disabled;
 
     std::pair<SearchNode, bool> fetch_next_node();
     void start_f_value_statistics(EvaluationContext &eval_context);

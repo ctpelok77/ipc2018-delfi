@@ -26,7 +26,9 @@ EagerSearch::EagerSearch(const Options &opts)
                 create_state_open_list()),
       f_evaluator(opts.get<Evaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
-      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")) {
+      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
+      num_por_probes(opts.get<int>("num_por_probes")),
+      pruning_disabled(false) {
 }
 
 void EagerSearch::initialize() {
@@ -110,11 +112,18 @@ SearchStatus EagerSearch::step() {
     vector<OperatorID> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
 
-    /*
-      TODO: When preferred operators are in use, a preferred operator will be
-      considered by the preferred operator queues even when it is pruned.
-    */
-    pruning_method->prune_operators(s, applicable_ops);
+    if (!pruning_disabled && num_por_probes < statistics.get_expanded()
+            && pruning_method->pruning_below_minimum_ratio()) {
+        pruning_disabled = true;
+        cout << "Insufficient pruning. Switching off." << endl;
+    }
+    if (!pruning_disabled) {
+        /*
+          TODO: When preferred operators are in use, a preferred operator will be
+          considered by the preferred operator queues even when it is pruned.
+        */
+        pruning_method->prune_operators(s, applicable_ops);
+    }
 
     // This evaluates the expanded state (again) to get preferred ops
     EvaluationContext eval_context(s, node.get_g(), false, &statistics, true);
