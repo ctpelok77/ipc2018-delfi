@@ -36,6 +36,15 @@ def parse_args():
         "severe performance penalty due to weaker relevance analysis "
         "(see issue7).")
     argparser.add_argument(
+        "--enforce-definite-effects", action="store_true",
+        help="ensure that each operator sets each variable to its "
+        "post-value whenever the effect condition is true. Otherwise it "
+        "could be the case that another effect is stronger and "
+        "overwrites the value (this is equivalent to add after delete "
+        "semantics but in finite domain representation). We recommend to "
+        "use this option only if you really need it because it can make "
+        "the task representation much larger.")
+    argparser.add_argument(
         "--keep-unreachable-facts",
         dest="filter_unreachable_facts", action="store_false",
         help="keep facts that can't be reached from the initial state")
