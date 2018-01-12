@@ -26,9 +26,9 @@ From: ubuntu
     ## Build your planner
     cd /planner
     ./build.py release64 -j4
-    cd h2-preprocessor
+    cd /planner/h2-preprocessor
     mkdir -p builds/release32
-    cd builds/release32
+    cd /planner/h2-preprocessor/builds/release32
     cmake ../../
     make -j4
 
