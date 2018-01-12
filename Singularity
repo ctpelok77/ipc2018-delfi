@@ -26,6 +26,12 @@ From: ubuntu
     ## Build your planner
     cd /planner
     ./build.py release64 -j4
+    cd h2-preprocessor
+    mkdir -p builds/release32
+    cd builds/release32
+    cmake ../../
+    make -j4
+
 
 %runscript
     ## The runscript is called whenever the container is used to solve
@@ -37,6 +43,7 @@ From: ubuntu
 
     ## Call your planner.
     /planner/fast-downward.py \
+        --transform-task "/planner/h2-preprocessor/builds/release32/bin/preprocess" \
         --build=release64 \
         --plan-file $PLANFILE \
         $DOMAINFILE \
