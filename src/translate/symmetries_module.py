@@ -604,6 +604,8 @@ class SymmetryGraph:
         print("Creating matrix for a graph with %s nodes.." % sz)
         matrix_data = np.zeros((sz,sz), dtype=int)
         print("Matrix created, filling with values for edges..")
+        if bolded:
+            print("Performing bolding.")
         for edge in self.graph.edges:
             assert type(edge) is tuple
             assert len(edge) == 2
@@ -688,7 +690,7 @@ class SymmetryGraph:
         return shrinked_matrix_data
         """
 
-    def write_matrix_image_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
+    def write_matrix_image_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6, target_size=128, write_original_size=False):
         """Write the graph into a grayscale image"""
         """If shrink_ratio of 1 is used, using raw [0, 1] values for each pixel. 
             If shrink_ratio of up to 3 is used, using [0, 255] values for each pixel. 
@@ -714,14 +716,17 @@ class SymmetryGraph:
         matrix_data = grayscale_color - matrix_data
                 
         sz = len(matrix_data)
-        print("Writing grayscale image of size %sx%s .." % (sz, sz))
         im = Image.new(grayscale_type, (sz, sz), grayscale_color)
         im.putdata(matrix_data.flatten()) 
-                   
-        im.save(nm,'png') 
-        size = 128, 128
+
+        if write_original_size:
+            print("Writing grayscale image of size %sx%s .." % (sz, sz))
+            im.save(nm,'png') 
+
+        size = target_size, target_size
         
         newimg = im.resize(size, Image.ANTIALIAS)
+        print("Writing grayscale image of size %sx%s .." % size)
         newimg.save(nm_constant_size, "png")
         
         #im.thumbnail(size, Image.ANTIALIAS)

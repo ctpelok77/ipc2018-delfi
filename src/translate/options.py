@@ -78,6 +78,9 @@ def parse_args():
         "--bliss-time-limit", default=300, type=int,
         help="Max time for bliss to search for automorphisms. (Set option "
         "--compute-symmetries)")
+    argparser.add_argument(
+        "--do-not-find-automorphisms", action="store_true",
+        help="If true, symmetries are not computed.")
 
     # Options related to symmetry-based reduction and expansion
     argparser.add_argument(
@@ -147,6 +150,38 @@ def parse_args():
         "--only-positive-literals", action="store_true",
         help="If true, relax the computation of h2 mutexes by not considering "
         "negative literals. (Set option --h2-mutexes)")
+
+    # Options related to dumping planning task as image
+    argparser.add_argument(
+        "--dump-dot-graph", action="store_true",
+        help="If true, dumping the abstract structure as dot graph."
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-raw", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-reg", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-int", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-original-size", action="store_true",
+        help="If true, the original size image representing the abstract structure "
+        "as a graph is also written to the disk, when at least one of "
+        "--write-abstract-structure-image-XXX is used.")
+    argparser.add_argument(
+        "--abstract-structure-image-target-size", default=128, type=int,
+        help="Target size for the constant size image")
+
+    argparser.add_argument(
+        "--bolding-abstract-structure-image", action="store_true",
+        help="If true, then bolding is performed on the image, "
+        "that is each dot is surrounded by 4 additional dots.")
+    
     return argparser.parse_args()
 
 
