@@ -602,8 +602,13 @@ class SymmetryGraph:
             sz += 1
         ## Creating a matrix
         print("Creating matrix for a graph with %s nodes.." % sz)
+        ## TODO: This seems to be memory intensive in some cases (e.g., airport:p21-airport4halfMUC-p2.pddl and onwards,  
+        ##            nomystery-opt11-strips:p05.pddl - p10.pddl and p15.pddl - p20.pddl,  and many grounded cases )
         matrix_data = np.zeros((sz,sz), dtype=int)
         print("Matrix created, filling with values for edges..")
+        print("Matrix size when created: %s" % sys.getsizeof(matrix_data))
+        print("Matrix size in bytes when created: %s" % matrix_data.nbytes)
+
         if bolded:
             print("Performing bolding.")
         for edge in self.graph.edges:
@@ -620,6 +625,7 @@ class SymmetryGraph:
                     make_bolder(i, j+1, matrix_data)
                     make_bolder(i, j-1, matrix_data)
 
+        print("Matrix size when 1s added: %s" % sys.getsizeof(matrix_data))
         return matrix_data
 
                         
@@ -656,7 +662,7 @@ class SymmetryGraph:
         
         matrix_data = self.create_raw_matrix_for_image(hide_equal_predicates, bolded)
         sz = len(matrix_data)
-
+        print("Matrix size: %s" % sys.getsizeof(matrix_data))
         print("Number of graph nodes: %s" % sz)
         print("Shrink ratio: %s" % shrink_ratio)
         if shrink_ratio == 1:
