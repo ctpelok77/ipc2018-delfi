@@ -21,20 +21,46 @@ enum PropositionStatus {
     BEFORE_GOAL_ZONE = 3
 };
 
-struct RelaxedOperator {
+struct RelaxedOperator;
+
+struct RelaxedOperatorGroup {
     int original_op_id;
+    int base_cost;
+    int cost : 31;
+    bool marked : 1;
+    // NOTE: Mixed type bit fields are not guarantueed to be compact in memory.
+    //       See the comment for SearchNodeInfo.
+    std::vector<RelaxedOperator> relaxed_operators;
+
+    size_t size() const {
+        return relaxed_operators.size();
+    }
+
+    RelaxedOperator &operator[](size_t i) {
+        return relaxed_operators[i];
+    }
+
+    const RelaxedOperator &operator[](size_t i) const {
+        return relaxed_operators[i];
+    }
+
+    RelaxedOperatorGroup(int original_op_id, int base_cost_)
+        : original_op_id(original_op_id), base_cost(base_cost_), marked(false) {
+    }
+};
+
+struct RelaxedOperator {
+    RelaxedOperatorGroup *group;
     std::vector<RelaxedProposition *> preconditions;
     std::vector<RelaxedProposition *> effects;
-    int base_cost; // 0 for axioms, 1 for regular operators
 
-    int cost;
     int unsatisfied_preconditions;
     int h_max_supporter_cost; // h_max_cost of h_max_supporter
     RelaxedProposition *h_max_supporter;
-    RelaxedOperator(std::vector<RelaxedProposition *> &&pre,
-                    std::vector<RelaxedProposition *> &&eff,
-                    int op_id, int base)
-        : original_op_id(op_id), preconditions(pre), effects(eff), base_cost(base) {
+    RelaxedOperator(const std::vector<RelaxedProposition *> &&pre,
+                    const std::vector<RelaxedProposition *> &&eff,
+                    RelaxedOperatorGroup *group_)
+        : group(group_), preconditions(pre), effects(eff) {
     }
 
     inline void update_h_max_supporter();
@@ -49,7 +75,8 @@ struct RelaxedProposition {
 };
 
 class CELandmarkCutLandmarks {
-    std::vector<RelaxedOperator> relaxed_operators;
+    // RelaxedOperators are grouped by the Operator that induced them
+    std::vector<RelaxedOperatorGroup> relaxed_operator_groups;
     std::vector<std::vector<RelaxedProposition>> propositions;
     RelaxedProposition artificial_precondition;
     RelaxedProposition artificial_goal;
@@ -57,10 +84,10 @@ class CELandmarkCutLandmarks {
     priority_queues::AdaptiveQueue<RelaxedProposition *> priority_queue;
 
     void initialize();
-    void build_relaxed_operator(const OperatorProxy &op);
+    void build_relaxed_operator(const OperatorProxy &op, RelaxedOperatorGroup &group);
     void add_relaxed_operator(std::vector<RelaxedProposition *> &&precondition,
                               std::vector<RelaxedProposition *> &&effects,
-                              int op_id, int base_cost);
+                              RelaxedOperatorGroup &group);
     RelaxedProposition *get_proposition(const FactProxy &fact);
     void setup_exploration_queue();
     void setup_exploration_queue_state(const State &state);
