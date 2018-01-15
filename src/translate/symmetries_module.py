@@ -606,9 +606,10 @@ class SymmetryGraph:
         ## Creating a matrix
         print("Creating matrix for a graph with %s nodes.." % sz)
         ## TODO: This seems to be memory intensive in some cases (e.g., airport:p21-airport4halfMUC-p2.pddl and onwards,  
-        ##            nomystery-opt11-strips:p05.pddl - p10.pddl and p15.pddl - p20.pddl,  and many grounded cases )
+        ##            nomystery-opt11-strips:p05.pddl - p10.pddl and p15.pddl - p20.pddl,  and grounded cases: openstacks-strips and trucks-strips )
         ## The size of the graph can be quite big when either the task is (parially) grounded or there are many static predicates.
-        ## 
+        ## The problem of static predicates can be overcome by using the option --only-functions-from-initial-state
+        ## An attempt on overcoming the memory consumption was made by switching to the sparse lil_matrix. However, for some reason, this does not seem to work.
 
         if shrink_ratio > 1:
             sz += (shrink_ratio - (sz % shrink_ratio))
