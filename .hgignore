@@ -8,6 +8,8 @@
 ^builds/
 ^src/CMakeLists.txt.user$
 
+^h2-preprocessor/builds
+
 ^symba/src/preprocess/.obj
 ^symba/src/preprocess/Makefile.depend
 ^symba/src/preprocess/preprocess
