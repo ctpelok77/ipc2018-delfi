@@ -24,8 +24,17 @@ CELandmarkCutLandmarks::CELandmarkCutLandmarks(const TaskProxy &task_proxy) {
     }
 
     // Build relaxed operators for operators and axioms.
-    for (OperatorProxy op : task_proxy.get_operators())
-        build_relaxed_operator(op);
+    relaxed_operator_groups.reserve(task_proxy.get_operators().size() + 1);
+    for (OperatorProxy op : task_proxy.get_operators()) {
+        relaxed_operator_groups.push_back(RelaxedOperatorGroup(op.get_id(), op.get_cost()));
+    }
+    // Add group for artificial goal operator.
+    // This must be added before groups are used to keep pointers stable.
+    relaxed_operator_groups.push_back(RelaxedOperatorGroup(0, 0));
+    for (size_t i = 0; i < task_proxy.get_operators().size(); ++i) {
+        OperatorProxy op = task_proxy.get_operators()[i];
+        build_relaxed_operator(op, relaxed_operator_groups[i]);
+    }
 
     // Simplify relaxed operators.
     // simplify();
@@ -41,42 +50,68 @@ CELandmarkCutLandmarks::CELandmarkCutLandmarks(const TaskProxy &task_proxy) {
     goal_op_eff.push_back(&artificial_goal);
     /* Use the invalid operator ID -1 so accessing
        the artificial operator will generate an error. */
-    add_relaxed_operator(move(goal_op_pre), move(goal_op_eff), -1, 0);
+//    add_relaxed_operator(move(goal_op_pre), move(goal_op_eff), -1, 0);
+    add_relaxed_operator(move(goal_op_pre), move(goal_op_eff),
+                         relaxed_operator_groups[task_proxy.get_operators().size()]);
 
     // Cross-reference relaxed operators.
-    for (RelaxedOperator &op : relaxed_operators) {
-        for (RelaxedProposition *pre : op.preconditions)
-            pre->precondition_of.push_back(&op);
-        for (RelaxedProposition *eff : op.effects)
-            eff->effect_of.push_back(&op);
+    for (RelaxedOperatorGroup &group : relaxed_operator_groups) {
+        for (RelaxedOperator &op : group.relaxed_operators) {
+            for (RelaxedProposition *pre : op.preconditions)
+                pre->precondition_of.push_back(&op);
+            for (RelaxedProposition *eff : op.effects)
+                eff->effect_of.push_back(&op);
+        }
     }
 }
 
 CELandmarkCutLandmarks::~CELandmarkCutLandmarks() {
 }
 
-void CELandmarkCutLandmarks::build_relaxed_operator(const OperatorProxy &op) {
+void CELandmarkCutLandmarks::build_relaxed_operator(
+    const OperatorProxy &op, RelaxedOperatorGroup &group) {
     vector<RelaxedProposition *> precondition;
     vector<RelaxedProposition *> effects;
     for (FactProxy pre : op.get_preconditions()) {
         precondition.push_back(get_proposition(pre));
     }
     for (EffectProxy eff : op.get_effects()) {
-        effects.push_back(get_proposition(eff.get_fact()));
+        if (eff.get_conditions().empty()) {
+            effects.push_back(get_proposition(eff.get_fact()));
+        }
     }
-    add_relaxed_operator(
-        move(precondition), move(effects), op.get_id(), op.get_cost());
+    if (!effects.empty()) {
+        vector<RelaxedProposition *> precondition_copy(precondition);
+        add_relaxed_operator(
+            move(precondition_copy), move(effects), group);
+    }
+    for (EffectProxy eff : op.get_effects()) {
+        if (!eff.get_conditions().empty()) {
+            vector<RelaxedProposition *> cond_precondition(precondition);
+            vector<RelaxedProposition *> cond_effects;
+            for (FactProxy effect_cond : eff.get_conditions()) {
+                cond_precondition.push_back(get_proposition(effect_cond));
+            }
+            cond_effects.push_back(get_proposition(eff.get_fact()));
+            // TODO: If it's worth grouping together effects that have no effect
+            // condition, then it's probably also worth otherwise grouping together
+            // effects that have the same effect condition. It would require copying
+            // the operator representation in some form and then sorting based on the
+            // preconditions.
+            add_relaxed_operator(move(cond_precondition), move(cond_effects), group);
+        }
+    }
 }
 
 void CELandmarkCutLandmarks::add_relaxed_operator(
     vector<RelaxedProposition *> &&precondition,
     vector<RelaxedProposition *> &&effects,
-    int op_id, int base_cost) {
+    RelaxedOperatorGroup &group) {
     RelaxedOperator relaxed_op(
-        move(precondition), move(effects), op_id, base_cost);
+        move(precondition), move(effects), &group);
     if (relaxed_op.preconditions.empty())
         relaxed_op.preconditions.push_back(&artificial_precondition);
-    relaxed_operators.push_back(relaxed_op);
+    group.relaxed_operators.push_back(relaxed_op);
 }
 
 RelaxedProposition *CELandmarkCutLandmarks::get_proposition(
@@ -99,10 +134,12 @@ void CELandmarkCutLandmarks::setup_exploration_queue() {
     artificial_goal.status = UNREACHED;
     artificial_precondition.status = UNREACHED;
 
-    for (RelaxedOperator &op : relaxed_operators) {
-        op.unsatisfied_preconditions = op.preconditions.size();
-        op.h_max_supporter = 0;
-        op.h_max_supporter_cost = numeric_limits<int>::max();
+    for (RelaxedOperatorGroup &group : relaxed_operator_groups) {
+        for (RelaxedOperator &op : group.relaxed_operators) {
+            op.unsatisfied_preconditions = op.preconditions.size();
+            op.h_max_supporter = 0;
+            op.h_max_supporter_cost = numeric_limits<int>::max();
+        }
     }
 }
 
@@ -133,7 +170,7 @@ void CELandmarkCutLandmarks::first_exploration(const State &state) {
             if (relaxed_op->unsatisfied_preconditions == 0) {
                 relaxed_op->h_max_supporter = prop;
                 relaxed_op->h_max_supporter_cost = prop_cost;
-                int target_cost = prop_cost + relaxed_op->cost;
+                int target_cost = prop_cost + relaxed_op->group->cost;
                 for (RelaxedProposition *effect : relaxed_op->effects) {
                     enqueue_if_necessary(effect, target_cost);
                 }
@@ -151,10 +188,16 @@ void CELandmarkCutLandmarks::first_exploration_incremental(
        to heap-based in problems where action costs are at most 1.
     */
     priority_queue.add_virtual_pushes(num_propositions);
-    for (RelaxedOperator *relaxed_op : cut) {
-        int cost = relaxed_op->h_max_supporter_cost + relaxed_op->cost;
-        for (RelaxedProposition *effect : relaxed_op->effects)
-            enqueue_if_necessary(effect, cost);
+    for (RelaxedOperator *cut_op : cut) {
+        RelaxedOperatorGroup *group = cut_op->group;
+        assert(group);
+        for (RelaxedOperator &op : group->relaxed_operators) {
+            if (op.h_max_supporter) {
+                int cost = op.h_max_supporter_cost + group->cost;
+                for (RelaxedProposition *effect : op.effects)
+                    enqueue_if_necessary(effect, cost);
+            }
+        }
     }
     while (!priority_queue.empty()) {
         pair<int, RelaxedProposition *> top_pair = priority_queue.pop();
@@ -175,7 +218,7 @@ void CELandmarkCutLandmarks::first_exploration_incremental(
                     if (new_supp_cost != old_supp_cost) {
                         // This operator has become cheaper.
                         assert(new_supp_cost < old_supp_cost);
-                        int target_cost = new_supp_cost + relaxed_op->cost;
+                        int target_cost = new_supp_cost + relaxed_op->group->cost;
                         for (RelaxedProposition *effect : relaxed_op->effects)
                             enqueue_if_necessary(effect, target_cost);
                     }
@@ -210,7 +253,7 @@ void CELandmarkCutLandmarks::second_exploration(
                 bool reached_goal_zone = false;
                 for (RelaxedProposition *effect : relaxed_op->effects) {
                     if (effect->status == GOAL_ZONE) {
-                        assert(relaxed_op->cost > 0);
+                        assert(relaxed_op->group->cost > 0);
                         reached_goal_zone = true;
                         cut.push_back(relaxed_op);
                         break;
@@ -238,7 +281,7 @@ void CELandmarkCutLandmarks::mark_goal_plateau(RelaxedProposition *subgoal) {
     if (subgoal && subgoal->status != GOAL_ZONE) {
         subgoal->status = GOAL_ZONE;
         for (RelaxedOperator *achiever : subgoal->effect_of)
-            if (achiever->cost == 0)
+            if (achiever->group->cost == 0)
                 mark_goal_plateau(achiever->h_max_supporter);
     }
 }
@@ -248,24 +291,26 @@ void CELandmarkCutLandmarks::validate_h_max() const {
     // Using conditional compilation to avoid complaints about unused
     // variables when using NDEBUG. This whole code does nothing useful
     // when assertions are switched off anyway.
-    for (const RelaxedOperator &op : relaxed_operators) {
-        if (op.unsatisfied_preconditions) {
-            bool reachable = true;
-            for (RelaxedProposition *pre : op.preconditions) {
-                if (pre->status == UNREACHED) {
-                    reachable = false;
-                    break;
+    for (const RelaxedOperatorGroup &group : relaxed_operator_groups) {
+        for (const RelaxedOperator &op : group.relaxed_operators) {
+            if (op.unsatisfied_preconditions) {
+                bool reachable = true;
+                for (RelaxedProposition *pre : op.preconditions) {
+                    if (pre->status == UNREACHED) {
+                        reachable = false;
+                        break;
+                    }
                 }
-            }
-            assert(!reachable);
-            assert(!op.h_max_supporter);
-        } else {
-            assert(op.h_max_supporter);
-            int h_max_cost = op.h_max_supporter_cost;
-            assert(h_max_cost == op.h_max_supporter->h_max_cost);
-            for (RelaxedProposition *pre : op.preconditions) {
-                assert(pre->status != UNREACHED);
-                assert(pre->h_max_cost <= h_max_cost);
+                assert(!reachable);
+                assert(!op.h_max_supporter);
+            } else {
+                assert(op.h_max_supporter);
+                int h_max_cost = op.h_max_supporter_cost;
+                assert(h_max_cost == op.h_max_supporter->h_max_cost);
+                for (RelaxedProposition *pre : op.preconditions) {
+                    assert(pre->status != UNREACHED);
+                    assert(pre->h_max_cost <= h_max_cost);
+                }
             }
         }
     }
@@ -275,8 +320,8 @@ void CELandmarkCutLandmarks::validate_h_max() const {
 bool CELandmarkCutLandmarks::compute_landmarks(
     State state, CostCallback cost_callback,
     LandmarkCallback landmark_callback) {
-    for (RelaxedOperator &op : relaxed_operators) {
-        op.cost = op.base_cost;
+    for (RelaxedOperatorGroup &group : relaxed_operator_groups) {
+        group.cost = group.base_cost;
     }
     // The following three variables could be declared inside the loop
     // ("second_exploration_queue" even inside second_exploration),
@@ -299,17 +344,28 @@ bool CELandmarkCutLandmarks::compute_landmarks(
         assert(!cut.empty());
         int cut_cost = numeric_limits<int>::max();
         for (RelaxedOperator *op : cut)
-            cut_cost = min(cut_cost, op->cost);
-        for (RelaxedOperator *op : cut)
-            op->cost -= cut_cost;
+            cut_cost = min(cut_cost, op->group->cost);
+
+        for (RelaxedOperator *cut_op : cut) {
+            RelaxedOperatorGroup *group = cut_op->group;
+            assert(group);
+            if (!group->marked) {
+                group->cost -= cut_cost;
+                group->marked = true;
+            }
+        }
+        for (RelaxedOperator *cut_op : cut) {
+            cut_op->group->marked = false;
+        }
 
         if (cost_callback) {
             cost_callback(cut_cost);
         }
         if (landmark_callback) {
             landmark.clear();
-            for (RelaxedOperator *op : cut) {
-                landmark.push_back(op->original_op_id);
+            for (RelaxedOperator *cut_op : cut) {
+                RelaxedOperatorGroup *group = cut_op->group;
+                landmark.push_back(group->original_op_id);
             }
             landmark_callback(landmark, cut_cost);
         }
