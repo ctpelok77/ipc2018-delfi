@@ -13,13 +13,15 @@ import PIL
 from PIL import Image
 import numpy as np
 
-from scipy.sparse import lil_matrix, coo_matrix
+from scipy.sparse import lil_matrix, coo_matrix, csr_matrix
 import options
 import timers
 import math
 
 # HACK
 GLOBAL_COLOR_COUNT = -1
+
+MAX_SIZE_EXPLICIT = 15000
 
 class PyblissModuleWrapper:
     """
@@ -610,10 +612,13 @@ class SymmetryGraph:
 
         if shrink_ratio > 1:
             sz += (shrink_ratio - (sz % shrink_ratio))
-        matrix_data = lil_matrix((sz, sz), dtype=int)
-        #matrix_data = np.zeros((sz,sz), dtype=int)
+            
+        if sz > MAX_SIZE_EXPLICIT:
+            matrix_data = lil_matrix((sz, sz), dtype=int)
+        else:
+            matrix_data = np.zeros((sz,sz), dtype=int)
         print("Matrix created, filling with values for edges..")
-        print("Matrix size when created: %s" % sys.getsizeof(matrix_data))
+        print("Matrix size when created: %s" % matrix_data.data.nbytes)
 
         if bolded:
             print("Performing bolding.")
@@ -631,7 +636,7 @@ class SymmetryGraph:
                     make_bolder(i, j+1, matrix_data, sz)
                     make_bolder(i, j-1, matrix_data, sz)
 
-        print("Matrix size when 1s added: %s" % sys.getsizeof(matrix_data))
+        print("Matrix size when 1s added: %s" % matrix_data.data.nbytes)
         return matrix_data, sz
 
                         
@@ -668,7 +673,6 @@ class SymmetryGraph:
         
         matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded, shrink_ratio)
 
-        print("Matrix size: %s" % sys.getsizeof(matrix_data))
         print("Number of graph nodes: %s" % sz)
         print("Shrink ratio: %s" % shrink_ratio)
         if shrink_ratio == 1:
@@ -677,14 +681,20 @@ class SymmetryGraph:
         shrinked_sz = int(math.ceil(float(sz)/shrink_ratio))     
         n = 0
         print("Shrinking matrix to size %sx%s.." % (shrinked_sz,shrinked_sz))
-        shrinked_matrix_data_test = lil_matrix((shrinked_sz, shrinked_sz), dtype=int)
-        #shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
+
+        if shrinked_sz > MAX_SIZE_EXPLICIT:
+            shrinked_matrix_data_test = lil_matrix((shrinked_sz, shrinked_sz), dtype=int)
+        else:
+            shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
+            
+        print("Shrinked matrix size when created: %s" % shrinked_matrix_data_test.data.nbytes)
+
         for i in range(shrink_ratio):
             for j in range(shrink_ratio):
                 if i == j:
                     continue
-                m = (2**n) * matrix_data[j::shrink_ratio, i::shrink_ratio]                 
-                shrinked_matrix_data_test += m
+                shrinked_matrix_data_test += (2**n) * matrix_data[j::shrink_ratio, i::shrink_ratio]
+                print("Shrinked matrix size after iteration %s: %s" % (n, shrinked_matrix_data_test.data.nbytes))
                 n += 1 
         return shrinked_matrix_data_test, shrinked_sz
         
