@@ -615,11 +615,12 @@ class SymmetryGraph:
             
         if sz > MAX_SIZE_EXPLICIT:
             matrix_data = lil_matrix((sz, sz), dtype=int)
+            print("Matrix size when created: %s" % (matrix_data.data.nbytes + matrix_data.rows.nbytes))
         else:
             matrix_data = np.zeros((sz,sz), dtype=int)
-        print("Matrix created, filling with values for edges..")
-        print("Matrix size when created: %s" % matrix_data.data.nbytes)
+            print("Matrix size when created: %s" % matrix_data.nbytes)
 
+        print("Matrix created, filling with values for edges..")
         if bolded:
             print("Performing bolding.")
         for edge in self.graph.edges:
@@ -636,7 +637,13 @@ class SymmetryGraph:
                     make_bolder(i, j+1, matrix_data, sz)
                     make_bolder(i, j-1, matrix_data, sz)
 
-        print("Matrix size when 1s added: %s" % matrix_data.data.nbytes)
+        if sz > MAX_SIZE_EXPLICIT:
+            nbytes_size = matrix_data.data.nbytes + matrix_data.rows.nbytes
+        else:
+            nbytes_size = matrix_data.nbytes
+           
+        print("Matrix size when 1s added: %s" % nbytes_size)
+
         return matrix_data, sz
 
                         
@@ -684,17 +691,17 @@ class SymmetryGraph:
 
         if shrinked_sz > MAX_SIZE_EXPLICIT:
             shrinked_matrix_data_test = lil_matrix((shrinked_sz, shrinked_sz), dtype=int)
+            print("Shrinked matrix size when created: %s" % shrinked_matrix_data_test.data.nbytes + shrinked_matrix_data_test.rows.nbytes)
         else:
             shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
+            print("Shrinked matrix size when created: %s" % shrinked_matrix_data_test.nbytes)
             
-        print("Shrinked matrix size when created: %s" % shrinked_matrix_data_test.data.nbytes)
 
         for i in range(shrink_ratio):
             for j in range(shrink_ratio):
                 if i == j:
                     continue
                 shrinked_matrix_data_test += (2**n) * matrix_data[j::shrink_ratio, i::shrink_ratio]
-                print("Shrinked matrix size after iteration %s: %s" % (n, shrinked_matrix_data_test.data.nbytes))
                 n += 1 
         return shrinked_matrix_data_test, shrinked_sz
         
