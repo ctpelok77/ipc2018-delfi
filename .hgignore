@@ -28,3 +28,5 @@
 ^symba/src/search/cudd-2.5.0/obj/.*\.[a,o]
 ^symba/src/search/cudd-2.5.0/st/.*\.[a,o]
 ^symba/src/search/cudd-2.5.0/util/.*\.[a,o]
+
+^experiments/ipc2018
