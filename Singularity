@@ -31,6 +31,8 @@ From: ubuntu
     cd /planner/h2-preprocessor/builds/release32
     cmake ../../
     make -j4
+    cd /planner/symba
+    ./build -j4
 
 
 %runscript
