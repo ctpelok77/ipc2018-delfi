@@ -587,7 +587,7 @@ class SymmetryGraph:
         file.write("}\n")
         
         
-    def create_raw_matrix_for_image(self, hide_equal_predicates=False, bolded=False):
+    def create_raw_matrix_for_image(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
         """Create raw 0/1 matrix, bolding by adding 1s around existing ones """
         def make_bolder(i, j, m, sz):
             if i < 0 or i >= sz or j < 0 or j >= sz:
@@ -607,7 +607,9 @@ class SymmetryGraph:
         ##            nomystery-opt11-strips:p05.pddl - p10.pddl and p15.pddl - p20.pddl,  and many grounded cases )
         ## The size of the graph can be quite big when either the task is (parially) grounded or there are many static predicates.
         ## 
-        
+
+        if shrink_ratio > 1:
+            sz += (shrink_ratio - (sz % shrink_ratio))
         matrix_data = lil_matrix((sz, sz), dtype=int)
         #matrix_data = np.zeros((sz,sz), dtype=int)
         print("Matrix created, filling with values for edges..")
@@ -634,7 +636,7 @@ class SymmetryGraph:
 
                         
     def print_graph_statistics(self, hide_equal_predicates=False):
-        matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded=False)
+        matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded=False, shrink_ratio=1)
         print("Number of graph vertices: %s" % sz)
         print("Number of graph edges: %s" % matrix_data.count_nonzero())
                         
@@ -664,7 +666,7 @@ class SymmetryGraph:
         assert(shrink_ratio > 0)
         assert(shrink_ratio <= 6)
         
-        matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded)
+        matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded, shrink_ratio)
 
         print("Matrix size: %s" % sys.getsizeof(matrix_data))
         print("Number of graph nodes: %s" % sz)
