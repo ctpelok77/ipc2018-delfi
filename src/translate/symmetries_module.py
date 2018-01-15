@@ -13,6 +13,7 @@ import PIL
 from PIL import Image
 import numpy as np
 
+from scipy.sparse import lil_matrix, coo_matrix
 import options
 import timers
 import math
@@ -588,10 +589,10 @@ class SymmetryGraph:
         
     def create_raw_matrix_for_image(self, hide_equal_predicates=False, bolded=False):
         """Create raw 0/1 matrix, bolding by adding 1s around existing ones """
-        def make_bolder(i, j, m):
-            if i < 0 or i >= len(m) or j < 0 or j >= len(m):
+        def make_bolder(i, j, m, sz):
+            if i < 0 or i >= sz or j < 0 or j >= sz:
                 return
-            m[i][j] = 1
+            m[i,j] = 1
                 
         sz = 0
         vertex_indices = {}
@@ -604,10 +605,13 @@ class SymmetryGraph:
         print("Creating matrix for a graph with %s nodes.." % sz)
         ## TODO: This seems to be memory intensive in some cases (e.g., airport:p21-airport4halfMUC-p2.pddl and onwards,  
         ##            nomystery-opt11-strips:p05.pddl - p10.pddl and p15.pddl - p20.pddl,  and many grounded cases )
-        matrix_data = np.zeros((sz,sz), dtype=int)
+        ## The size of the graph can be quite big when either the task is (parially) grounded or there are many static predicates.
+        ## 
+        
+        matrix_data = lil_matrix((sz, sz), dtype=int)
+        #matrix_data = np.zeros((sz,sz), dtype=int)
         print("Matrix created, filling with values for edges..")
         print("Matrix size when created: %s" % sys.getsizeof(matrix_data))
-        print("Matrix size in bytes when created: %s" % matrix_data.nbytes)
 
         if bolded:
             print("Performing bolding.")
@@ -617,21 +621,21 @@ class SymmetryGraph:
             if edge[0] in vertex_indices and edge[1] in vertex_indices:
                 i = vertex_indices[edge[0]]
                 j = vertex_indices[edge[1]]
-                matrix_data[i][j] = 1
+                matrix_data[i,j] = 1
                 if bolded:
                     ## Try to make wider
-                    make_bolder(i+1, j, matrix_data)
-                    make_bolder(i-1, j, matrix_data)
-                    make_bolder(i, j+1, matrix_data)
-                    make_bolder(i, j-1, matrix_data)
+                    make_bolder(i+1, j, matrix_data, sz)
+                    make_bolder(i-1, j, matrix_data, sz)
+                    make_bolder(i, j+1, matrix_data, sz)
+                    make_bolder(i, j-1, matrix_data, sz)
 
         print("Matrix size when 1s added: %s" % sys.getsizeof(matrix_data))
-        return matrix_data
+        return matrix_data, sz
 
                         
     def print_graph_statistics(self, hide_equal_predicates=False):
-        matrix_data = self.create_raw_matrix_for_image(hide_equal_predicates, bolded=False)
-        print("Number of graph vertices: %s" % len(matrix_data))
+        matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded=False)
+        print("Number of graph vertices: %s" % sz)
         print("Number of graph edges: %s" % matrix_data.count_nonzero())
                         
 
@@ -660,8 +664,8 @@ class SymmetryGraph:
         assert(shrink_ratio > 0)
         assert(shrink_ratio <= 6)
         
-        matrix_data = self.create_raw_matrix_for_image(hide_equal_predicates, bolded)
-        sz = len(matrix_data)
+        matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded)
+
         print("Matrix size: %s" % sys.getsizeof(matrix_data))
         print("Number of graph nodes: %s" % sz)
         print("Shrink ratio: %s" % shrink_ratio)
@@ -671,15 +675,16 @@ class SymmetryGraph:
         shrinked_sz = int(math.ceil(float(sz)/shrink_ratio))     
         n = 0
         print("Shrinking matrix to size %sx%s.." % (shrinked_sz,shrinked_sz))
-        shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
+        shrinked_matrix_data_test = lil_matrix((shrinked_sz, shrinked_sz), dtype=int)
+        #shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
         for i in range(shrink_ratio):
             for j in range(shrink_ratio):
                 if i == j:
                     continue
                 m = (2**n) * matrix_data[j::shrink_ratio, i::shrink_ratio]                 
-                shrinked_matrix_data_test += np.resize(m,(shrinked_sz,shrinked_sz))
+                shrinked_matrix_data_test += m
                 n += 1 
-        return shrinked_matrix_data_test
+        return shrinked_matrix_data_test, shrinked_sz
         
         """ TODO: Check why the following does not give the same result! 
                   Probably something to do with the order in which the entries are traversed. 
@@ -712,18 +717,22 @@ class SymmetryGraph:
         nm_thumbnail = '%s-%s-%s-thumbnail.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
         nm_constant_size = '%s-%s-%s-cs.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
         
-        matrix_data = self.shrink_matrix_raw_to_grayscale(hide_equal_predicates, bolded, shrink_ratio)
+        matrix_data, sz = self.shrink_matrix_raw_to_grayscale(hide_equal_predicates, bolded, shrink_ratio)
         #print matrix_data[matrix_data.nonzero()]
         ## For grayscale_type "L", sharpen the image by 4 (there are only 6 entries used, so the maximal number is 63)
         if grayscale_type == 'L':
             matrix_data = 4 * matrix_data
-            
-        #print matrix_data[matrix_data.nonzero()]
-        matrix_data = grayscale_color - matrix_data
-                
-        sz = len(matrix_data)
+
         im = Image.new(grayscale_type, (sz, sz), grayscale_color)
-        im.putdata(matrix_data.flatten()) 
+        cx = coo_matrix(matrix_data)
+
+        for x,y,color in zip(cx.row, cx.col, cx.data):
+            #print("Pixel of color %s at (%s,%s)" % (grayscale_color - color, x, y))
+            im.putpixel((x, y), grayscale_color - color)
+
+        #matrix_data = grayscale_color - matrix_data
+        
+        #im.putdata(matrix_data.flatten() + grayscale_color) 
 
         if write_original_size:
             print("Writing grayscale image of size %sx%s .." % (sz, sz))
@@ -732,13 +741,13 @@ class SymmetryGraph:
         size = target_size, target_size
         
         newimg = im.resize(size, Image.ANTIALIAS)
+
         print("Writing grayscale image of size %sx%s .." % size)
         newimg.save(nm_constant_size, "png")
         
         #im.thumbnail(size, Image.ANTIALIAS)
         #im.save(nm_thumbnail, "png")
         
-
     def find_automorphisms(self, time_limit):
         # TODO: we sorted task's init, hence if we wanted to to use
         # the generators, we should remap init indices when required.
