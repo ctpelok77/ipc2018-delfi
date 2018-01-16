@@ -103,6 +103,8 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
         conditions.push_back(GlobalCondition(fact.var, fact.value));
     }
     operators_conditions.push_back(conditions);
+
+    parent_operator_index.push_back(op_no);
 }
 
 void MultiplyOutConditionalEffectsTask::multiply_out_conditions(int op_no, const std::vector<int>& conditional_variables,
