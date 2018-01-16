@@ -26,7 +26,9 @@ class Distances {
     bool goal_distances_computed;
 
     void clear_distances();
+public: // For computing average heuristic values.
     int get_num_states() const;
+private:
     bool is_unit_cost() const;
 
     void compute_init_distances_unit_cost();
@@ -35,6 +37,8 @@ class Distances {
     void compute_goal_distances_general_cost();
 public:
     explicit Distances(const TransitionSystem &transition_system);
+    Distances(const TransitionSystem &transition_system, const Distances &other);
+    Distances(const Distances &other) = delete;
     ~Distances() = default;
 
     bool are_init_distances_computed() const {
@@ -73,6 +77,11 @@ public:
     int get_goal_distance(int state) const {
         assert(are_goal_distances_computed());
         return goal_distances[state];
+    }
+
+    bool operator==(const Distances &other) const {
+        return init_distances == other.init_distances && goal_distances == other.goal_distances 
+            && init_distances_computed == other.init_distances_computed && goal_distances_computed == other.goal_distances_computed;
     }
 
     void dump() const;
