@@ -20,11 +20,13 @@ from itertools import product
 
 import axiom_rules
 import fact_groups
+import h2_mutexes
 import instantiate
 import normalize
 import options
 import pddl
 import pddl_parser
+import reduction
 import sas_tasks
 import simplify
 import symmetries_module
@@ -523,6 +525,7 @@ def unsolvable_sas_task(msg):
     print("%s! Generating unsolvable task..." % msg)
     return trivial_task(solvable=False)
 
+
 class Generator:
     def __init__(self, generator, task):
         # Transform generator into a tuple of dicts, mapping predicates
@@ -564,6 +567,7 @@ class Generator:
         assert self.is_valid()
         print("Mapping objects: {}; Mapping predicates: {}".format(self.generator[0], self.generator[1]))
 
+
 def is_permutation(sas_generator):
     # Caution! If the given sas_generator maps two keys to the same value,
     # this check may fail and loop forever.
@@ -593,7 +597,7 @@ def filter_out_identities_or_nonpermutations(sas_generators):
                 print(sas_generator)
                 print("is the identiy!")
         elif not is_permutation(sas_generator):
-            if options.stabilize_initial_state:
+            if not options.do_not_stabilize_initial_state:
                 assert False
             elif DUMP:
                 print(sas_generator)
@@ -601,34 +605,6 @@ def filter_out_identities_or_nonpermutations(sas_generators):
         else:
             remaining_generators.append(sas_generator)
     return remaining_generators
-
-
-def gcd(a, b):
-    """Return greatest common divisor using Euclid's Algorithm."""
-    while b:
-        a, b = b, a % b
-    return a
-
-
-def lcm(a, b):
-    """Return lowest common multiple."""
-    return a * b // gcd(a, b)
-
-
-def compute_order(sas_generator):
-    visited_keys = set()
-    order = 1
-    for start_key in sas_generator.keys():
-        if not start_key in visited_keys:
-            cycle_size = 1
-            visited_keys.add(start_key)
-            current_key = sas_generator[start_key]
-            while current_key != start_key:
-                current_key = tuple(sas_generator[current_key])
-                visited_keys.add(current_key)
-                cycle_size += 1
-            order = lcm(order, cycle_size)
-    return order
 
 
 def print_sas_generator(sas_generator):
@@ -639,37 +615,18 @@ def print_sas_generator(sas_generator):
 
 
 def pddl_to_sas(task):
-    with timers.timing("Instantiating", block=True):
-        (relaxed_reachable, atoms, actions, axioms,
-         reachable_action_params) = instantiate.explore(task)
-
-    if not relaxed_reachable:
-        return unsolvable_sas_task("No relaxed solution")
-
-    # HACK! Goals should be treated differently.
-    if isinstance(task.goal, pddl.Conjunction):
-        goal_list = task.goal.parts
-    else:
-        goal_list = [task.goal]
-    for item in goal_list:
-        assert isinstance(item, pddl.Literal)
-
-    with timers.timing("Computing fact groups", block=True):
-        groups, mutex_groups, translation_key = fact_groups.compute_groups(
-            task, atoms, reachable_action_params)
-
-    with timers.timing("Building STRIPS to SAS dictionary"):
-        ranges, strips_to_sas = strips_to_sas_dictionary(
-            groups, assert_partial=options.use_partial_encoding)
-
+    symmetric_object_sets = None
     with timers.timing("Symmetries0 computing symmetries", block=True):
         if options.compute_symmetries:
             only_object_symmetries = options.only_object_symmetries
-            stabilize_initial_state = options.stabilize_initial_state
+            stabilize_initial_state = not options.do_not_stabilize_initial_state
+            stabilize_goal = not options.do_not_stabilize_goal
             time_limit = options.bliss_time_limit
-            graph = symmetries_module.SymmetryGraph(task, only_object_symmetries, stabilize_initial_state)
+            graph = symmetries_module.SymmetryGraph(task, only_object_symmetries, stabilize_initial_state, stabilize_goal)
             if options.add_mutex_groups:
-                graph.add_mutex_groups(mutex_groups)
+                #graph.add_mutex_groups(mutex_groups)
+                print("Adding mutex group to the computation of symmetries currently not supported.")
+                sys.exit(1)
             generators = graph.find_automorphisms(time_limit)
             if DUMP:
                 graph.write_or_print_automorphisms(generators, dump=True)
@@ -677,8 +634,14 @@ def pddl_to_sas(task):
             order_to_generator_count = defaultdict(int)
             order_list = []
             max_order = 0
+            transpositions = []
             for generator in generators:
-                order = compute_order(generator)
+                graph.print_generator(generator)
+                order = symmetries_module.compute_order(generator)
+                if options.compute_symmetric_object_sets:
+                    assert options.only_object_symmetries
+                    if order == 2 and len(symmetries_module.get_mapped_objects(generator)) == 2:
+                        transpositions.append(generator)
                 max_order = max(max_order, order)
                 order_to_generator_count[order] += 1
                 order_list.append(order)
@@ -688,6 +651,14 @@ def pddl_to_sas(task):
             print("Lifted generator orders list: {}".format(order_list))
             for order in range(2, 50):
                 print("Lifted generator order {}: {}".format(order, order_to_generator_count[order]))
+
+            if transpositions:
+                print("Number of transpositions: {}".format(len(transpositions)))
+                sys.stdout.flush()
+                symmetric_object_sets = symmetries_module.compute_symmetric_object_sets(task.objects, transpositions)
+                print("Symmetric object sets:")
+                for obj_set in symmetric_object_sets:
+                    print(", ".join([x for x in obj_set]))
 
     with timers.timing("Symmetries1 transforming generators into predicate object mappings", block=True):
         if options.compute_symmetries and options.ground_symmetries:
@@ -701,6 +672,72 @@ def pddl_to_sas(task):
                 elif DUMP:
                     print("Initial transformation already filtered out a generator")
             print("Number of lifted generators mapping predicates or objects: {}".format(len(task.generators)))
+    with timers.timing("Instantiating", block=True):
+        if options.symmetry_reduced_grounding or options.symmetry_reduced_grounding_for_h2_mutexes:
+            assert options.compute_symmetric_object_sets
+            object_sets_and_preserved_subsets = reduction.compute_selected_object_sets_and_preserved_subsets(task, symmetric_object_sets)
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task, object_sets_and_preserved_subsets)
+            if options.assert_equal_grounding:
+                assert options.expand_reduced_task
+                # Perform regular grounding in addition to the above symmetry-
+                # reduced one to compare the results.
+                print("Grounding again to assert equal grounding...")
+                (relaxed_reachable2, atoms2, actions2, axioms2,
+                 reachable_action_params2) = instantiate.explore(task)
+                reduction.assert_equal_grounding(relaxed_reachable, atoms, actions, axioms,
+                reachable_action_params, relaxed_reachable2, atoms2, actions2, axioms2,
+                reachable_action_params2)
+                print("Done asserting equal grounding")
+        else:
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task)
+
+    if not relaxed_reachable:
+        return unsolvable_sas_task("No relaxed solution")
+
+    # HACK! Goals should be treated differently.
+    if isinstance(task.goal, pddl.Conjunction):
+        goal_list = task.goal.parts
+    else:
+        goal_list = [task.goal]
+    for item in goal_list:
+        assert isinstance(item, pddl.Literal)
+
+    with timers.timing("Computing h2 mutex groups", block=True):
+        if options.h2_mutexes:
+            mutex_pairs = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
+            axioms, reachable_action_params, options.only_positive_literals)
+        if options.expand_reduced_h2_mutexes:
+            assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes
+            timer = timers.Timer()
+            for symm_obj_set, subset in object_sets_and_preserved_subsets:
+                reduction.expand(mutex_pairs, symm_obj_set, contains_pairs=True)
+            print("Expanded h2 mutex pairs to {}".format(len(mutex_pairs)))
+            print("Time to expand h2 mutexes: {}s".format(timer.elapsed_time()))
+            sys.stdout.flush()
+        if options.assert_equal_h2_mutexes:
+            assert options.h2_mutexes and options.symmetry_reduced_grounding_for_h2_mutexes and options.expand_reduced_h2_mutexes
+            print("Grounding again to assert equal h2 mutex pairs...")
+            (relaxed_reachable, atoms, actions, axioms,
+             reachable_action_params) = instantiate.explore(task)
+            mutex_pairs2 = h2_mutexes.compute_mutex_pairs(task, atoms, actions,
+            axioms, reachable_action_params, options.only_positive_literals)
+            for mutex_pair in mutex_pairs:
+                assert mutex_pair in mutex_pairs2, "no match for {} from expanded-after-reduced mutex pairs in regular mutex pairs".format(mutex_pair)
+            for mutex_pair in mutex_pairs2:
+                assert mutex_pair in mutex_pairs, "no match for {} from regular mutex pairs in expanded-after-reduced mutex pairs".format(mutex_pair)
+            assert len(mutex_pairs) == len(mutex_pairs2)
+            print("Done asserting equal h2 mutex pairs")
+
+
+    with timers.timing("Computing fact groups", block=True):
+        groups, mutex_groups, translation_key = fact_groups.compute_groups(
+            task, atoms, reachable_action_params)
+
+    with timers.timing("Building STRIPS to SAS dictionary"):
+        ranges, strips_to_sas = strips_to_sas_dictionary(
+            groups, assert_partial=options.use_partial_encoding)
 
     sas_generators = []
     with timers.timing("Symmetries2 grounding generators into SAS", block=True):
@@ -724,7 +761,7 @@ def pddl_to_sas(task):
                     if DUMP:
                         print("need to skip generator because it maps an atom to some "
                             "atom which does not exist in the sas representation")
-                    if options.stabilize_initial_state:
+                    if not options.do_not_stabilize_initial_state:
                         assert False
                     valid_generator = False
                     break
@@ -848,7 +885,7 @@ def pddl_to_sas(task):
         order_to_generator_count = defaultdict(int)
         order_list = []
         for sas_generator in sas_generators:
-            order = compute_order(sas_generator)
+            order = symmetries_module.compute_order(sas_generator)
             order_to_generator_count[order] += 1
             order_list.append(order)
         printable_order_to_count = [(order, count) for order, count in order_to_generator_count.items()]
