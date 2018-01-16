@@ -163,7 +163,8 @@ void FactoredTransitionSystem::apply_label_mapping(
 int FactoredTransitionSystem::merge(
     int index1,
     int index2,
-    Verbosity verbosity) {
+    Verbosity verbosity,
+    bool invalidating_merge) {
     assert(is_component_valid(index1));
     assert(is_component_valid(index2));
     transition_systems.push_back(
@@ -172,16 +173,43 @@ int FactoredTransitionSystem::merge(
             *transition_systems[index1],
             *transition_systems[index2],
             verbosity));
-    distances[index1] = nullptr;
-    distances[index2] = nullptr;
-    transition_systems[index1] = nullptr;
-    transition_systems[index2] = nullptr;
-    mas_representations.push_back(
-        utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
-            move(mas_representations[index1]),
-            move(mas_representations[index2])));
-    mas_representations[index1] = nullptr;
-    mas_representations[index2] = nullptr;
+    if (invalidating_merge) {
+        distances[index1] = nullptr;
+        distances[index2] = nullptr;
+        transition_systems[index1] = nullptr;
+        transition_systems[index2] = nullptr;
+        mas_representations.push_back(
+            utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                move(mas_representations[index1]),
+                move(mas_representations[index2])));
+        mas_representations[index1] = nullptr;
+        mas_representations[index2] = nullptr;
+    } else {
+        unique_ptr<MergeAndShrinkRepresentation> hr1 = nullptr;
+        if (dynamic_cast<MergeAndShrinkRepresentationLeaf *>(mas_representations[index1].get())) {
+            hr1 = utils::make_unique_ptr<MergeAndShrinkRepresentationLeaf>(
+                dynamic_cast<MergeAndShrinkRepresentationLeaf *>
+                    (mas_representations[index1].get()));
+        } else {
+            hr1 = utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                dynamic_cast<MergeAndShrinkRepresentationMerge *>(
+                    mas_representations[index1].get()));
+        }
+        unique_ptr<MergeAndShrinkRepresentation> hr2 = nullptr;
+        if (dynamic_cast<MergeAndShrinkRepresentationLeaf *>(mas_representations[index2].get())) {
+            hr2 = utils::make_unique_ptr<MergeAndShrinkRepresentationLeaf>(
+                        dynamic_cast<MergeAndShrinkRepresentationLeaf *>
+                        (mas_representations[index2].get()));
+        } else {
+            hr2 = utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                        dynamic_cast<MergeAndShrinkRepresentationMerge *>(
+                            mas_representations[index2].get()));
+        }
+        mas_representations.push_back(
+            utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+                move(hr1),
+                move(hr2)));
+    }
     const TransitionSystem &new_ts = *transition_systems.back();
     distances.push_back(utils::make_unique_ptr<Distances>(new_ts));
     int new_index = transition_systems.size() - 1;
@@ -224,5 +252,12 @@ bool FactoredTransitionSystem::is_factor_solvable(int index) const {
 bool FactoredTransitionSystem::is_active(int index) const {
     assert_index_valid(index);
     return transition_systems[index] != nullptr;
+}
+
+void FactoredTransitionSystem::remove(int index) {
+    assert(is_active(index));
+    transition_systems[index] = nullptr;
+    mas_representations[index] = nullptr;
+    distances[index] = nullptr;
 }
 }

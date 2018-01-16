@@ -620,6 +620,7 @@ fast_downward_plugin(
         merge_and_shrink/merge_tree
         merge_and_shrink/merge_tree_factory
         merge_and_shrink/merge_tree_factory_linear
+        merge_and_shrink/merge_tree_factory_miasm
         merge_and_shrink/shrink_bisimulation
         merge_and_shrink/shrink_bucket_based
         merge_and_shrink/shrink_fh
@@ -628,6 +629,11 @@ fast_downward_plugin(
         merge_and_shrink/transition_system
         merge_and_shrink/types
         merge_and_shrink/utils
+        merge_and_shrink/miasm/merge_tree
+        merge_and_shrink/miasm/miasm_mas
+        merge_and_shrink/miasm/sink_set_search
+        merge_and_shrink/miasm/subset_info
+        merge_and_shrink/miasm/types
     DEPENDS PRIORITY_QUEUES EQUIVALENCE_RELATION SCCS TASK_PROPERTIES VARIABLE_ORDER_FINDER
 )
 
