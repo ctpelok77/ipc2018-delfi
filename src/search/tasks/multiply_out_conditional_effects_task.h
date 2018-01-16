@@ -26,7 +26,7 @@ class MultiplyOutConditionalEffectsTask : public DelegatingTask {
     void multiply_out_conditions(int op_no, const std::vector<int>& conditional_variables,
             int var_index, std::vector<FactPair>& multiplied_conditions);
 public:
-    explicit MultiplyOutConditionalEffectsTask(const options::Options &opts);
+    MultiplyOutConditionalEffectsTask();
     virtual ~MultiplyOutConditionalEffectsTask() override = default;
 
     virtual int get_operator_cost(int index, bool is_axiom) const override;

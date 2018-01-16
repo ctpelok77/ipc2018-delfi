@@ -14,8 +14,8 @@ using namespace std;
 using utils::ExitCode;
 
 namespace tasks {
-MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask(const Options &opts)
-    : DelegatingTask(opts.get<shared_ptr<AbstractTask>>("parent")) {
+MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask()
+    : DelegatingTask(g_root_task()) {
     // Creating operators for the parent operators
     for (int op_no = 0; op_no < parent->get_num_operators(); ++op_no) {
         set<int> condition_variables;
@@ -179,14 +179,11 @@ OperatorID MultiplyOutConditionalEffectsTask::get_global_operator_id(OperatorID 
 
 
 static shared_ptr<AbstractTask> _parse(OptionParser &parser) {
-    Options opts = parser.parse();
     if (parser.dry_run())
         return nullptr;
     else
-        return make_shared<MultiplyOutConditionalEffectsTask>(opts);
+        return make_shared<MultiplyOutConditionalEffectsTask>();
 }
-
-
 
 static PluginShared<AbstractTask> _plugin("multiply_out_conditional_effects", _parse);
 }
