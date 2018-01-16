@@ -94,15 +94,20 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
 
     operators_effects.push_back(effects);
 
-    vector<GlobalCondition> conditions;
+    set<FactPair> conditions;
     for (int fact_index = 0; fact_index < parent->get_num_operator_preconditions(op_no, false); ++fact_index) {
         FactPair fact = parent->get_operator_precondition(op_no, fact_index, false);
-        conditions.push_back(GlobalCondition(fact.var, fact.value));
+        conditions.insert(fact);
     }
     for (FactPair fact : multiplied_conditions) {
-        conditions.push_back(GlobalCondition(fact.var, fact.value));
+        conditions.insert(fact);
     }
-    operators_conditions.push_back(conditions);
+
+    vector<GlobalCondition> conditions_vec;
+    for (FactPair fact : conditions) {
+        conditions_vec.emplace_back(fact.var, fact.value);
+    }
+    operators_conditions.push_back(conditions_vec);
 
     parent_operator_index.push_back(op_no);
 }
