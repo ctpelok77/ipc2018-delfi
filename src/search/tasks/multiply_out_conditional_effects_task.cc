@@ -35,6 +35,13 @@ MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask()
         }
     }
 
+    cout << "original operators:" << endl;
+    TaskProxy root_proxy(*g_root_task());
+    root_proxy.get_operators().dump_fdr();
+
+    cout << "compiled operators:" << endl;
+    TaskProxy task_proxy(*this);
+    task_proxy.get_operators().dump_fdr();
 }
 
 void MultiplyOutConditionalEffectsTask::add_non_conditional_operator(int op_no) {
