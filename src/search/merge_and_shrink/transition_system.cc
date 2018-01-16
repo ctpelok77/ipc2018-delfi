@@ -109,6 +109,7 @@ TransitionSystem::TransitionSystem(const TransitionSystem &other)
       num_states(other.num_states),
       goal_states(other.goal_states),
       init_state(other.init_state) {
+    assert(*this == other);
 }
 
 TransitionSystem::~TransitionSystem() {
@@ -526,5 +527,26 @@ void TransitionSystem::dump_labels_and_transitions() const {
 void TransitionSystem::statistics() const {
     cout << tag() << get_size() << " states, "
          << compute_total_transitions() << " arcs " << endl;
+}
+
+int TransitionSystem::get_group_id_for_label(int label_no) const {
+    return label_equivalence_relation->get_group_id(label_no);
+}
+
+bool TransitionSystem::operator==(const TransitionSystem &other) const {
+    assert(num_variables == other.num_variables);
+    assert(incorporated_variables == other.incorporated_variables);
+    assert(*label_equivalence_relation.get() == *other.label_equivalence_relation.get());
+    assert(transitions_by_group_id == other.transitions_by_group_id);
+    assert(num_states == other.num_states);
+    assert(goal_states == other.goal_states);
+    assert(init_state == other.init_state);
+    return num_variables == other.num_variables &&
+           incorporated_variables == other.incorporated_variables &&
+           *label_equivalence_relation.get() == *other.label_equivalence_relation.get() &&
+           transitions_by_group_id == other.transitions_by_group_id &&
+           num_states == other.num_states &&
+           goal_states == other.goal_states &&
+           init_state == other.init_state;
 }
 }

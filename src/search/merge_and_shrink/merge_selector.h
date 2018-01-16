@@ -25,6 +25,10 @@ public:
     void dump_options() const;
     virtual bool requires_init_distances() const = 0;
     virtual bool requires_goal_distances() const = 0;
+
+    virtual std::pair<int, int> get_tiebreaking_statistics() const {
+        return std::make_pair(0, 0);
+    }
 };
 }
 
