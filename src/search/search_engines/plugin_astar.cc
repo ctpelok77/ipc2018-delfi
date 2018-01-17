@@ -39,6 +39,12 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
         "symmetries",
         "symmetries object to compute structural symmetries for pruning",
         OptionParser::NONE);
+    parser.add_option<int>(
+        "num_por_probes",
+        "Mumber of state expansions until which we test if the minimum "
+        "required pruning ratio is achieved.",
+        "infinity",
+        Bounds("0", "infinity"));
     Options opts = parser.parse();
 
     shared_ptr<eager_search::EagerSearch> engine;
