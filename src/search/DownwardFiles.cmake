@@ -484,6 +484,15 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME CE_LANDMARK_CUT_HEURISTIC
+    HELP "The conditional effects LM-cut heuristic"
+    SOURCES
+        heuristics/ce_lm_cut_heuristic
+        heuristics/ce_lm_cut_landmarks
+    DEPENDS PRIORITY_QUEUES TASK_PROPERTIES
+)
+
+fast_downward_plugin(
     NAME MAX_HEURISTIC
     HELP "The Max heuristic"
     SOURCES
@@ -704,6 +713,34 @@ fast_downward_plugin(
     SOURCES
         algorithms/sccs.cc
     DEPENDENCY_ONLY
+)
+
+fast_downward_plugin(
+    NAME BLISS
+    HELP "Plugin containing a modified version of Bliss"
+    SOURCES
+        bliss/bignum.cc
+        bliss/defs.cc
+        bliss/graph.cc
+        bliss/heap.cc
+        bliss/kqueue.cc
+        bliss/kstack.cc
+        bliss/orbit.cc
+        bliss/partition.cc
+        bliss/timer.cc
+        bliss/uintseqhash.cc
+        bliss/utils.cc
+    DEPENDENCY_ONLY
+)
+
+fast_downward_plugin(
+    NAME STRUCTURAL_SYMMETRIES
+    HELP "Plugin containing the code for computing structural symmetries"
+    SOURCES
+        structural_symmetries/graph_creator.cc
+        structural_symmetries/group.cc
+        structural_symmetries/permutation.cc
+    DEPENDS BLISS
 )
 
 fast_downward_add_plugin_sources(PLANNER_SOURCES)
