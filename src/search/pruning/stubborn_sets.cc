@@ -1,5 +1,7 @@
 #include "stubborn_sets.h"
 
+#include "../options/bounds.h"
+#include "../options/option_parser.h"
 #include "../task_utils/task_properties.h"
 #include "../utils/collections.h"
 
@@ -27,6 +29,11 @@ bool contain_conflicting_fact(const vector<FactPair> &facts1,
         }
     }
     return false;
+}
+
+StubbornSets::StubbornSets(const options::Options &options)
+    : PruningMethod(),
+    minimum_pruning_ratio(options.get<double>("minimum_pruning_ratio")) {
 }
 
 void StubbornSets::initialize(const shared_ptr<AbstractTask> &task) {
@@ -128,10 +135,29 @@ void StubbornSets::prune_operators(
     num_pruned_successors_generated += op_ids.size();
 }
 
+bool StubbornSets::pruning_below_minimum_ratio() const {
+    if (num_unpruned_successors_generated == 0) {
+        return false;
+    }
+    return (
+        (num_pruned_successors_generated /
+         static_cast<double>(num_unpruned_successors_generated))
+        >= (1 - minimum_pruning_ratio));
+}
+
 void StubbornSets::print_statistics() const {
     cout << "total successors before partial-order reduction: "
          << num_unpruned_successors_generated << endl
          << "total successors after partial-order reduction: "
          << num_pruned_successors_generated << endl;
+}
+
+void StubbornSets::add_options_to_parser(options::OptionParser &parser) {
+    parser.add_option<double>(
+        "minimum_pruning_ratio",
+        "The minium ratio of pruned states that must "
+        "be achieved to not turn pruning off.",
+        "0.0",
+        options::Bounds("0", "1"));
 }
 }
