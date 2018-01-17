@@ -20,6 +20,9 @@ class StubbornSetsSimple : public stubborn_sets::StubbornSets {
                can_disable(op2_no, op1_no);
     }
     void compute_interference_relation();
+
+    // helper structure
+    std::vector<FactPair> unsat_eff_conditions;
 protected:
     virtual void initialize_stubborn_set(const State &state) override;
     virtual void handle_stubborn_operator(const State &state,
