@@ -28,6 +28,8 @@ public:
     virtual void prune_operators(const GlobalState &state,
                                  std::vector<OperatorID> &op_ids);
 
+    virtual bool pruning_below_minimum_ratio() const;
+
     virtual void print_statistics() const = 0;
 };
 
