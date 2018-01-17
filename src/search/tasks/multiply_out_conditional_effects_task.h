@@ -17,6 +17,7 @@ namespace tasks {
     assignment to the variables mentioned in the conditions.
 */
 class MultiplyOutConditionalEffectsTask : public DelegatingTask {
+    const bool dump_tasks;
     std::vector<std::vector<GlobalCondition>> operators_conditions;
     std::vector<std::vector<GlobalEffect>> operators_effects;
     std::vector<int> parent_operator_index;
@@ -26,7 +27,7 @@ class MultiplyOutConditionalEffectsTask : public DelegatingTask {
     void multiply_out_conditions(int op_no, const std::vector<int>& conditional_variables,
             int var_index, std::vector<FactPair>& multiplied_conditions);
 public:
-    MultiplyOutConditionalEffectsTask();
+    explicit MultiplyOutConditionalEffectsTask(const options::Options &opts);
     virtual ~MultiplyOutConditionalEffectsTask() override = default;
 
     virtual int get_operator_cost(int index, bool is_axiom) const override;
