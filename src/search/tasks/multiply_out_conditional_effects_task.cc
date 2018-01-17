@@ -5,6 +5,7 @@
 #include "../plugin.h"
 
 #include "../utils/system.h"
+#include "../task_utils/task_properties.h"
 
 #include <iostream>
 #include <memory>
@@ -14,8 +15,10 @@ using namespace std;
 using utils::ExitCode;
 
 namespace tasks {
-MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask()
-    : DelegatingTask(g_root_task()) {
+MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask(
+    const options::Options &opts)
+    : DelegatingTask(g_root_task()),
+      dump_tasks(opts.get<bool>("dump_tasks")) {
     // Creating operators for the parent operators
     for (int op_no = 0; op_no < parent->get_num_operators(); ++op_no) {
         set<int> condition_variables;
@@ -35,13 +38,17 @@ MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask()
         }
     }
 
-//    cout << "original operators:" << endl;
-//    TaskProxy root_proxy(*g_root_task());
-//    root_proxy.get_operators().dump_fdr();
+    TaskProxy task_proxy(*this);
+    if (dump_tasks) {
+        cout << "original operators:" << endl;
+        TaskProxy root_proxy(*g_root_task());
+        root_proxy.get_operators().dump_fdr();
 
-//    cout << "compiled operators:" << endl;
-//    TaskProxy task_proxy(*this);
-//    task_proxy.get_operators().dump_fdr();
+        cout << "compiled operators:" << endl;
+
+        task_proxy.get_operators().dump_fdr();
+    }
+    task_properties::verify_no_conditional_effects(task_proxy);
 }
 
 void MultiplyOutConditionalEffectsTask::add_non_conditional_operator(int op_no) {
@@ -193,10 +200,15 @@ OperatorID MultiplyOutConditionalEffectsTask::get_global_operator_id(OperatorID 
 
 
 static shared_ptr<AbstractTask> _parse(OptionParser &parser) {
+    parser.add_option<bool>(
+        "dump_tasks",
+        "dump the original root task and the compiled one",
+        "false");
+    Options opt = parser.parse();
     if (parser.dry_run())
         return nullptr;
     else
-        return make_shared<MultiplyOutConditionalEffectsTask>();
+        return make_shared<MultiplyOutConditionalEffectsTask>(opt);
 }
 
 static PluginShared<AbstractTask> _plugin("multiply_out_conditional_effects", _parse);
