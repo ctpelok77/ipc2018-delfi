@@ -18,7 +18,7 @@ def main(revisions=None):
     'trucks']
 
     if is_test_run():
-        suite = ['gripper:prob01.pddl','depot:p01.pddl']
+        suite = ['miconic-simpleadl:s1-0.pddl']
         environment = LocalEnvironment(processes=4)
     else:
         environment = BaselSlurmEnvironment(email="silvan.sievers@unibas.ch", export=["PATH"])
