@@ -508,6 +508,8 @@ public:
     OperatorProxy operator[](OperatorID id) const {
         return (*this)[id.get_index()];
     }
+
+    void dump_fdr() const;
 };
 
 
