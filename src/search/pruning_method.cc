@@ -27,6 +27,10 @@ void PruningMethod::prune_operators(const GlobalState &global_state,
     prune_operators(state, op_ids);
 }
 
+bool PruningMethod::pruning_below_minimum_ratio() const {
+    return false;
+}
+
 static PluginTypePlugin<PruningMethod> _type_plugin(
     "PruningMethod",
     "Prune or reorder applicable operators.");
