@@ -1,0 +1,9 @@
+Note: If you're using the FD-lab scripts to run experiments, there are
+a couple of things that have to be changed (in case that you run the
+planner calling the plan script that we provide you can ignore all
+this). We made change on the translator and preprocessor so you cannot
+re-use the preprocessed files from another planners. Also, the
+preprocessor needs to receive "--opt-ordering" as parameter. Our plan
+script already does that, but using FD-lab will skip that part so a
+workaround is needed (e.g, modify the code of preprocess to put
+opt-ordering to true as default).

@@ -22,6 +22,8 @@
 
 using namespace std;
 
+class Group;
+
 // TODO: Remove this when Synergy is gone.
 namespace landmarks {
 class LandmarkFactory;
@@ -92,6 +94,23 @@ static void predefine_lmgraph(const string &arg, bool dry_run) {
     if (definees.size() == 1) {
         Predefinitions<landmarks::LandmarkFactory *>::instance()->predefine(
             definees[0], op.start_parsing<landmarks::LandmarkFactory *>());
+    } else {
+        op.error("predefinition has invalid left side");
+    }
+}
+
+static void predefine_symmetries(std::string s, bool dry_run) {
+    //remove newlines so they don't mess anything up:
+    s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+
+    size_t split = s.find("=");
+    std::string ls = s.substr(0, split);
+    std::vector<std::string> definees = to_list(ls);
+    std::string rs = s.substr(split + 1);
+    OptionParser op(rs, dry_run);
+    if (definees.size() == 1) {
+        Predefinitions<shared_ptr<Group>>::instance()->predefine(
+            definees[0], op.start_parsing<shared_ptr<Group>>());
     } else {
         op.error("predefinition has invalid left side");
     }
@@ -199,6 +218,11 @@ shared_ptr<SearchEngine> OptionParser::parse_cmd_line_aux(
                 throw ArgError("missing argument after --landmarks");
             ++i;
             predefine_lmgraph(args[i], dry_run);
+        } else if (arg == "--symmetries") {
+            if (is_last)
+                throw ArgError("missing argument after --symmetries");
+            ++i;
+            predefine_symmetries(args[i], dry_run);
         } else if (arg == "--search") {
             if (is_last)
                 throw ArgError("missing argument after --search");
@@ -265,6 +289,9 @@ string OptionParser::usage(const string &progname) {
            "--heuristic HEURISTIC_PREDEFINITION\n"
            "    Predefines a heuristic that can afterwards be referenced\n"
            "    by the name that is specified in the definition.\n"
+           "--symmetries SYMMETRY_PREDEFINITION\n"
+           "    Predefines a structural symmetry group that can afterwards be\n"
+           "    referenced by the name that is specified in the definition.\n"
            "--internal-plan-file FILENAME\n"
            "    Plan will be output to a file called FILENAME\n\n"
            "--internal-previous-portfolio-plans COUNTER\n"

@@ -244,28 +244,32 @@ def translate_strips_operator_aux(operator, dictionary, ranges, mutex_dict,
                 if var in cond and cond[var] != val:
                     continue  # condition inconsistent with deleted atom
                 cond[var] = val
-                # add condition that no add effect triggers
-                for no_add_cond in no_add_effect_condition:
-                    new_cond = dict(cond)
-                    # This is a rather expensive step. We try every no_add_cond
-                    # with every condition of the delete effect and discard the
-                    # overal combination if it is unsatisfiable. Since
-                    # no_add_effect_condition is precomputed it can contain many
-                    # no_add_conds in which a certain literal occurs. So if cond
-                    # plus the literal is already unsatisfiable, we still try
-                    # all these combinations. A possible optimization would be
-                    # to re-compute no_add_effect_condition for every delete
-                    # effect and to unfold the product(*condition) in
-                    # negate_and_translate_condition to allow an early break.
-                    for cvar, cval in no_add_cond.items():
-                        if cvar in new_cond and new_cond[cvar] != cval:
-                            # the del effect condition plus the deleted atom
-                            # imply that some add effect on the variable
-                            # triggers
-                            break
-                        new_cond[cvar] = cval
-                    else:
-                        effects_by_variable[var][none_of_those].append(new_cond)
+                if options.enforce_definite_effects:
+                    # add condition that no add effect triggers
+                    for no_add_cond in no_add_effect_condition:
+                        new_cond = dict(cond)
+                        # This is a rather expensive step. We try every no_add_cond
+                        # with every condition of the delete effect and discard the
+                        # overal combination if it is unsatisfiable. Since
+                        # no_add_effect_condition is precomputed it can contain many
+                        # no_add_conds in which a certain literal occurs. So if cond
+                        # plus the literal is already unsatisfiable, we still try
+                        # all these combinations. A possible optimization would be
+                        # to re-compute no_add_effect_condition for every delete
+                        # effect and to unfold the product(*condition) in
+                        # negate_and_translate_condition to allow an early break.
+                        for cvar, cval in no_add_cond.items():
+                            if cvar in new_cond and new_cond[cvar] != cval:
+                                # the del effect condition plus the deleted atom
+                                # imply that some add effect on the variable
+                                # triggers
+                                break
+                            new_cond[cvar] = cval
+                        else:
+                            effects_by_variable[var][none_of_those].append(new_cond)
+                else:
+                    effects_by_variable[var][none_of_those].append(cond)
+
 
     return build_sas_operator(operator.name, condition, effects_by_variable,
                               operator.cost, ranges, implied_facts)
@@ -281,11 +285,18 @@ def build_sas_operator(name, condition, effects_by_variable, cost, ranges,
     pre_post = []
     for var, effects_on_var in effects_by_variable.items():
         orig_pre = condition.get(var, -1)
+        none_of_those = ranges[var] - 1
+        has_delete_effect = none_of_those in effects_by_variable[var]
         added_effect = False
         for post, eff_conditions in effects_on_var.items():
             pre = orig_pre
-            # if the effect does not change the variable value, we ignore it
-            if pre == post:
+            # If the effect does not change the variable value, we ignore it if
+            # we are enforcing definite effects or there is no delete effect
+            # present. Under add-after-delete semantics for conditional effects
+            # add effects can overwrite delete effects and it is not safe to
+            # ignore add effects.
+            if pre == post and (
+                    options.enforce_definite_effects or not has_delete_effect):
                 continue
             eff_condition_lists = [sorted(eff_cond.items())
                                    for eff_cond in eff_conditions]
@@ -316,6 +327,7 @@ def build_sas_operator(name, condition, effects_by_variable, cost, ranges,
                         filtered_eff_condition.append((variable, value))
                 if eff_condition_contradicts_precondition:
                     continue
+                filtered_eff_condition.sort()  # TODO: Is it already sorted?
                 pre_post.append((var, pre, post, filtered_eff_condition))
                 added_effect = True
         if added_effect:
