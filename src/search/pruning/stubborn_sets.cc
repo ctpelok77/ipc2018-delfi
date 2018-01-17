@@ -82,14 +82,16 @@ void StubbornSets::compute_sorted_operators(const TaskProxy &task_proxy) {
                     [](const EffectProxy &eff) {return eff.get_fact().get_pair(); }));
         });
 
-    for (const OperatorProxy op : task_proxy.get_operators()) {
-        vector<FactPair> conditions;
-        for (const EffectProxy effect : op.get_effects()) {
-            for (const FactProxy cond : effect.get_conditions()) {
-                conditions.push_back(cond.get_pair());
+    if (has_conditional_effects) {
+        for (const OperatorProxy op : task_proxy.get_operators()) {
+            vector<FactPair> conditions;
+            for (const EffectProxy effect : op.get_effects()) {
+                for (const FactProxy cond : effect.get_conditions()) {
+                    conditions.push_back(cond.get_pair());
+                }
             }
+            sorted_op_effect_conditions.push_back(utils::sorted<FactPair>(conditions));
         }
-        sorted_op_effect_conditions.push_back(utils::sorted<FactPair>(conditions));
     }
 }
 
