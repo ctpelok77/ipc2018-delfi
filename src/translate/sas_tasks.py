@@ -260,17 +260,30 @@ class SASOperator:
         self.cost = cost
 
     def _canonical_pre_post(self, pre_post):
-        # Return a sorted and uniquified version of pre_post. We would
-        # like to just use sorted(set(pre_post)), but this fails because
-        # the effect conditions are a list and hence not hashable.
+        """Return a sorted and uniquified version of pre_post.
+
+        We sort effects on a variable in decreasing order of their post
+        condition so that none-of-those effects (corresponding to delete
+        effects) are executed first and possibly overwritten by other
+        effects (add-after-delete semantics). We would like to just use
+        sorted(set(pre_post), key=add_after_delete), but this fails
+        because the effect conditions are a list and hence not hashable.
+
+        """
+        def add_after_delete(effect):
+            var, pre, val, cond = effect
+            return var, -val, cond
+
         def tuplify(entry):
             var, pre, post, cond = entry
             return var, pre, post, tuple(cond)
+
         def listify(entry):
             var, pre, post, cond = entry
             return var, pre, post, list(cond)
+
         pre_post = map(tuplify, pre_post)
-        pre_post = sorted(set(pre_post))
+        pre_post = sorted(set(pre_post), key=add_after_delete)
         pre_post = list(map(listify, pre_post))
         return pre_post
 
