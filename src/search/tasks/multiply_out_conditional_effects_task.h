@@ -18,6 +18,7 @@ namespace tasks {
 */
 class MultiplyOutConditionalEffectsTask : public DelegatingTask {
     const bool dump_tasks;
+    const bool parent_has_conditional_effects;
     std::vector<std::vector<GlobalCondition>> operators_conditions;
     std::vector<std::vector<GlobalEffect>> operators_effects;
     std::vector<int> parent_operator_index;
