@@ -7,7 +7,7 @@ from lab.environments import LocalEnvironment, BaselSlurmEnvironment
 
 from common_setup import IssueConfig, IssueExperiment, is_test_run
 
-REVISION = '3c56601fba9e'
+REVISION = '2ee197773df6'
 
 def main(revisions=None):
     benchmarks_dir = os.environ["DOWNWARD_BENCHMARKS_IPC2018"]
