@@ -13,9 +13,6 @@ namespace stubborn_sets {
 inline FactPair find_unsatisfied_condition(
     const std::vector<FactPair> &conditions, const State &state);
 
-inline std::vector<FactPair> find_unsatisfied_conditions(
-    const std::vector<FactPair> &conditions, const State &state);
-
 class StubbornSets : public PruningMethod {
     const double minimum_pruning_ratio;
     long num_unpruned_successors_generated;
@@ -87,12 +84,6 @@ protected:
         return find_unsatisfied_condition(sorted_op_preconditions[op_no], state);
     }
 
-    std::vector<FactPair> find_unsatisfied_effect_conditions(
-        int op_no,
-        const State &state) const {
-        return find_unsatisfied_conditions(sorted_op_effect_conditions[op_no], state);
-    }
-
     // Returns true iff the operators was enqueued.
     // TODO: rename to enqueue_stubborn_operator?
     bool mark_as_stubborn(int op_no);
@@ -122,20 +113,6 @@ inline FactPair find_unsatisfied_condition(
     }
     return FactPair::no_fact;
 }
-
-inline std::vector<FactPair> find_unsatisfied_conditions(
-    const std::vector<FactPair> &conditions,
-    const State &state) {
-    std::vector<FactPair> unsat_conditions;
-    for (const FactPair &condition : conditions) {
-        if (state[condition.var].get_value() != condition.value) {
-            unsat_conditions.push_back(condition);
-        }
-    }
-    return unsat_conditions;
-}
-
-
 }
 
 #endif

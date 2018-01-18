@@ -78,14 +78,7 @@ void StubbornSetsSimple::handle_stubborn_operator(const State &state,
                     add_necessary_enabling_set(condition);
                 }
             }
-            /*
-            vector<FactPair> unsat_eff_conditions = find_unsatisfied_effect_conditions(op_no, state);
-            for (FactPair unsatisfied_effect_condition : unsat_eff_conditions) {
-                add_necessary_enabling_set(unsatisfied_effect_condition);
-            }
-            */
         }
-
     } else {
         /* unsatisfied precondition found
            => add a necessary enabling set for it */
