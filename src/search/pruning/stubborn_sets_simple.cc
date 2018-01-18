@@ -65,10 +65,10 @@ void StubbornSetsSimple::handle_stubborn_operator(const State &state,
         add_interfering(op_no);
 
         if (has_conditional_effects) {
-            unsat_eff_conditions.clear();
-            find_unsatisfied_effect_conditions(op_no, state, unsat_eff_conditions);
-            for (FactPair unsatisfied_effect_condition : unsat_eff_conditions)
+            vector<FactPair> unsat_eff_conditions = find_unsatisfied_effect_conditions(op_no, state);
+            for (FactPair unsatisfied_effect_condition : unsat_eff_conditions) {
                 add_necessary_enabling_set(unsatisfied_effect_condition);
+            }
         }
 
     } else {
