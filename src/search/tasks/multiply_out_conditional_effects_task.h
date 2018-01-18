@@ -12,13 +12,18 @@ class Options;
 namespace tasks {
 /*
   Task transformation that changes operators by multiplying out conditional effects.
-    If the parent operator does not have conditional effects, then it remains as it was.
-    If it has conditional effects, then it is replaced by a set of operators, one for each possible
-    assignment to the variables mentioned in the conditions.
+  If the parent operator does not have conditional effects, then it remains as it was.
+  If it has conditional effects, then it is replaced by a set of operators, one for each possible
+  assignment to the variables mentioned in the conditions.
 */
 class MultiplyOutConditionalEffectsTask : public DelegatingTask {
     const bool dump_tasks;
     const bool parent_has_conditional_effects;
+    /*
+      The following is indexed by operator ids of this task. Each element,
+      i.e. conditions and effects of each operator, is sorted in the same
+      order (var, val) as the inducing operator of the parent task.
+    */
     std::vector<std::vector<GlobalCondition>> operators_conditions;
     std::vector<std::vector<GlobalEffect>> operators_effects;
     std::vector<int> parent_operator_index;
