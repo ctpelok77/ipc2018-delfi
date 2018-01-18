@@ -13,9 +13,8 @@ namespace stubborn_sets {
 inline FactPair find_unsatisfied_condition(
     const std::vector<FactPair> &conditions, const State &state);
 
-inline void find_unsatisfied_conditions(
-    const std::vector<FactPair> &conditions, const State &state,
-        std::vector<FactPair>& unsat_conditions);
+inline std::vector<FactPair> find_unsatisfied_conditions(
+    const std::vector<FactPair> &conditions, const State &state);
 
 class StubbornSets : public PruningMethod {
     const double minimum_pruning_ratio;
@@ -42,6 +41,7 @@ protected:
       We copy some parts of the task here, so we can avoid the more expensive
       access through the task interface during the search.
     */
+    bool has_conditional_effects;
     int num_operators;
     std::vector<std::vector<FactPair>> sorted_op_preconditions;
     std::vector<std::vector<FactPair>> sorted_op_effect_conditions;
@@ -87,11 +87,10 @@ protected:
         return find_unsatisfied_condition(sorted_op_preconditions[op_no], state);
     }
 
-    bool has_conditional_effects;
-    void find_unsatisfied_effect_conditions(int op_no,
-                                      const State &state,
-                                      std::vector<FactPair>& unsat_eff_conditions) const {
-        find_unsatisfied_conditions(sorted_op_effect_conditions[op_no], state, unsat_eff_conditions);
+    std::vector<FactPair> find_unsatisfied_effect_conditions(
+        int op_no,
+        const State &state) const {
+        return find_unsatisfied_conditions(sorted_op_effect_conditions[op_no], state);
     }
 
     // Returns true iff the operators was enqueued.
@@ -124,14 +123,16 @@ inline FactPair find_unsatisfied_condition(
     return FactPair::no_fact;
 }
 
-
-inline void find_unsatisfied_conditions(const std::vector<FactPair> &conditions,
-                              const State &state,
-                              std::vector<FactPair>& unsat_conditions) {
+inline std::vector<FactPair> find_unsatisfied_conditions(
+    const std::vector<FactPair> &conditions,
+    const State &state) {
+    std::vector<FactPair> unsat_conditions;
     for (const FactPair &condition : conditions) {
-        if (state[condition.var].get_value() != condition.value)
+        if (state[condition.var].get_value() != condition.value) {
             unsat_conditions.push_back(condition);
+        }
     }
+    return unsat_conditions;
 }
 
 

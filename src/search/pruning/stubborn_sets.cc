@@ -40,7 +40,6 @@ void StubbornSets::initialize(const shared_ptr<AbstractTask> &task) {
     PruningMethod::initialize(task);
     TaskProxy task_proxy(*task);
     task_properties::verify_no_axioms(task_proxy);
-    //task_properties::verify_no_conditional_effects(task_proxy);
 
     has_conditional_effects = task_properties::has_conditional_effects(task_proxy);
     num_operators = task_proxy.get_operators().size();
