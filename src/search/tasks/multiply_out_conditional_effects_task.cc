@@ -17,38 +17,44 @@ using utils::ExitCode;
 namespace tasks {
 MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask(
     const options::Options &opts)
+    // TODO: if this is ever changed to accept a parent taks as option, do
+    // not forget to replace g_root_task twice here below.
     : DelegatingTask(g_root_task()),
-      dump_tasks(opts.get<bool>("dump_tasks")) {
-    // Creating operators for the parent operators
-    for (int op_no = 0; op_no < parent->get_num_operators(); ++op_no) {
-        set<int> condition_variables;
-        for (int fact_index = 0; fact_index < parent->get_num_operator_effects(op_no, false); ++fact_index) {
-            for (int c_index = 0; c_index < parent->get_num_operator_effect_conditions(op_no, fact_index, false); ++c_index) {
-                FactPair fact = parent->get_operator_effect_condition(op_no, fact_index, c_index, false);
-                condition_variables.insert(fact.var);
+      dump_tasks(opts.get<bool>("dump_tasks")),
+      parent_has_conditional_effects(task_properties::has_conditional_effects(TaskProxy(*g_root_task()))) {
+    // Create operators for the parent operators only if the task has
+    // conditional effects.
+    if (parent_has_conditional_effects) {
+        for (int op_no = 0; op_no < parent->get_num_operators(); ++op_no) {
+            set<int> condition_variables;
+            for (int fact_index = 0; fact_index < parent->get_num_operator_effects(op_no, false); ++fact_index) {
+                for (int c_index = 0; c_index < parent->get_num_operator_effect_conditions(op_no, fact_index, false); ++c_index) {
+                    FactPair fact = parent->get_operator_effect_condition(op_no, fact_index, c_index, false);
+                    condition_variables.insert(fact.var);
+                }
+            }
+            if (condition_variables.empty()) {
+                // No conditional effects, just push the operator
+                add_non_conditional_operator(op_no);
+            } else {
+                vector<int> cvars(condition_variables.begin(), condition_variables.end());
+                vector<FactPair> multiplied_conditions;
+                multiply_out_conditions(op_no, cvars, 0, multiplied_conditions);
             }
         }
-        if (condition_variables.empty()) {
-            // No conditional effects, just push the operator
-            add_non_conditional_operator(op_no);
-        } else {
-            vector<int> cvars(condition_variables.begin(), condition_variables.end());
-            vector<FactPair> multiplied_conditions;
-            multiply_out_conditions(op_no, cvars, 0, multiplied_conditions);
+
+        TaskProxy task_proxy(*this);
+        if (dump_tasks) {
+            cout << "original operators:" << endl;
+            TaskProxy root_proxy(*g_root_task());
+            root_proxy.get_operators().dump_fdr();
+
+            cout << "compiled operators:" << endl;
+
+            task_proxy.get_operators().dump_fdr();
         }
+        task_properties::verify_no_conditional_effects(task_proxy);
     }
-
-    TaskProxy task_proxy(*this);
-    if (dump_tasks) {
-        cout << "original operators:" << endl;
-        TaskProxy root_proxy(*g_root_task());
-        root_proxy.get_operators().dump_fdr();
-
-        cout << "compiled operators:" << endl;
-
-        task_proxy.get_operators().dump_fdr();
-    }
-    task_properties::verify_no_conditional_effects(task_proxy);
 }
 
 void MultiplyOutConditionalEffectsTask::add_non_conditional_operator(int op_no) {
@@ -57,7 +63,7 @@ void MultiplyOutConditionalEffectsTask::add_non_conditional_operator(int op_no) 
         FactPair fact = parent->get_operator_precondition(op_no, fact_index, false);
         conditions.push_back(GlobalCondition(fact.var, fact.value));
     }
-    operators_conditions.push_back(conditions);
+    operators_conditions.push_back(conditions); // Already sorted.
 
     vector<GlobalEffect> effects;
     vector<GlobalCondition> empty_cond;
@@ -65,7 +71,7 @@ void MultiplyOutConditionalEffectsTask::add_non_conditional_operator(int op_no) 
         FactPair fact = parent->get_operator_effect(op_no, fact_index, false);
         effects.push_back(GlobalEffect(fact.var, fact.value, empty_cond));
     }
-    operators_effects.push_back(effects);
+    operators_effects.push_back(effects); // Already sorted.
 
     parent_operator_index.push_back(op_no);
 }
@@ -101,20 +107,34 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
 
     operators_effects.push_back(effects);
 
-    set<FactPair> conditions;
-    for (int fact_index = 0; fact_index < parent->get_num_operator_preconditions(op_no, false); ++fact_index) {
-        FactPair fact = parent->get_operator_precondition(op_no, fact_index, false);
-        conditions.insert(fact);
-    }
-    for (FactPair fact : multiplied_conditions) {
-        conditions.insert(fact);
+    // Compute a mapping of variables to indices (i.e. an order) according
+    // to the effects of the operator.
+    vector<int> effect_var_indices(parent->get_num_variables(), -1);
+    for (size_t i = 0; i < effects.size(); ++i) {
+        effect_var_indices[effects[i].var] = i;
     }
 
-    vector<GlobalCondition> conditions_vec;
-    for (FactPair fact : conditions) {
-        conditions_vec.emplace_back(fact.var, fact.value);
+    /*
+      Collect preconditions of the operators from the parent's preconditions
+      and the multiplied out effect preconditions. We use a set here to filter
+      out duplicates. Furthermore, we directly sort the set in the desired
+      way, i.e. according to the order of (var, val) of the operator's effects.
+    */
+    auto GlobalConditionComparator = [effect_var_indices] (const GlobalCondition &p1, const GlobalCondition &p2) {
+        return (effect_var_indices[p1.var] < effect_var_indices[p2.var]);
+    };
+    set<GlobalCondition, decltype(GlobalConditionComparator)> conditions(GlobalConditionComparator);
+    for (int fact_index = 0; fact_index < parent->get_num_operator_preconditions(op_no, false); ++fact_index) {
+        FactPair fact = parent->get_operator_precondition(op_no, fact_index, false);
+        conditions.insert(GlobalCondition(fact.var, fact.value));
     }
-    operators_conditions.push_back(conditions_vec);
+    for (FactPair fact : multiplied_conditions) {
+        conditions.insert(GlobalCondition(fact.var, fact.value));
+    }
+
+    // Turn the conditions into a vector.
+    // TODO: Check: The (new) prevail should maybe go first? Then the prevail from the original action?
+    operators_conditions.emplace_back(conditions.begin(), conditions.end());
 
     parent_operator_index.push_back(op_no);
 }
@@ -136,51 +156,53 @@ void MultiplyOutConditionalEffectsTask::multiply_out_conditions(int op_no, const
 
 
 int MultiplyOutConditionalEffectsTask::get_operator_cost(int index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_cost(index, is_axiom);
     return parent->get_operator_cost(parent_operator_index[index], is_axiom);
 }
 
 std::string MultiplyOutConditionalEffectsTask::get_operator_name(int index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_name(index, is_axiom);
     return parent->get_operator_name(parent_operator_index[index], is_axiom);
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operators() const {
+    if (!parent_has_conditional_effects)
+        return parent->get_num_operators();
     return static_cast<int>(parent_operator_index.size());
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operator_preconditions(int index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_num_operator_preconditions(index, is_axiom);
     return static_cast<int>(operators_conditions[index].size());
 }
 
 FactPair MultiplyOutConditionalEffectsTask::get_operator_precondition(
     int op_index, int fact_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_precondition(op_index, fact_index, is_axiom);
     GlobalCondition c = operators_conditions[op_index][fact_index];
     return FactPair(c.var, c.val);
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operator_effects(int op_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_num_operator_effects(op_index, is_axiom);
     return static_cast<int>(operators_effects[op_index].size());
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operator_effect_conditions(
     int op_index, int eff_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_num_operator_effect_conditions(op_index, eff_index, is_axiom);
     return static_cast<int>(operators_effects[op_index][eff_index].conditions.size());
 }
 
 FactPair MultiplyOutConditionalEffectsTask::get_operator_effect_condition(
     int op_index, int eff_index, int cond_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_effect_condition(op_index, eff_index, cond_index, is_axiom);
     GlobalCondition c = operators_effects[op_index][eff_index].conditions[cond_index];
     return FactPair(c.var, c.val);
@@ -188,13 +210,15 @@ FactPair MultiplyOutConditionalEffectsTask::get_operator_effect_condition(
 
 FactPair MultiplyOutConditionalEffectsTask::get_operator_effect(
     int op_index, int eff_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_effect(op_index, eff_index, is_axiom);
     GlobalEffect c = operators_effects[op_index][eff_index];
     return FactPair(c.var, c.val);
 }
 
 OperatorID MultiplyOutConditionalEffectsTask::get_global_operator_id(OperatorID id) const {
+    if (!parent_has_conditional_effects)
+        return parent->get_global_operator_id(id);
     return OperatorID(parent_operator_index[id.get_index()]);
 }
 
