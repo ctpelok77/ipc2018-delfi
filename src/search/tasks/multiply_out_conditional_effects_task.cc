@@ -18,8 +18,11 @@ namespace tasks {
 MultiplyOutConditionalEffectsTask::MultiplyOutConditionalEffectsTask(
     const options::Options &opts)
     : DelegatingTask(g_root_task()),
-      dump_tasks(opts.get<bool>("dump_tasks")) {
+      dump_tasks(opts.get<bool>("dump_tasks")),
+      parent_has_conditional_effects(has_conditional_effects()) {
     // Creating operators for the parent operators
+    if (!parent_has_conditional_effects)
+        return;
     for (int op_no = 0; op_no < parent->get_num_operators(); ++op_no) {
         set<int> condition_variables;
         for (int fact_index = 0; fact_index < parent->get_num_operator_effects(op_no, false); ++fact_index) {
@@ -57,7 +60,7 @@ void MultiplyOutConditionalEffectsTask::add_non_conditional_operator(int op_no) 
         FactPair fact = parent->get_operator_precondition(op_no, fact_index, false);
         conditions.push_back(GlobalCondition(fact.var, fact.value));
     }
-    operators_conditions.push_back(conditions);
+    operators_conditions.push_back(conditions);  //Already sorted
 
     vector<GlobalEffect> effects;
     vector<GlobalCondition> empty_cond;
@@ -65,7 +68,7 @@ void MultiplyOutConditionalEffectsTask::add_non_conditional_operator(int op_no) 
         FactPair fact = parent->get_operator_effect(op_no, fact_index, false);
         effects.push_back(GlobalEffect(fact.var, fact.value, empty_cond));
     }
-    operators_effects.push_back(effects);
+    operators_effects.push_back(effects);  //Already sorted
 
     parent_operator_index.push_back(op_no);
 }
@@ -101,6 +104,10 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
 
     operators_effects.push_back(effects);
 
+    vector<int> effect_var_indices(parent->get_num_variables(), -1);
+    for (size_t i = 0; i < effects.size(); ++i)
+        effect_var_indices[effects[i].var] = i;
+
     set<FactPair> conditions;
     for (int fact_index = 0; fact_index < parent->get_num_operator_preconditions(op_no, false); ++fact_index) {
         FactPair fact = parent->get_operator_precondition(op_no, fact_index, false);
@@ -114,6 +121,13 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
     for (FactPair fact : conditions) {
         conditions_vec.emplace_back(fact.var, fact.value);
     }
+
+    // Sorting preconditions by the same order as effects variables.
+    // TODO: Check: The (new) prevail should maybe go first? Then the prevail from the original action?
+    sort(conditions_vec.begin(), conditions_vec.end(),
+                 [effect_var_indices] (const GlobalCondition &p1, const GlobalCondition &p2) {
+                    return (effect_var_indices[p1.var] < effect_var_indices[p2.var]);
+                });
     operators_conditions.push_back(conditions_vec);
 
     parent_operator_index.push_back(op_no);
@@ -136,51 +150,53 @@ void MultiplyOutConditionalEffectsTask::multiply_out_conditions(int op_no, const
 
 
 int MultiplyOutConditionalEffectsTask::get_operator_cost(int index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_cost(index, is_axiom);
     return parent->get_operator_cost(parent_operator_index[index], is_axiom);
 }
 
 std::string MultiplyOutConditionalEffectsTask::get_operator_name(int index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_name(index, is_axiom);
     return parent->get_operator_name(parent_operator_index[index], is_axiom);
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operators() const {
+    if (!parent_has_conditional_effects)
+        return parent->get_num_operators();
     return static_cast<int>(parent_operator_index.size());
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operator_preconditions(int index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_num_operator_preconditions(index, is_axiom);
     return static_cast<int>(operators_conditions[index].size());
 }
 
 FactPair MultiplyOutConditionalEffectsTask::get_operator_precondition(
     int op_index, int fact_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_precondition(op_index, fact_index, is_axiom);
     GlobalCondition c = operators_conditions[op_index][fact_index];
     return FactPair(c.var, c.val);
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operator_effects(int op_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_num_operator_effects(op_index, is_axiom);
     return static_cast<int>(operators_effects[op_index].size());
 }
 
 int MultiplyOutConditionalEffectsTask::get_num_operator_effect_conditions(
     int op_index, int eff_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_num_operator_effect_conditions(op_index, eff_index, is_axiom);
     return static_cast<int>(operators_effects[op_index][eff_index].conditions.size());
 }
 
 FactPair MultiplyOutConditionalEffectsTask::get_operator_effect_condition(
     int op_index, int eff_index, int cond_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_effect_condition(op_index, eff_index, cond_index, is_axiom);
     GlobalCondition c = operators_effects[op_index][eff_index].conditions[cond_index];
     return FactPair(c.var, c.val);
@@ -188,13 +204,15 @@ FactPair MultiplyOutConditionalEffectsTask::get_operator_effect_condition(
 
 FactPair MultiplyOutConditionalEffectsTask::get_operator_effect(
     int op_index, int eff_index, bool is_axiom) const {
-    if (is_axiom)
+    if (is_axiom || !parent_has_conditional_effects)
         return parent->get_operator_effect(op_index, eff_index, is_axiom);
     GlobalEffect c = operators_effects[op_index][eff_index];
     return FactPair(c.var, c.val);
 }
 
 OperatorID MultiplyOutConditionalEffectsTask::get_global_operator_id(OperatorID id) const {
+    if (!parent_has_conditional_effects)
+        return parent->get_global_operator_id(id);
     return OperatorID(parent_operator_index[id.get_index()]);
 }
 
