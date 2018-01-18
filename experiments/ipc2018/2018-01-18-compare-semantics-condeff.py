@@ -7,7 +7,7 @@ from lab.environments import LocalEnvironment, BaselSlurmEnvironment
 from downward.reports.compare import ComparativeReport
 from common_setup import IssueConfig, IssueExperiment, is_test_run
 
-REVISION = '2ee197773df6'
+REVISION = '40b648bf6d40'
 
 def main(revisions=[]):
     if is_test_run():
