@@ -93,8 +93,10 @@ PatternDatabase::PatternDatabase(
         }
     }
     create_pdb(task_proxy, operator_costs);
-    if (dump)
+    if (dump) {
         cout << "PDB construction time: " << timer << endl;
+//        this->dump();
+    }
 }
 
 void PatternDatabase::multiply_out(
@@ -337,5 +339,11 @@ bool PatternDatabase::is_operator_relevant(const OperatorProxy &op) const {
         }
     }
     return false;
+}
+
+void PatternDatabase::dump() const {
+    cout << pattern << endl;
+    cout << distances << endl;
+    cout << endl;
 }
 }

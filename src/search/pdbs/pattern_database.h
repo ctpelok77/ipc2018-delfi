@@ -183,6 +183,8 @@ public:
 
     // Returns true iff op has an effect on a variable in the pattern.
     bool is_operator_relevant(const OperatorProxy &op) const;
+
+    void dump() const;
 };
 }
 
