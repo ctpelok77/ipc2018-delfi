@@ -73,7 +73,6 @@ PatternDatabase::PatternDatabase(
     const vector<int> &operator_costs)
     : pattern(pattern) {
     task_properties::verify_no_axioms(task_proxy);
-    task_properties::verify_no_conditional_effects(task_proxy);
     assert(operator_costs.empty() ||
            operator_costs.size() == task_proxy.get_operators().size());
     assert(utils::is_sorted_unique(pattern));
@@ -148,41 +147,65 @@ void PatternDatabase::build_abstract_operators(
     vector<FactPair> pre_pairs;
     // All variable value pairs that are an effect
     vector<FactPair> eff_pairs;
-    // All variable value pairs that are a precondition (value = -1)
+    // All variable value pairs that are an effect without precondition (value = -1)
     vector<FactPair> effects_without_pre;
 
     size_t num_vars = variables.size();
-    vector<bool> has_precond_and_effect_on_var(num_vars, false);
-    vector<bool> has_precondition_on_var(num_vars, false);
 
-    for (FactProxy pre : op.get_preconditions())
-        has_precondition_on_var[pre.get_variable().get_id()] = true;
-
-    for (EffectProxy eff : op.get_effects()) {
-        int var_id = eff.get_fact().get_variable().get_id();
-        int pattern_var_id = variable_to_index[var_id];
-        int val = eff.get_fact().get_value();
-        if (pattern_var_id != -1) {
-            if (has_precondition_on_var[var_id]) {
-                has_precond_and_effect_on_var[var_id] = true;
-                eff_pairs.emplace_back(pattern_var_id, val);
-            } else {
-                effects_without_pre.emplace_back(pattern_var_id, val);
-            }
-        }
-    }
+    vector<int> var_to_condition_val(num_vars, -1);
     for (FactProxy pre : op.get_preconditions()) {
         int var_id = pre.get_variable().get_id();
         int pattern_var_id = variable_to_index[var_id];
         int val = pre.get_value();
         if (pattern_var_id != -1) { // variable occurs in pattern
-            if (has_precond_and_effect_on_var[var_id]) {
-                pre_pairs.emplace_back(pattern_var_id, val);
-            } else {
-                prev_pairs.emplace_back(pattern_var_id, val);
+            var_to_condition_val[var_id] = val;
+        }
+    }
+
+    vector<int> var_to_effect_val(num_vars, -1);
+    for (EffectProxy eff : op.get_effects()) {
+        int var_id = eff.get_fact().get_variable().get_id();
+        int pattern_var_id = variable_to_index[var_id];
+        int val = eff.get_fact().get_value();
+        if (pattern_var_id != -1) { // variable occurs in pattern
+            for (FactProxy cond_eff : eff.get_conditions()) {
+                int cond_eff_var_id = cond_eff.get_variable().get_id();
+                int pattern_cond_eff_var_id = variable_to_index[cond_eff_var_id];
+                int cond_eff_val = cond_eff.get_value();
+                if (pattern_cond_eff_var_id != -1) { // variable occurs in pattern
+                    assert(var_to_condition_val[cond_eff_var_id] == -1);
+                    var_to_condition_val[cond_eff_var_id] = cond_eff_val;
+                }
+            }
+            // TODO: not sure if the following assertion really holds.
+            // Especially with the new semantics, I think we may have
+            // different effects on the same variable. But then this
+            // should be fine, as the last one should count, and we
+            // overwrite here.
+            assert(var_to_effect_val[var_id] == -1);
+            var_to_effect_val[var_id] = val;
+        }
+    }
+
+    for (size_t var_id = 0; var_id < num_vars; ++var_id) {
+        int condition_val = var_to_condition_val[var_id];
+        int effect_val = var_to_effect_val[var_id];
+        bool has_condition = condition_val != -1;
+        bool has_effect = effect_val != -1;
+        if (has_condition || has_effect) {
+            int pattern_var_id = variable_to_index[var_id];
+            assert(pattern_var_id != -1); // variable occurs in pattern
+            if (has_condition && has_effect) {
+                pre_pairs.emplace_back(pattern_var_id, condition_val);
+                eff_pairs.emplace_back(pattern_var_id, effect_val);
+            } else if (has_condition && !has_effect) {
+                prev_pairs.emplace_back(pattern_var_id, condition_val);
+            } else if (has_effect && !has_condition) {
+                effects_without_pre.emplace_back(pattern_var_id, effect_val);
             }
         }
     }
+
     multiply_out(0, cost, prev_pairs, pre_pairs, eff_pairs, effects_without_pre,
                  variables, operators);
 }
