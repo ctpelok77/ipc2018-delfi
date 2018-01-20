@@ -147,6 +147,7 @@ SearchStatus EagerSearch::step() {
     if (!pruning_disabled && num_por_probes < statistics.get_expanded()
             && pruning_method->pruning_below_minimum_ratio()) {
         pruning_disabled = true;
+        // TODO: Free memory consumed by the pruning class object
         cout << "Insufficient pruning. Switching off." << endl;
     }
     if (!pruning_disabled) {
