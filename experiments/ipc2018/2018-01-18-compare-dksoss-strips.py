@@ -37,7 +37,7 @@ def main(revisions=[]):
                 ('{}-h2-simpless-oldsemantics-oss-lmcountlmmergedlmrhwlmhm1'.format(REVISION), '{}-h2-simpless-oldsemantics-dks-lmcountlmmergedlmrhwlmhm1'.format(REVISION)),
                 ('{}-h2-simpless-oldsemantics-oss-masb50ksccdfp'.format(REVISION), '{}-h2-simpless-oldsemantics-dks-masb50ksccdfp'.format(REVISION)),
                 ('{}-h2-simpless-oldsemantics-oss-masb50ksbmiasm'.format(REVISION), '{}-h2-simpless-oldsemantics-dks-masb50ksbmiasm'.format(REVISION)),
-                ('{}-h2-simpless-oldsemantics-oss-masb50kmiasmdfp'.format(REVISION), '{}-h2-simpless-oldsemantics-dks-masb50kmiasmdfp'.format(REVISION)),
+                ('{}-simpless-oldsemantics-oss-masb50kmiasmdfp'.format(REVISION), '{}-simpless-oldsemantics-dks-masb50kmiasmdfp'.format(REVISION)),
                 ('{}-h2-simpless-oldsemantics-oss-cpdbshc900'.format(REVISION), '{}-h2-simpless-oldsemantics-dks-cpdbshc900'.format(REVISION)),
             ],
             attributes=attributes,
