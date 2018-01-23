@@ -40,6 +40,7 @@ def main(revisions=None):
 
     configs = {
         IssueConfig('h2-simpless-dks-maxcelmcutlmcountlmmergedlmrhwlmhm1', ['--symmetries', 'sym=structural_symmetries(search_symmetries=dks)', '--search', 'astar(max([celmcut,lmcount(lm_factory=lm_merged([lm_rhw,lm_hm(m=1)]),admissible=true)]),symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)'], driver_options=['--transform', 'preprocess']),
+        IssueConfig('h2-simpless-oss-maxcelmcutlmcountlmmergedlmrhwlmhm1', ['--symmetries', 'sym=structural_symmetries(search_symmetries=oss)', '--search', 'astar(max([celmcut,lmcount(lm_factory=lm_merged([lm_rhw,lm_hm(m=1)]),admissible=true)]),symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)'], driver_options=['--transform', 'preprocess']),
     }
 
     exp = IssueExperiment(
