@@ -67,7 +67,7 @@ def main(revisions=None):
         Attribute('genetic_time', absolute=False, min_wins=True, functions=[geometric_mean]),
     ])
 
-    exp.add_absolute_report_step()
+    exp.add_absolute_report_step(attributes=attributes)
 
     exp.run_steps()
 
