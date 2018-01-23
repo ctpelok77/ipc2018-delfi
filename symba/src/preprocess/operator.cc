@@ -129,7 +129,7 @@ void Operator::remove_ambiguity(const H2Mutexes & h2) {
     if (is_redundant())
         return;
     // cout << "Check ambiguity: " << name << endl;
-  
+
     vector<int> preconditions(h2.num_variables(), -1);
     vector<bool> original(h2.num_variables(), false);
 
@@ -218,7 +218,7 @@ void Operator::remove_ambiguity(const H2Mutexes & h2) {
                     it2 = candidate_var.erase(it2);
                 } else {
                     ++it2;
-                }   
+                }
             }
 
             // we check the remaining candidates
@@ -237,7 +237,7 @@ void Operator::remove_ambiguity(const H2Mutexes & h2) {
 
         known_values.swap(aux_values);
     }
-    
+
 
     // new preconditions are added
     for (int i = 0; i < preconditions.size(); i++)
@@ -264,7 +264,7 @@ void Operator::remove_ambiguity(const H2Mutexes & h2) {
             bool conflict = false;
             for (int k = 0; !conflict && k < preconditions.size(); k++)
                 if (preconditions[k] != -1)
-                    conflict = h2.are_mutex(var, j, i, preconditions[i]);
+                    conflict = h2.are_mutex(var, j, k, preconditions[k]);
 
             if (!conflict)
                 potential_preconditions.push_back(make_pair(var,j));
