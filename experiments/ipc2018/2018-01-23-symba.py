@@ -42,7 +42,7 @@ REPO_DIR = get_repo_base()
 REMOTE = 'cluster' in platform.node()
 BENCHMARKS_DIR = os.environ["DOWNWARD_BENCHMARKS_IPC2018"]
 if REMOTE:
-    ENV = BaselSlurmEnvironment(export=["PATH", "DOWNWARD_BENCHMARKS_IPC2018"])
+    ENV = BaselSlurmEnvironment(export=["PATH", "DOWNWARD_BENCHMARKS_IPC2018"],email='silvan.sievers@unibas.ch')
 else:
     ENV = LocalEnvironment(processes=4)
 
