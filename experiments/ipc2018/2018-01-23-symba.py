@@ -118,8 +118,6 @@ for ipc_config in IPC_CONFIGS:
         # Schedule parser.
         run.add_command('parse', ['{parser}'])
 
-print(get_script())
-
 # Make a report.
 exp.add_report(
     AbsoluteReport(attributes=ATTRIBUTES),
