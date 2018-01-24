@@ -4,7 +4,6 @@
 import argparse
 from subprocess import call
 import sys
-sys.path.insert(1, 'driver')
 import timers
 
 parser = argparse.ArgumentParser()
