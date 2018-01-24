@@ -43,7 +43,7 @@ REPO_DIR = get_repo_base()
 REMOTE = 'cluster' in platform.node()
 BENCHMARKS_DIR = os.environ["DOWNWARD_BENCHMARKS_IPC2018"]
 if REMOTE:
-    ENV = BaselSlurmEnvironment(export=["PATH", "DOWNWARD_BENCHMARKS_IPC2018"],email='silvan.sievers@unibas.ch')
+    ENV = BaselSlurmEnvironment(memory_per_cpu='7744M', export=["PATH"],email='silvan.sievers@unibas.ch')
 else:
     ENV = LocalEnvironment(processes=4)
 
@@ -113,7 +113,7 @@ for ipc_config in IPC_CONFIGS:
             'run-planner',
             [sys.executable,  planner, ipc_config, '{domain}', '{problem}', 'sas_plan'],
             time_limit=1800,
-            memory_limit=2048)
+            memory_limit=7744)
         run.set_property('domain', task.domain)
         run.set_property('problem', task.problem)
         run.set_property('algorithm', ipc_config)
