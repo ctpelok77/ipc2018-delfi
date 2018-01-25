@@ -9,6 +9,7 @@ from . import aliases
 from . import arguments
 from . import cleanup
 from . import run_components
+from . import timers
 
 
 def main():
@@ -28,10 +29,13 @@ def main():
 
     # If validation succeeds, exit with the search component's exitcode.
     exitcode = None
+    timer = timers.Timer()
     for component in args.components:
         try:
             if component == "translate":
                 run_components.run_translate(args)
+                if args.transform_task:
+                    run_components.transform_task(args)
             elif component == "search":
                 exitcode = run_components.run_search(args)
             elif component == "validate":
@@ -42,6 +46,7 @@ def main():
             print(err)
             exitcode = err.returncode
             break
+    print("Overall time: {}".format(timer))
     sys.exit(exitcode)
 
 

@@ -19,7 +19,6 @@
 #include "../task_utils/task_properties.h"
 #include "../utils/markup.h"
 #include "../utils/math.h"
-#include "../utils/memory.h"
 #include "../utils/system.h"
 #include "../utils/timer.h"
 
@@ -127,12 +126,12 @@ void MergeAndShrinkHeuristic::dump_options() const {
 void MergeAndShrinkHeuristic::warn_on_unusual_options() const {
     string dashes(79, '=');
     if (!label_reduction) {
-        cerr << dashes << endl
+        cout << dashes << endl
              << "WARNING! You did not enable label reduction.\nThis may "
             "drastically reduce the performance of merge-and-shrink!"
              << endl << dashes << endl;
     } else if (label_reduction->reduce_before_merging() && label_reduction->reduce_before_shrinking()) {
-        cerr << dashes << endl
+        cout << dashes << endl
              << "WARNING! You set label reduction to be applied twice in each merge-and-shrink\n"
             "iteration, both before shrinking and merging. This double computation effort\n"
             "does not pay off for most configurations!"
@@ -141,14 +140,14 @@ void MergeAndShrinkHeuristic::warn_on_unusual_options() const {
         if (label_reduction->reduce_before_shrinking() &&
             (shrink_strategy->get_name() == "f-preserving"
              || shrink_strategy->get_name() == "random")) {
-            cerr << dashes << endl
+            cout << dashes << endl
                  << "WARNING! Bucket-based shrink strategies such as f-preserving random perform\n"
                 "best if used with label reduction before merging, not before shrinking!"
                  << endl << dashes << endl;
         }
         if (label_reduction->reduce_before_merging() &&
             shrink_strategy->get_name() == "bisimulation") {
-            cerr << dashes << endl
+            cout << dashes << endl
                  << "WARNING! Shrinking based on bisimulation performs best if used with label\n"
                 "reduction before shrinking, not before merging!"
                  << endl << dashes << endl;
@@ -156,53 +155,11 @@ void MergeAndShrinkHeuristic::warn_on_unusual_options() const {
     }
 
     if (!prune_unreachable_states || !prune_irrelevant_states) {
-        cerr << dashes << endl
+        cout << dashes << endl
              << "WARNING! Pruning is (partially) turned off!\nThis may "
             "drastically reduce the performance of merge-and-shrink!"
              << endl << dashes << endl;
     }
-}
-
-bool MergeAndShrinkHeuristic::shrink_before_merge(
-    FactoredTransitionSystem &fts, int index1, int index2) {
-    /*
-      Compute the size limit for both transition systems as imposed by
-      max_states and max_states_before_merge.
-    */
-    pair<int, int> new_sizes = compute_shrink_sizes(
-        fts.get_ts(index1).get_size(),
-        fts.get_ts(index2).get_size(),
-        max_states_before_merge,
-        max_states);
-
-    /*
-      For both transition systems, possibly compute and apply an
-      abstraction.
-      TODO: we could better use the given limit by increasing the size limit
-      for the second shrinking if the first shrinking was larger than
-      required.
-    */
-    bool shrunk1 = shrink_factor(
-        fts,
-        index1,
-        new_sizes.first,
-        shrink_threshold_before_merge,
-        *shrink_strategy,
-        verbosity);
-    if (verbosity >= Verbosity::VERBOSE && shrunk1) {
-        fts.statistics(index1);
-    }
-    bool shrunk2 = shrink_factor(
-        fts,
-        index2,
-        new_sizes.second,
-        shrink_threshold_before_merge,
-        *shrink_strategy,
-        verbosity);
-    if (verbosity >= Verbosity::VERBOSE && shrunk2) {
-        fts.statistics(index2);
-    }
-    return shrunk1 || shrunk2;
 }
 
 void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
@@ -228,7 +185,7 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
     */
     for (int index = 0; index < fts.get_size(); ++index) {
         if (prune_unreachable_states || prune_irrelevant_states) {
-            prune_factor(
+            prune_step(
                 fts,
                 index,
                 prune_unreachable_states,
@@ -273,8 +230,15 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
             }
 
             // Shrinking
-            bool shrunk = shrink_before_merge(
-                fts, merge_index1, merge_index2);
+            bool shrunk = shrink_before_merge_step(
+                fts,
+                merge_index1,
+                merge_index2,
+                max_states,
+                max_states_before_merge,
+                shrink_threshold_before_merge,
+                *shrink_strategy,
+                verbosity);
             if (verbosity >= Verbosity::NORMAL && shrunk) {
                 print_time(timer, "after shrinking");
             }
@@ -298,7 +262,7 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
 
             // Pruning
             if (prune_unreachable_states || prune_irrelevant_states) {
-                bool pruned = prune_factor(
+                bool pruned = prune_step(
                     fts,
                     merged_index,
                     prune_unreachable_states,
@@ -358,6 +322,14 @@ void MergeAndShrinkHeuristic::build(const utils::Timer &timer) {
     pair<unique_ptr<MergeAndShrinkRepresentation>, unique_ptr<Distances>>
     final_entry = fts.extract_factor(final_index);
     mas_representation = move(final_entry.first);
+    if (!final_entry.second->are_goal_distances_computed()) {
+        // Be careful: the following two variables shadow above ones.
+        const bool compute_init_distances = false;
+        const bool compute_goal_distances = true;
+        final_entry.second->compute_distances(
+            compute_init_distances, compute_goal_distances, verbosity);
+    }
+    assert(final_entry.second->are_goal_distances_computed());
     mas_representation->set_distances(*final_entry.second);
     shrink_strategy = nullptr;
     label_reduction = nullptr;
@@ -418,18 +390,18 @@ void MergeAndShrinkHeuristic::handle_shrink_limit_options_defaults(Options &opts
     }
 
     if (max_states_before_merge > max_states) {
-        cerr << "warning: max_states_before_merge exceeds max_states, "
+        cout << "warning: max_states_before_merge exceeds max_states, "
              << "correcting." << endl;
         max_states_before_merge = max_states;
     }
 
     if (max_states < 1) {
-        cerr << "error: transition system size must be at least 1" << endl;
+        cout << "error: transition system size must be at least 1" << endl;
         utils::exit_with(ExitCode::INPUT_ERROR);
     }
 
     if (max_states_before_merge < 1) {
-        cerr << "error: transition system size before merge must be at least 1"
+        cout << "error: transition system size before merge must be at least 1"
              << endl;
         utils::exit_with(ExitCode::INPUT_ERROR);
     }
@@ -438,11 +410,11 @@ void MergeAndShrinkHeuristic::handle_shrink_limit_options_defaults(Options &opts
         threshold = max_states;
     }
     if (threshold < 1) {
-        cerr << "error: threshold must be at least 1" << endl;
+        cout << "error: threshold must be at least 1" << endl;
         utils::exit_with(ExitCode::INPUT_ERROR);
     }
     if (threshold > max_states) {
-        cerr << "warning: threshold exceeds max_states, correcting" << endl;
+        cout << "warning: threshold exceeds max_states, correcting" << endl;
         threshold = max_states;
     }
 
@@ -484,9 +456,7 @@ static Heuristic *_parse(OptionParser &parser) {
             "Proceedings of the 26th International Conference on Automated "
             "Planning and Scheduling (ICAPS 2016)",
             "294-298",
-            "AAAI Press 2016") + "\n" +
-        "Note that dyn-MIASM has not been integrated into the official code "
-        "base of Fast Downward and is available on request.");
+            "AAAI Press 2016"));
     parser.document_language_support("action costs", "supported");
     parser.document_language_support("conditional effects", "supported (but see note)");
     parser.document_language_support("axioms", "not supported");
@@ -511,8 +481,7 @@ static Heuristic *_parse(OptionParser &parser) {
         "{{{\nmerge_and_shrink(shrink_strategy=shrink_bisimulation(greedy=false),"
         "merge_strategy=merge_sccs(order_of_sccs=topological,merge_selector="
         "score_based_filtering(scoring_functions=[goal_relevance,dfp,"
-        "total_order])),"
-        "label_reduction=exact(before_shrinking=true,"
+        "total_order])),label_reduction=exact(before_shrinking=true,"
         "before_merging=false),max_states=50000,threshold_before_merge=1)\n}}}\n"
         "Note that for versions of Fast Downward prior to 2016-08-19, the "
         "syntax differs. See the recommendation in the file "

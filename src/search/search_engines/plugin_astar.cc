@@ -4,6 +4,8 @@
 #include "../option_parser.h"
 #include "../plugin.h"
 
+#include "../structural_symmetries/group.h"
+
 using namespace std;
 
 namespace plugin_astar {
@@ -33,6 +35,10 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
 
     SearchEngine::add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);
+    parser.add_option<shared_ptr<Group>>(
+        "symmetries",
+        "symmetries object to compute structural symmetries for pruning",
+        OptionParser::NONE);
     parser.add_option<int>(
         "num_por_probes",
         "Mumber of state expansions until which we test if the minimum "
@@ -43,6 +49,14 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
 
     shared_ptr<eager_search::EagerSearch> engine;
     if (!parser.dry_run()) {
+        if (opts.contains("symmetries")) {
+            shared_ptr<Group> group = opts.get<shared_ptr<Group>>("symmetries");
+            if (group->get_search_symmetries() == SearchSymmetries::NONE) {
+                cerr << "Symmetries option passed to eager search, but no "
+                     << "search symmetries should be used." << endl;
+                utils::exit_with(utils::ExitCode::INPUT_ERROR);
+            }
+        }
         auto temp = search_common::create_astar_open_list_factory_and_f_eval(opts);
         opts.set("open", temp.first);
         opts.set("f_eval", temp.second);

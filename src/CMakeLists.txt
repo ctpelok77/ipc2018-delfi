@@ -64,3 +64,4 @@ add_custom_command(TARGET translate POST_BUILD
     COMMENT "Copying translator module into output directory")
 
 add_subdirectory(search)
+add_subdirectory(h2-preprocessor)
