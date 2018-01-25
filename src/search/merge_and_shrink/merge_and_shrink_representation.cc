@@ -5,7 +5,10 @@
 
 #include "../task_proxy.h"
 
+#include "../utils/memory.h"
+
 #include <algorithm>
+#include <cassert>
 #include <iostream>
 #include <numeric>
 
@@ -32,8 +35,15 @@ MergeAndShrinkRepresentationLeaf::MergeAndShrinkRepresentationLeaf(
     iota(lookup_table.begin(), lookup_table.end(), 0);
 }
 
+MergeAndShrinkRepresentationLeaf::MergeAndShrinkRepresentationLeaf(const MergeAndShrinkRepresentationLeaf *other)
+    : MergeAndShrinkRepresentation(other->domain_size),
+      var_id(other->var_id),
+      lookup_table(other->lookup_table) {
+}
+
 void MergeAndShrinkRepresentationLeaf::set_distances(
     const Distances &distances) {
+    assert(distances.are_goal_distances_computed());
     for (int &entry : lookup_table) {
         if (entry != PRUNED_STATE) {
             entry = distances.get_goal_distance(entry);
@@ -59,6 +69,7 @@ int MergeAndShrinkRepresentationLeaf::get_value(const State &state) const {
 }
 
 void MergeAndShrinkRepresentationLeaf::dump() const {
+    cout << "lookup table: ";
     for (const auto &value : lookup_table) {
         cout << value << ", ";
     }
@@ -86,12 +97,33 @@ MergeAndShrinkRepresentationMerge::MergeAndShrinkRepresentationMerge(
 
 void MergeAndShrinkRepresentationMerge::set_distances(
     const Distances &distances) {
+    assert(distances.are_goal_distances_computed());
     for (vector<int> &row : lookup_table) {
         for (int &entry : row) {
             if (entry != PRUNED_STATE) {
                 entry = distances.get_goal_distance(entry);
             }
         }
+    }
+}
+
+
+MergeAndShrinkRepresentationMerge::MergeAndShrinkRepresentationMerge(const MergeAndShrinkRepresentationMerge *other)
+    : MergeAndShrinkRepresentation(other->domain_size),
+      lookup_table(other->lookup_table) {
+    if (dynamic_cast<MergeAndShrinkRepresentationLeaf *>(other->left_child.get())) {
+        left_child = utils::make_unique_ptr<MergeAndShrinkRepresentationLeaf>(
+            dynamic_cast<MergeAndShrinkRepresentationLeaf *>(other->left_child.get()));
+    } else {
+        left_child = utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+            dynamic_cast<MergeAndShrinkRepresentationMerge *>(other->left_child.get()));
+    }
+    if (dynamic_cast<MergeAndShrinkRepresentationLeaf *>(other->right_child.get())) {
+        right_child = utils::make_unique_ptr<MergeAndShrinkRepresentationLeaf>(
+            dynamic_cast<MergeAndShrinkRepresentationLeaf *>(other->right_child.get()));
+    } else {
+        right_child = utils::make_unique_ptr<MergeAndShrinkRepresentationMerge>(
+            dynamic_cast<MergeAndShrinkRepresentationMerge *>(other->right_child.get()));
     }
 }
 
@@ -113,19 +145,20 @@ int MergeAndShrinkRepresentationMerge::get_value(
     const State &state) const {
     int state1 = left_child->get_value(state);
     int state2 = right_child->get_value(state);
-    if (state1 == PRUNED_STATE ||
-        state2 == PRUNED_STATE)
+    if (state1 == PRUNED_STATE || state2 == PRUNED_STATE)
         return PRUNED_STATE;
     return lookup_table[state1][state2];
 }
 
 void MergeAndShrinkRepresentationMerge::dump() const {
+    cout << "lookup table: ";
     for (const auto &row : lookup_table) {
         for (const auto &value : row) {
             cout << value << ", ";
         }
         cout << endl;
     }
+    cout << endl;
     cout << "dump left child:" << endl;
     left_child->dump();
     cout << "dump right child:" << endl;

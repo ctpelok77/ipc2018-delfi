@@ -36,6 +36,15 @@ def parse_args():
         "severe performance penalty due to weaker relevance analysis "
         "(see issue7).")
     argparser.add_argument(
+        "--enforce-definite-effects", action="store_true",
+        help="ensure that each operator sets each variable to its "
+        "post-value whenever the effect condition is true. Otherwise it "
+        "could be the case that another effect is stronger and "
+        "overwrites the value (this is equivalent to add after delete "
+        "semantics but in finite domain representation). We recommend to "
+        "use this option only if you really need it because it can make "
+        "the task representation much larger.")
+    argparser.add_argument(
         "--keep-unreachable-facts",
         dest="filter_unreachable_facts", action="store_false",
         help="keep facts that can't be reached from the initial state")
@@ -51,6 +60,65 @@ def parse_args():
     argparser.add_argument(
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
+
+    #### Options related to symmetries
+    argparser.add_argument(
+        "--compute-symmetries", action="store_true",
+        help="compute symmetries on the normalized taks using bliss, dump "
+        "statistics")
+    argparser.add_argument(
+        "--only-object-symmetries", action="store_true",
+        help="HACK! Only allow objects to be permuted, but not "
+        "predicates, operators, axioms or functions. (Set option "
+        "--compute-symmetries)")
+    argparser.add_argument(
+        "--do-not-stabilize-initial-state", action="store_true",
+        help="If true, only those atoms in the initial state mentioning "
+        "static predicates are added. (Set option --compute-symmetries)")
+    argparser.add_argument(
+        "--only-functions-from-initial-state", action="store_true",
+        help="If true, include only the functions mentioned in the initial "
+        "states, but not the fluents or types. (Set option --compute-symmetries)")
+    argparser.add_argument(
+        "--do-not-stabilize-goal", action="store_true",
+        help="If true, literals in the goal are not colored with a special "
+        "color. (Set option --compute-symmetries)")
+    argparser.add_argument(
+        "--bliss-time-limit", default=300, type=int,
+        help="Max time for bliss to search for automorphisms. (Set option "
+        "--compute-symmetries)")
+
+    # Options related to dumping planning task as image
+    argparser.add_argument(
+        "--dump-dot-graph", action="store_true",
+        help="If true, dumping the abstract structure as dot graph."
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-raw", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-reg", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-int", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    argparser.add_argument(
+        "--write-abstract-structure-image-original-size", action="store_true",
+        help="If true, the original size image representing the abstract structure "
+        "as a graph is also written to the disk, when at least one of "
+        "--write-abstract-structure-image-XXX is used.")
+    argparser.add_argument(
+        "--abstract-structure-image-target-size", default=128, type=int,
+        help="Target size for the constant size image")
+
+    argparser.add_argument(
+        "--bolding-abstract-structure-image", action="store_true",
+        help="If true, then bolding is performed on the image, "
+        "that is each dot is surrounded by 4 additional dots.")
+    
     return argparser.parse_args()
 
 

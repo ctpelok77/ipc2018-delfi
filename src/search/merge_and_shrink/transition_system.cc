@@ -99,6 +99,18 @@ TransitionSystem::TransitionSystem(
     assert(are_transitions_sorted_unique());
 }
 
+TransitionSystem::TransitionSystem(const TransitionSystem &other)
+    : num_variables(other.num_variables),
+      incorporated_variables(other.incorporated_variables),
+      label_equivalence_relation(
+          utils::make_unique_ptr<LabelEquivalenceRelation>(
+              *other.label_equivalence_relation.get())),
+      transitions_by_group_id(other.transitions_by_group_id),
+      num_states(other.num_states),
+      goal_states(other.goal_states),
+      init_state(other.init_state) {
+}
+
 TransitionSystem::~TransitionSystem() {
 }
 
@@ -422,8 +434,13 @@ bool TransitionSystem::are_transitions_sorted_unique() const {
 }
 
 bool TransitionSystem::is_solvable(const Distances &distances) const {
-    return init_state != PRUNED_STATE &&
-           distances.get_goal_distance(init_state) != INF;
+    if (init_state == PRUNED_STATE) {
+        return false;
+    }
+    if (distances.are_goal_distances_computed() && distances.get_goal_distance(init_state) == INF) {
+        return false;
+    }
+    return true;
 }
 
 int TransitionSystem::compute_total_transitions() const {

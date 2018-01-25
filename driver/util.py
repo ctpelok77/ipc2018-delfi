@@ -31,6 +31,7 @@ def find_domain_filename(task_filename):
     domain_basenames = [
         "domain.pddl",
         basename[:3] + "-domain.pddl",
+        "domain-" + basename,
         "domain_" + basename,
     ]
 
@@ -38,7 +39,7 @@ def find_domain_filename(task_filename):
         domain_filename = os.path.join(dirname, domain_basename)
         if os.path.exists(domain_filename):
             return domain_filename
-            
+
     raise SystemExit(
         "Error: Could not find domain file using automatic naming rules.")
 

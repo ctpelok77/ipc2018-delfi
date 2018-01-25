@@ -114,7 +114,8 @@ public:
     int merge(
         int index1,
         int index2,
-        Verbosity verbosity);
+        Verbosity verbosity,
+        bool invalidating_merge = true);
 
     /*
       Extract the factor at the given index, rendering the FTS invalid.
@@ -164,6 +165,7 @@ public:
     }
 
     bool is_active(int index) const;
+    void remove(int index);
 };
 }
 
