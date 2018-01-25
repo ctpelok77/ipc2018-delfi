@@ -95,7 +95,9 @@ void EagerSearch::print_checkpoint_line(int g) const {
 void EagerSearch::print_statistics() const {
     statistics.print_detailed_statistics();
     search_space.print_statistics();
-    pruning_method->print_statistics();
+    if (!pruning_disabled) {
+        pruning_method->print_statistics();
+    }
 }
 
 SearchStatus EagerSearch::step() {
@@ -116,6 +118,10 @@ SearchStatus EagerSearch::step() {
             && pruning_method->pruning_below_minimum_ratio()) {
         pruning_disabled = true;
         cout << "Insufficient pruning. Switching off." << endl;
+        // Not sure about printing statistics at this point - is there actually a need for that?
+        pruning_method->print_statistics();
+        // Resetting the shared_ptr. The object should be deleted, in case noone else is using it.
+        pruning_method.reset();
     }
     if (!pruning_disabled) {
         /*
