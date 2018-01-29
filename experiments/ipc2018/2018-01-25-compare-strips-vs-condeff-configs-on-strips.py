@@ -58,8 +58,6 @@ def main(revisions=[]):
 
     attributes = exp.DEFAULT_TABLE_ATTRIBUTES
 
-    exp.add_absolute_report_step()
-
     exp.add_report(
         ComparativeReport(
             algorithm_pairs=[
