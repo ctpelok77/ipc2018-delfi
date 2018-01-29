@@ -15,7 +15,8 @@ class Timer(object):
 
     def _clock(self):
         times = os.times()
-        return times[0] + times[1]
+        # HACK, does not work on Windows: also add time used by child processes
+        return times[0] + times[1] + times[2] + times[3]
 
     def __str__(self):
         return "[%.3fs CPU, %.3fs wall-clock]" % (
