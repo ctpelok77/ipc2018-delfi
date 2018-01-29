@@ -7,7 +7,7 @@ from lab.environments import LocalEnvironment, BaselSlurmEnvironment
 from lab.reports import Attribute, geometric_mean
 from common_setup import IssueConfig, IssueExperiment, is_test_run
 
-REVISION = 'da35be09cad0'
+REVISION = '31d1eefdbeca'
 
 def main(revisions=None):
     benchmarks_dir = os.environ["DOWNWARD_BENCHMARKS_IPC2018"]
@@ -45,7 +45,7 @@ def main(revisions=None):
     'ss_maintenance', 'ss_maintenance_large', 'ss_schedule',])
 
     if is_test_run():
-        suite = ['miconic-simpleadl:s1-0.pddl']
+        suite = ['gripper:prob01.pddl', 'miconic-simpleadl:s1-0.pddl']
         environment = LocalEnvironment(processes=4)
     else:
         environment = BaselSlurmEnvironment(memory_per_cpu='7744M', email="silvan.sievers@unibas.ch", export=["PATH"])
