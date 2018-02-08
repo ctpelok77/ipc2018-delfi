@@ -1,14 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 import sys
-stdout = sys.stdout
-sys.stdout = open('/dev/null', 'w')
 stderr = sys.stderr
 sys.stderr = open('/dev/null', 'w')
 from keras.models import model_from_json
-sys.stdout = stdout
 sys.stderr = stderr
 
 import numpy as np
