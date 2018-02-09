@@ -32,22 +32,25 @@ def get_repo_base():
         path = os.path.dirname(path)
     sys.exit("repo base could not be found")
 
-parser = argparse.ArgumentParser()
+def run_symba(config, domain, problem, plan):
+    repo_dir = get_repo_base()
+    planner = os.path.join(os.path.abspath(repo_dir), 'symba', 'src', 'plan-ipc')
+    call([planner, config, domain, problem, plan])
 
-parser.add_argument("config")
-parser.add_argument("domain_file")
-parser.add_argument("problem_file")
-parser.add_argument("plan_file")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
 
-args = parser.parse_args()
-config = args.config
-domain = args.domain_file
-problem = args.problem_file
-plan_file = args.plan_file
+    parser.add_argument("config")
+    parser.add_argument("domain_file")
+    parser.add_argument("problem_file")
+    parser.add_argument("plan_file")
 
-repo_dir = get_repo_base()
-planner = os.path.join(os.path.abspath(repo_dir), 'symba', 'src', 'plan-ipc')
+    args = parser.parse_args()
+    config = args.config
+    domain = args.domain_file
+    problem = args.problem_file
+    plan = args.plan_file
 
-timer = timers.Timer()
-call([planner, config, domain, problem, plan_file])
-print("Overall time: {}".format(timer))
+    timer = timers.Timer()
+    run_symba(config, domain, problem, plan)
+    print("Overall time: {}".format(timer))
