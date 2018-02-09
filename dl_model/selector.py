@@ -44,8 +44,8 @@ def compute_command_line_options(json_model, h5_model, image):
     json_file.close()
     model = model_from_json(loaded_model_json)
     # load weights into new model
-    model.load_weights(json_model, h5_model)
-    #print("Loaded model from disk")
+    model.load_weights(h5_model)
+    print("Loaded model from disk")
 
     list_solver_names = ['{}-h2-simpless-dks-lmcountlmmergedlmrhwlmhm1'.format(TRAINING_REVISION), '{}-h2-simpless-dks-masb50ksccdfp'.format(TRAINING_REVISION), '{}-h2-simpless-dks-lmcountlmrhw'.format(TRAINING_REVISION), '{}-h2-simpless-dks-blind'.format(TRAINING_REVISION), '{}-h2-simpless-dks-celmcut'.format(TRAINING_REVISION), '{}-h2-simpless-dks-zopdbsgenetic'.format(TRAINING_REVISION), '{}-h2-simpless-dks-masb50ksbmiasm'.format(TRAINING_REVISION), '{}-h2-simpless-dks-masginfsccdfp'.format(TRAINING_REVISION), '{}-simpless-dks-masb50kmiasmdfp'.format(TRAINING_REVISION), '{}-h2-simpless-dks-cpdbshc900'.format(TRAINING_REVISION), '{}-h2-simpless-oss-blind'.format(TRAINING_REVISION), '{}-h2-simpless-oss-celmcut'.format(TRAINING_REVISION), '{}-h2-simpless-oss-lmcountlmrhw'.format(TRAINING_REVISION), '{}-h2-simpless-oss-masb50ksccdfp'.format(TRAINING_REVISION), '{}-h2-simpless-oss-lmcountlmmergedlmrhwlmhm1'.format(TRAINING_REVISION), '{}-h2-simpless-oss-zopdbsgenetic'.format(TRAINING_REVISION), '{}-h2-simpless-oss-cpdbshc900'.format(TRAINING_REVISION), '{}-simpless-oss-masb50kmiasmdfp'.format(TRAINING_REVISION), '{}-h2-simpless-oss-masb50ksbmiasm'.format(TRAINING_REVISION), '{}-h2-simpless-oss-masginfsccdfp'.format(TRAINING_REVISION), 'seq-opt-symba-1']
 
@@ -66,6 +66,7 @@ def compute_command_line_options(json_model, h5_model, image):
     preds = model.predict(data)
     #print(preds)
     selected_algorithm = list_solver_names[np.argmax(preds[0])]
+    print("Running %s" % selected_algorithm)
 
     assert selected_algorithm in ALGORITHM_TO_COMMAND_LINE_STRING
     return ALGORITHM_TO_COMMAND_LINE_STRING[selected_algorithm]
