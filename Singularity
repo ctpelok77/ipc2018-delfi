@@ -21,8 +21,8 @@ From: ubuntu
 
     ## Install all necessary dependencies.
     apt update
-    apt -y install cmake g++ g++-multilib make python python-dev gawk
-    pip install scipy
+    apt -y install cmake gawk g++ g++-multilib make python python-dev python-pip python3 python3-dev python3-pip
+    pip3 install h5py keras numpy pillow scipy tensorflow
 
     ## Build your planner
     cd /planner
@@ -45,13 +45,10 @@ From: ubuntu
     PLANFILE=$3
 
     ## Call your planner.
-    /planner/fast-downward.py \
-        --transform-task "/planner/h2-preprocessor/builds/release32/bin/preprocess" \
-        --build=release64 \
-        --plan-file $PLANFILE \
+    /planner/plan-ipc.py \
         $DOMAINFILE \
         $PROBLEMFILE \
-        --search "astar(lmcut())"
+        $PLANFILE
 
 ## Update the following fields with meta data about your submission.
 ## Please use the same field names and use only one line for each value.
