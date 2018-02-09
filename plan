@@ -1,8 +1,0 @@
-#! /bin/bash
-
-#"$(dirname "$0")"/src/plan-ipc seq-cbo-merwin "$@"
-
-"$(dirname "$0")"/src/translate/create_image.py --only-functions-from-initial-state --write-abstract-structure-image-reg --bolding-abstract-structure-image --abstract-structure-image-target-size 128 "$1" "$2"
-LABEL=`"$(dirname "$0")"/src/dl-model/test.py graph-gs-L-bolded-cs.png`
-echo "Running planner $LABEL"
-
