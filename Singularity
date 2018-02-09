@@ -22,6 +22,7 @@ From: ubuntu
     ## Install all necessary dependencies.
     apt update
     apt -y install cmake g++ g++-multilib make python python-dev gawk
+    pip install scipy
 
     ## Build your planner
     cd /planner
