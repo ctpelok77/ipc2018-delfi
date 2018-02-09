@@ -49,6 +49,7 @@ if __name__ == "__main__":
     planner = os.path.join(os.path.abspath(repo_dir), 'symba', 'src', 'plan-ipc')
     call([os.path.join(os.path.abspath(repo_dir), 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', domain, problem])
     call([os.path.join(os.path.abspath(repo_dir), 'src/dl-model/test.py'), 'graph-gs-L-bolded-cs.png'])
+    # TODO: clean-up files (png?)
 
     # TODO: use config determined above or fallback if everything fails
     # TODO: run correct planner
