@@ -15,7 +15,7 @@ CXX	= g++
 #CXX	= cxx
 
 # Specific options for compilation of C++ files.
-CXXFLAGS = 
+CXXFLAGS =
 # Stricter standard conformance for g++.
 #CXXFLAGS = -std=c++98
 # For Sun CC version 5, this invokes compatibility mode.
@@ -66,9 +66,9 @@ ICFLAGS	= -O3 -DNDEBUG
 # Gcc 2.8.1 on i686.
 #XCFLAGS	= -mcpu=pentiumpro -malign-double -DHAVE_IEEE_754 -DBSD
 # Gcc 4.2.4 or higher on x86_64 (64-bit compilation)
-#XCFLAGS	= -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8
+XCFLAGS	= -m64 -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8
 # Gcc 4.2.4 or higher on x86_64 (32-bit compilation)
-XCFLAGS	= -m32 -mtune=native -malign-double -DHAVE_IEEE_754 -DBSD
+#XCFLAGS	= -m32 -mtune=native -malign-double -DHAVE_IEEE_754 -DBSD
 # Icc on i686 (older versions may not support -xHost).
 #XCFLAGS	= -ansi -xHost -align -ip -DHAVE_IEEE_754 -DBSD
 # Icc on x86_64 (64-bit compilation).
