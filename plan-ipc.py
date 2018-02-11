@@ -55,44 +55,25 @@ if __name__ == "__main__":
     # TODO: use fallback if everything fails
     # TODO: if something fails (like the problem with the h2 preprocessor), catch and repeat with a default config
     repo_dir = get_repo_base()
-    print("repo dir: {}".format(repo_dir))
-    print(os.listdir(repo_dir))
 
     # create image for given domain/problem
     call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', domain, problem])
     image_file_name = 'graph-gs-L-bolded-cs.png'
-    image_path = os.path.join(repo_dir, image_file_name)
-    print("image path {}".format(image_path))
+    image_path = os.path.join(os.getcwd(), image_file_name)
     assert os.path.exists(image_path)
-
-    print("repo dir: {}".format(repo_dir))
-    print(os.listdir(repo_dir))
-
-    print("pwd: {}".format(os.getcwd()))
-    print(os.listdir(os.getcwd()))
 
     # use the learned model to select the appropriate planner (its command line options)
     json_model = os.path.join(repo_dir, 'dl_model/model.json')
-    print("json_model path {}".format(json_model))
     h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
-    print("h5_model path {}".format(h5_model))
     command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
 
     # build the correct command line to be called
     if len(command_line_options) == 1:
         assert command_line_options[0] == 'seq-opt-symba-1'
-        planner = [sys.executable, 'symba.py', command_line_options[0], domain, problem, plan]
+        planner = [sys.executable, os.path.join(repo_dir, 'symba.py'), command_line_options[0], domain, problem, plan]
     else:
-        planner = [sys.executable, 'fast-downward.py', '--transform-task', 'preprocess', '--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem]
+        planner = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--transform-task', 'preprocess', '--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem]
         planner.extend(command_line_options)
     print("Call string: {}".format(planner))
     print()
     call(planner)
-
-    # Remove all files that possibly have been created
-    force_remove_file(image_file_name)
-    force_remove_file('output')
-    force_remove_file('output.sas')
-    force_remove_file('elapsed.time')
-    force_remove_file('plan_numbers_and_cost')
-    force_remove_file('sas_plan')
