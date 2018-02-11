@@ -658,7 +658,7 @@ class AbstractStructureGraph:
                 n += 1
         return shrinked_matrix_data_test, shrinked_sz
 
-    def write_matrix_image_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6, target_size=128, write_original_size=False, output_directory=os.getcwd()):
+    def write_matrix_image_grayscale(self, output_directory, hide_equal_predicates=False, bolded=False, shrink_ratio=6, target_size=128, write_original_size=False):
         """Write the graph into a grayscale image"""
         """If shrink_ratio of 1 is used, using raw [0, 1] values for each pixel.
             If shrink_ratio of up to 3 is used, using [0, 255] values for each pixel.
