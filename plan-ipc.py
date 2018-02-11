@@ -55,16 +55,28 @@ if __name__ == "__main__":
     # TODO: use fallback if everything fails
     # TODO: if something fails (like the problem with the h2 preprocessor), catch and repeat with a default config
     repo_dir = get_repo_base()
+    print("repo dir: {}".format(repo_dir))
+    print(os.listdir(repo_dir))
 
     # create image for given domain/problem
-    image_file_name = 'graph-gs-L-bolded-cs.png'
     call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', domain, problem])
+    image_file_name = 'graph-gs-L-bolded-cs.png'
+    image_path = os.path.join(repo_dir, image_file_name)
+    print("image path {}".format(image_path))
+    assert os.path.exists(image_path)
+
+    print("repo dir: {}".format(repo_dir))
+    print(os.listdir(repo_dir))
+
+    print("pwd: {}".format(os.getcwd()))
+    print(os.listdir(os.getcwd()))
 
     # use the learned model to select the appropriate planner (its command line options)
     json_model = os.path.join(repo_dir, 'dl_model/model.json')
+    print("json_model path {}".format(json_model))
     h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
-    image = os.path.join(repo_dir, image_file_name)
-    command_line_options = selector.compute_command_line_options(json_model, h5_model, image)
+    print("h5_model path {}".format(h5_model))
+    command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
 
     # build the correct command line to be called
     if len(command_line_options) == 1:

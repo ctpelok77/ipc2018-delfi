@@ -539,25 +539,25 @@ class AbstractStructureGraph:
                     continue
                 file.write("\"%s\" -> \"%s\";\n" % (vertex, succ))
         file.write("}\n")
-        
-        
+
+
     def create_raw_matrix_for_image(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
         """Create raw 0/1 matrix, bolding by adding 1s around existing ones """
         def make_bolder(i, j, m, sz):
             if i < 0 or i >= sz or j < 0 or j >= sz:
                 return
             m[i,j] = 1
-                
+
         sz = 0
         vertex_indices = {}
         for vertex in self.graph.get_vertices():
-            if hide_equal_predicates and vertex in self.graph.excluded_vertices:           
+            if hide_equal_predicates and vertex in self.graph.excluded_vertices:
                 continue
             vertex_indices[vertex] = sz
             sz += 1
         ## Creating a matrix
         print("Creating matrix for a graph with %s nodes.." % sz)
-        ## TODO: This seems to be memory intensive in some cases (e.g., airport:p21-airport4halfMUC-p2.pddl and onwards,  
+        ## TODO: This seems to be memory intensive in some cases (e.g., airport:p21-airport4halfMUC-p2.pddl and onwards,
         ##            nomystery-opt11-strips:p05.pddl - p10.pddl and p15.pddl - p20.pddl,  and grounded cases: openstacks-strips and trucks-strips )
         ## The size of the graph can be quite big when either the task is (parially) grounded or there are many static predicates.
         ## The problem of static predicates can be overcome by using the option --only-functions-from-initial-state
@@ -565,7 +565,7 @@ class AbstractStructureGraph:
 
         if shrink_ratio > 1:
             sz += (shrink_ratio - (sz % shrink_ratio))
-            
+
         if sz > MAX_SIZE_EXPLICIT:
             matrix_data = lil_matrix((sz, sz), dtype=int)
             print("Matrix size when created: %s" % (matrix_data.data.nbytes + matrix_data.rows.nbytes))
@@ -594,17 +594,17 @@ class AbstractStructureGraph:
             nbytes_size = matrix_data.data.nbytes + matrix_data.rows.nbytes
         else:
             nbytes_size = matrix_data.nbytes
-           
+
         print("Matrix size when 1s added: %s" % nbytes_size)
 
         return matrix_data, sz
 
-                        
+
     def print_graph_statistics(self, hide_equal_predicates=False):
         matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded=False, shrink_ratio=1)
         print("Number of graph vertices: %s" % sz)
         print("Number of graph edges: %s" % matrix_data.count_nonzero())
-                        
+
 
     def shrink_matrix_raw_to_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
         """ Assuming no self loops!!!
@@ -630,15 +630,15 @@ class AbstractStructureGraph:
 
         assert(shrink_ratio > 0)
         assert(shrink_ratio <= 6)
-        
+
         matrix_data, sz = self.create_raw_matrix_for_image(hide_equal_predicates, bolded, shrink_ratio)
 
         print("Number of graph nodes: %s" % sz)
         print("Shrink ratio: %s" % shrink_ratio)
         if shrink_ratio == 1:
             return matrix_data
-        
-        shrinked_sz = int(math.ceil(float(sz)/shrink_ratio))     
+
+        shrinked_sz = int(math.ceil(float(sz)/shrink_ratio))
         n = 0
         print("Shrinking matrix to size %sx%s.." % (shrinked_sz,shrinked_sz))
 
@@ -648,32 +648,33 @@ class AbstractStructureGraph:
         else:
             shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
             print("Shrinked matrix size when created: %s" % shrinked_matrix_data_test.nbytes)
-            
+
 
         for i in range(shrink_ratio):
             for j in range(shrink_ratio):
                 if i == j:
                     continue
                 shrinked_matrix_data_test += (2**n) * matrix_data[j::shrink_ratio, i::shrink_ratio]
-                n += 1 
+                n += 1
         return shrinked_matrix_data_test, shrinked_sz
-        
-    def write_matrix_image_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6, target_size=128, write_original_size=False):
+
+    def write_matrix_image_grayscale(self, hide_equal_predicates=False, bolded=False, shrink_ratio=6, target_size=128, write_original_size=False, output_directory=os.getcwd()):
         """Write the graph into a grayscale image"""
-        """If shrink_ratio of 1 is used, using raw [0, 1] values for each pixel. 
-            If shrink_ratio of up to 3 is used, using [0, 255] values for each pixel. 
+        """If shrink_ratio of 1 is used, using raw [0, 1] values for each pixel.
+            If shrink_ratio of up to 3 is used, using [0, 255] values for each pixel.
             Otherwise, a 32bit signed int is used"""
+        assert os.path.exists(output_directory)
         fname_base = 'graph-gs'
         grayscale_type_opts = { 1 : '1', 2 : 'L', 3 : 'L', 4 : 'I', 5 : 'I', 6 : 'I'}
         grayscale_color_opts = { '1' : 1, 'L' : 255, 'I' : 2147483647}
-        
+
         grayscale_type = grayscale_type_opts[shrink_ratio]
         grayscale_color = grayscale_color_opts[grayscale_type]
         print("Grayscale color: %s" % grayscale_color)
         nm = '%s-%s-%s.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
         nm_thumbnail = '%s-%s-%s-thumbnail.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
         nm_constant_size = '%s-%s-%s-cs.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
-        
+
         matrix_data, sz = self.shrink_matrix_raw_to_grayscale(hide_equal_predicates, bolded, shrink_ratio)
         #print matrix_data[matrix_data.nonzero()]
         ## For grayscale_type "L", sharpen the image by 4 (there are only 6 entries used, so the maximal number is 63)
@@ -688,23 +689,23 @@ class AbstractStructureGraph:
             im.putpixel((x, y), grayscale_color - color)
 
         #matrix_data = grayscale_color - matrix_data
-        
-        #im.putdata(matrix_data.flatten() + grayscale_color) 
+
+        #im.putdata(matrix_data.flatten() + grayscale_color)
 
         if write_original_size:
             print("Writing grayscale image of size %sx%s .." % (sz, sz))
-            im.save(nm,'png') 
+            im.save(os.path.join(output_directory, nm),'png')
 
         size = target_size, target_size
-        
+
         newimg = im.resize(size, Image.ANTIALIAS)
 
         print("Writing grayscale image of size %sx%s .." % size)
-        newimg.save(nm_constant_size, "png")
-        
+        newimg.save(os.path.join(output_directory, nm_constant_size), "png")
+
         #im.thumbnail(size, Image.ANTIALIAS)
         #im.save(nm_thumbnail, "png")
-        
+
     def add_mutex_groups(self, mutex_groups):
         for index, mutex_group in enumerate(mutex_groups):
             assert isinstance(mutex_group, list)
