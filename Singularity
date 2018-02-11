@@ -21,17 +21,12 @@ From: ubuntu
 
     ## Install all necessary dependencies.
     apt update
-    apt -y install cmake gawk g++ g++-multilib make python python-dev python-pip python3 python3-dev python3-pip
-    pip3 install h5py keras numpy pillow scipy tensorflow
+    apt -y install cmake gawk g++ g++-multilib make python python-dev python-pip
+    pip install h5py keras numpy pillow scipy tensorflow
 
     ## Build your planner
     cd /planner
     ./build.py release64 -j4
-    cd /planner/h2-preprocessor
-    mkdir -p builds/release32
-    cd /planner/h2-preprocessor/builds/release32
-    cmake ../../
-    make -j4
     cd /planner/symba
     ./build -j4
 
