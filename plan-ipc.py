@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-from subprocess import call
 import os
+import subprocess
 import sys
 
 from dl_model import selector
@@ -66,13 +66,14 @@ if __name__ == "__main__":
     repo_dir = get_repo_base()
     try:
         # Create an image from the abstract structure for the given domain and problem.
-        # TODO: add the output path to the call to create_image.py
-        image_file_name = 'graph-gs-L-bolded-cs.png'
-        image_path = os.path.join(os.getcwd(), image_file_name)
         # TODO: switch to process/communicate to limit the time
-        call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', domain, problem])
+        image_dir = os.getcwd()
+        subprocess.check_call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', '--image-output-directory', image_dir, domain, problem])
+        # TODO: we should be able to not hard-code the file name
+        image_file_name = 'graph-gs-L-bolded-cs.png'
+        image_path = os.path.join(image_dir, image_file_name)
         assert os.path.exists(image_path)
-        # use the learned model to select the appropriate planner (its command line options)
+        # Use the learned model to select the appropriate planner (its command line options)
         json_model = os.path.join(repo_dir, 'dl_model/model.json')
         h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
         command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
@@ -85,10 +86,10 @@ if __name__ == "__main__":
     planner = build_planner_from_command_line_options(repo_dir, command_line_options)
     try:
         print("Planner call string: {}".format(planner))
-        call(planner)
+        subprocess.call(planner)
     except:
         # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics
         print("Running fallback planner")
         planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS)
         print("Planner call string: {}".format(planner))
-        call(planner)
+        subprocess.call(planner)

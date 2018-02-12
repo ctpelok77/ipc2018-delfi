@@ -61,11 +61,7 @@ def parse_args():
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
 
-    #### Options related to symmetries
-    argparser.add_argument(
-        "--compute-symmetries", action="store_true",
-        help="compute symmetries on the normalized taks using bliss, dump "
-        "statistics")
+    # Options related to symmetries/computation of abstract structure graphs.
     argparser.add_argument(
         "--only-object-symmetries", action="store_true",
         help="HACK! Only allow objects to be permuted, but not "
@@ -84,15 +80,14 @@ def parse_args():
         help="If true, literals in the goal are not colored with a special "
         "color. (Set option --compute-symmetries)")
     argparser.add_argument(
-        "--bliss-time-limit", default=300, type=int,
-        help="Max time for bliss to search for automorphisms. (Set option "
-        "--compute-symmetries)")
-
-    # Options related to dumping planning task as image
-    argparser.add_argument(
         "--dump-dot-graph", action="store_true",
         help="If true, dumping the abstract structure as dot graph."
         "as a graph is written to the disk.")
+
+    # Options related to dumping planning task as image.
+    argparser.add_argument(
+        "--image-output-directory", help="Absolute path where the image of the abstract "
+        "structure graph should be stored.")
     argparser.add_argument(
         "--write-abstract-structure-image-raw", action="store_true",
         help="If true, the constant size image representing the abstract structure "
@@ -113,12 +108,11 @@ def parse_args():
     argparser.add_argument(
         "--abstract-structure-image-target-size", default=128, type=int,
         help="Target size for the constant size image")
-
     argparser.add_argument(
         "--bolding-abstract-structure-image", action="store_true",
         help="If true, then bolding is performed on the image, "
         "that is each dot is surrounded by 4 additional dots.")
-    
+
     return argparser.parse_args()
 
 
