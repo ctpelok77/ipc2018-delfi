@@ -644,7 +644,7 @@ class AbstractStructureGraph:
 
         if shrinked_sz > MAX_SIZE_EXPLICIT:
             shrinked_matrix_data_test = lil_matrix((shrinked_sz, shrinked_sz), dtype=int)
-            print("Shrinked matrix size when created: %s" % shrinked_matrix_data_test.data.nbytes + shrinked_matrix_data_test.rows.nbytes)
+            print("Shrinked matrix size when created: %s" % (shrinked_matrix_data_test.data.nbytes + shrinked_matrix_data_test.rows.nbytes))
         else:
             shrinked_matrix_data_test = np.zeros((shrinked_sz,shrinked_sz), dtype=int)
             print("Shrinked matrix size when created: %s" % shrinked_matrix_data_test.nbytes)
