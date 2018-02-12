@@ -31,6 +31,7 @@ if __name__ == "__main__":
         f = open('out.dot', 'w')
         graph.write_dot_graph(f, hide_equal_predicates=True)
         f.close()
+    # TODO: we should add an option for the output directory
     output_directory = os.getcwd()
     if options.write_abstract_structure_image_raw:
         with timers.timing("Writing abstract structure graph raw image..", True):
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         with timers.timing("Writing abstract structure graph grayscale 32bit image..", True):
             graph.write_matrix_image_grayscale(output_directory, hide_equal_predicates=True, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
 
-    print("Done! %s" % timer)
+    print("Done creating image! %s" % timer)
 
     sys.stdout.flush()
 
