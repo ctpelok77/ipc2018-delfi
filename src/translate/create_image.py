@@ -15,6 +15,7 @@ if __name__ == "__main__":
     stabilize_initial_state = not options.do_not_stabilize_initial_state
     stabilize_goal = not options.do_not_stabilize_goal
 
+    image_output_directory = options.image_output_directory
     use_bolding = options.bolding_abstract_structure_image
     write_original_size = options.write_abstract_structure_image_original_size
     abstract_structure_image_target_size = options.abstract_structure_image_target_size
@@ -31,17 +32,15 @@ if __name__ == "__main__":
         f = open('out.dot', 'w')
         graph.write_dot_graph(f, hide_equal_predicates=True)
         f.close()
-    # TODO: we should add an option for the output directory
-    output_directory = os.getcwd()
     if options.write_abstract_structure_image_raw:
         with timers.timing("Writing abstract structure graph raw image..", True):
-            graph.write_matrix_image_grayscale(output_directory, hide_equal_predicates=True, shrink_ratio=1, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            graph.write_matrix_image_grayscale(image_output_directory, hide_equal_predicates=True, shrink_ratio=1, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
     if options.write_abstract_structure_image_reg:
         with timers.timing("Writing abstract structure graph grayscale 8bit image..", True):
-            graph.write_matrix_image_grayscale(output_directory, hide_equal_predicates=True, shrink_ratio=3, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            graph.write_matrix_image_grayscale(image_output_directory, hide_equal_predicates=True, shrink_ratio=3, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
     if options.write_abstract_structure_image_int:
         with timers.timing("Writing abstract structure graph grayscale 32bit image..", True):
-            graph.write_matrix_image_grayscale(output_directory, hide_equal_predicates=True, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            graph.write_matrix_image_grayscale(image_output_directory, hide_equal_predicates=True, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
 
     print("Done creating image! %s" % timer)
 
