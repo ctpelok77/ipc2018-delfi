@@ -22,7 +22,7 @@ From: ubuntu
     ## Install all necessary dependencies.
     apt update
     apt -y install cmake gawk g++ g++-multilib make python python-dev python-pip
-    pip install h5py keras numpy pillow scipy tensorflow
+    pip install h5py keras numpy pillow scipy tensorflow subprocess32
 
     ## Build your planner
     cd /planner
