@@ -3,8 +3,13 @@
 
 import argparse
 import os
-import subprocess32 as subprocess
+
 import sys
+
+if (sys.version_info > (3, 0)):
+    import subprocess
+else:
+    import subprocess32 as subprocess
 
 from dl_model import selector
 
@@ -68,7 +73,7 @@ if __name__ == "__main__":
     try:
         # Create an image from the abstract structure for the given domain and problem.
         image_dir = os.getcwd()
-        subprocess.check_call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', '--image-output-directory', image_dir, domain, problem], timeout=IMAGE_CREATION_TIME_LIMIT)
+        subprocess.check_call([sys.executable, os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', '--image-output-directory', image_dir, domain, problem], timeout=IMAGE_CREATION_TIME_LIMIT)
         # TODO: we should be able to not hard-code the file name
         image_file_name = 'graph-gs-L-bolded-cs.png'
         image_path = os.path.join(image_dir, image_file_name)
