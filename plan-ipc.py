@@ -74,6 +74,7 @@ if __name__ == "__main__":
         # Create an image from the abstract structure for the given domain and problem.
         image_dir = os.getcwd()
         subprocess.check_call([sys.executable, os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', '--image-output-directory', image_dir, domain, problem], timeout=IMAGE_CREATION_TIME_LIMIT)
+        sys.stdout.flush()
         # TODO: we should be able to not hard-code the file name
         image_file_name = 'graph-gs-L-bolded-cs.png'
         image_path = os.path.join(image_dir, image_file_name)
@@ -85,6 +86,7 @@ if __name__ == "__main__":
         print("Command line options from model: {}".format(command_line_options))
     except:
         # Image creation failed, e.g. due to reaching the time limit
+        sys.stdout.flush()
         print()
         print("Image creation failed, switching to fallback!")
         print()
@@ -94,14 +96,17 @@ if __name__ == "__main__":
     planner = build_planner_from_command_line_options(repo_dir, command_line_options)
     try:
         print("Planner call string: {}".format(planner))
+        sys.stdout.flush()
         subprocess.call(planner)
     except:
         # TODO: make the type of exception more precise, otherwise killing this
         # script from outside will not actually kill it.
         # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics.
+        sys.stdout.flush()
         print()
         print("Planner failed, switching to fallback!")
         print()
         planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS)
         print("Planner call string: {}".format(planner))
         subprocess.call(planner)
+    print("Done running the chosen planner.")

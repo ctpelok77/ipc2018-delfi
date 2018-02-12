@@ -22,7 +22,9 @@ From: ubuntu
     ## Install all necessary dependencies.
     apt update
     apt -y install cmake gawk g++ g++-multilib make python python-dev python-pip
-    pip install h5py keras numpy pillow scipy tensorflow subprocess32
+    apt -y install python3 python3-dev python3-pip
+    #pip install h5py keras numpy pillow scipy tensorflow subprocess32
+    pip3 install h5py keras numpy pillow scipy tensorflow
 
     ## Build your planner
     cd /planner
@@ -40,7 +42,7 @@ From: ubuntu
     PLANFILE=$3
 
     ## Call your planner.
-    /planner/plan-ipc.py \
+    python3 /planner/plan-ipc.py \
         $DOMAINFILE \
         $PROBLEMFILE \
         $PLANFILE
