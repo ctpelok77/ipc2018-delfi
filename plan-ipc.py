@@ -3,13 +3,14 @@
 
 import argparse
 import os
-import subprocess
+import subprocess32 as subprocess
 import sys
 
 from dl_model import selector
 
 # TODO: better fallback than blind?
 FALLBACK_COMMAND_LINE_OPTIONS = ['--symmetries', 'sym=structural_symmetries(search_symmetries=dks)', '--search', 'astar(blind,symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)']
+IMAGE_CREATION_TIME_LIMIT = 180 # 300s
 
 def get_script():
     """Get file name of main script."""
@@ -66,9 +67,8 @@ if __name__ == "__main__":
     repo_dir = get_repo_base()
     try:
         # Create an image from the abstract structure for the given domain and problem.
-        # TODO: switch to process/communicate to limit the time
         image_dir = os.getcwd()
-        subprocess.check_call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', '--image-output-directory', image_dir, domain, problem])
+        subprocess.check_call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', '--image-output-directory', image_dir, domain, problem], timeout=IMAGE_CREATION_TIME_LIMIT)
         # TODO: we should be able to not hard-code the file name
         image_file_name = 'graph-gs-L-bolded-cs.png'
         image_path = os.path.join(image_dir, image_file_name)
@@ -80,6 +80,9 @@ if __name__ == "__main__":
         print("Command line options from model: {}".format(command_line_options))
     except:
         # Image creation failed, e.g. due to reaching the time limit
+        print()
+        print("Image creation failed, switching to fallback!")
+        print()
         command_line_options = FALLBACK_COMMAND_LINE_OPTIONS
 
     # Build the planner call from the command line options computed above.
@@ -88,8 +91,12 @@ if __name__ == "__main__":
         print("Planner call string: {}".format(planner))
         subprocess.call(planner)
     except:
-        # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics
-        print("Running fallback planner")
+        # TODO: make the type of exception more precise, otherwise killing this
+        # script from outside will not actually kill it.
+        # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics.
+        print()
+        print("Planner failed, switching to fallback!")
+        print()
         planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS)
         print("Planner call string: {}".format(planner))
         subprocess.call(planner)
