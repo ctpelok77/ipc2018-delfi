@@ -35,7 +35,7 @@ ALGORITHM_TO_COMMAND_LINE_STRING = {
 }
 
 def compute_command_line_options(json_model, h5_model, image):
-
+    # TODO: what is that and what do we need it for?
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     # load json and create model
@@ -66,7 +66,7 @@ def compute_command_line_options(json_model, h5_model, image):
     preds = model.predict(data)
     #print(preds)
     selected_algorithm = list_solver_names[np.argmax(preds[0])]
-    print("Running %s" % selected_algorithm)
+    print("Chose %s" % selected_algorithm)
 
     assert selected_algorithm in ALGORITHM_TO_COMMAND_LINE_STRING
     return ALGORITHM_TO_COMMAND_LINE_STRING[selected_algorithm]

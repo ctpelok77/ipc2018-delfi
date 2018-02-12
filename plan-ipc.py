@@ -8,6 +8,9 @@ import sys
 
 from dl_model import selector
 
+# TODO: better fallback than blind?
+FALLBACK_COMMAND_LINE_OPTIONS = ['--symmetries', 'sym=structural_symmetries(search_symmetries=dks)', '--search', 'astar(blind,symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)']
+
 def get_script():
     """Get file name of main script."""
     return os.path.abspath(sys.argv[0])
@@ -39,6 +42,15 @@ def force_remove_file(file_name):
     except OSError:
         pass
 
+def build_planner_from_command_line_options(repo_dir, command_line_options):
+    if len(command_line_options) == 1:
+        assert command_line_options[0] == 'seq-opt-symba-1'
+        planner = [sys.executable, os.path.join(repo_dir, 'symba.py'), command_line_options[0], domain, problem, plan]
+    else:
+        planner = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--transform-task', 'preprocess', '--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem]
+        planner.extend(command_line_options)
+    return planner
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -51,29 +63,32 @@ if __name__ == "__main__":
     problem = args.problem_file
     plan = args.plan_file
 
-    # TODO: limit time for the calls to subprocess (easiest probably to use python3.3+)
-    # TODO: use fallback if everything fails
-    # TODO: if something fails (like the problem with the h2 preprocessor), catch and repeat with a default config
     repo_dir = get_repo_base()
+    try:
+        # Create an image from the abstract structure for the given domain and problem.
+        # TODO: add the output path to the call to create_image.py
+        image_file_name = 'graph-gs-L-bolded-cs.png'
+        image_path = os.path.join(os.getcwd(), image_file_name)
+        # TODO: switch to process/communicate to limit the time
+        call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', domain, problem])
+        assert os.path.exists(image_path)
+        # use the learned model to select the appropriate planner (its command line options)
+        json_model = os.path.join(repo_dir, 'dl_model/model.json')
+        h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
+        command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
+        print("Command line options from model: {}".format(command_line_options))
+    except:
+        # Image creation failed, e.g. due to reaching the time limit
+        command_line_options = FALLBACK_COMMAND_LINE_OPTIONS
 
-    # create image for given domain/problem
-    call([os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', domain, problem])
-    image_file_name = 'graph-gs-L-bolded-cs.png'
-    image_path = os.path.join(os.getcwd(), image_file_name)
-    assert os.path.exists(image_path)
-
-    # use the learned model to select the appropriate planner (its command line options)
-    json_model = os.path.join(repo_dir, 'dl_model/model.json')
-    h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
-    command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
-
-    # build the correct command line to be called
-    if len(command_line_options) == 1:
-        assert command_line_options[0] == 'seq-opt-symba-1'
-        planner = [sys.executable, os.path.join(repo_dir, 'symba.py'), command_line_options[0], domain, problem, plan]
-    else:
-        planner = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--transform-task', 'preprocess', '--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem]
-        planner.extend(command_line_options)
-    print("Call string: {}".format(planner))
-    print()
-    call(planner)
+    # Build the planner call from the command line options computed above.
+    planner = build_planner_from_command_line_options(repo_dir, command_line_options)
+    try:
+        print("Planner call string: {}".format(planner))
+        call(planner)
+    except:
+        # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics
+        print("Running fallback planner")
+        planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS)
+        print("Planner call string: {}".format(planner))
+        call(planner)
