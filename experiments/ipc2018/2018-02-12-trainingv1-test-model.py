@@ -90,7 +90,7 @@ exp = Experiment(environment=ENV)
 exp.add_resource('parser', 'plan-ipc-parser.py', dest='parser.py')
 
 # Absolute path to executable
-planner = os.path.join(os.path.abspath(REPO_DIR), 'plan-ipc.py')
+image = os.path.join(os.path.abspath(REPO_DIR), 'ipc2018.img')
 
 for task in suites.build_suite(BENCHMARKS_DIR, SUITE):
     run = exp.add_run()
@@ -101,7 +101,7 @@ for task in suites.build_suite(BENCHMARKS_DIR, SUITE):
     # We could also use exp.add_resource() for the binary.
     run.add_command(
         'run-planner',
-        ['python3',  planner, '{domain}', '{problem}', 'sas_plan'],
+        ['singularity', 'run', '-C', '-H', '$PWD', image, '$PWD/{domain}', '$PWD/{problem}', 'sas_plan'],
         time_limit=1800,
         memory_limit=7600)
     run.set_property('domain', task.domain)
