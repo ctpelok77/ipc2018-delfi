@@ -217,7 +217,7 @@ DEPEND = g++ -MM
 
 CCOPT = -Iext
 #CCOPT += -g
-CCOPT += -m64
+CCOPT += -m32
 CCOPT += -std=c++11
 CCOPT += -Wall -W -Wno-sign-compare -Wno-deprecated -pedantic -Werror -DSTATE_VAR_BYTES=$(STATE_VAR_BYTES)
 ## The following lines contain workarounds for bugs when
@@ -238,7 +238,7 @@ ifdef HAVE_GCC_4_5
 endif
 
 LINKOPT  = -g
-LINKOPT += -m64
+LINKOPT += -m32
 LINKOPT +=
 
 POSTLINKOPT =
