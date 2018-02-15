@@ -24,6 +24,7 @@ Group::Group(const options::Options &opts)
     : stabilize_initial_state(opts.get<bool>("stabilize_initial_state")),
       time_bound(opts.get<int>("time_bound")),
       dump_symmetry_graph(opts.get<bool>("dump_symmetry_graph")),
+      stop_after_symmetry_graph_creation(opts.get<bool>("stop_after_symmetry_graph_creation")),
       search_symmetries(SearchSymmetries(opts.get_enum("search_symmetries"))),
       dump_permutations(opts.get<bool>("dump_permutations")),
       num_vars(0),
@@ -51,7 +52,8 @@ void Group::compute_symmetries(const TaskProxy &task_proxy) {
     }
     GraphCreator graph_creator;
     bool success = graph_creator.compute_symmetries(
-        task_proxy, stabilize_initial_state, time_bound, dump_symmetry_graph, this);
+        task_proxy, stabilize_initial_state, time_bound,
+        stop_after_symmetry_graph_creation, dump_symmetry_graph, this);
     if (!success) {
         generators.clear();
     }
@@ -282,6 +284,10 @@ static shared_ptr<Group> _parse(OptionParser &parser) {
     parser.add_option<bool>("dump_symmetry_graph",
                            "Dump symmetry graph in dot format",
                            "false");
+    parser.add_option<bool>("stop_after_symmetry_graph_creation",
+                            "Stop after computing the symmetry graph. Useful "
+                            "if only that graph should be written.",
+                            "false");
 
     // Type of search symmetries to be used
     vector<string> search_symmetries;
