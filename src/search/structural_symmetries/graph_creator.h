@@ -42,6 +42,7 @@ public:
         const bool stabilize_initial_state,
         const int time_bound,
         const bool dump_symmetry_graph,
+        const bool stop_after_symmetry_graph_creation,
         Group *group);
 };
 
