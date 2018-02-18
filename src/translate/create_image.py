@@ -17,7 +17,7 @@ import math
 
 MAX_SIZE_EXPLICIT = 15000
 
-def create_raw_matrix_for_image(graph, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
+def create_raw_matrix_for_image(graph, bolded=False, shrink_ratio=6):
     """Create raw 0/1 matrix, bolding by adding 1s around existing ones """
     def make_bolder(i, j, m, sz):
         if i < 0 or i >= sz or j < 0 or j >= sz:
@@ -67,13 +67,13 @@ def create_raw_matrix_for_image(graph, hide_equal_predicates=False, bolded=False
     return matrix_data, sz
 
 
-def print_graph_statistics(graph, hide_equal_predicates=False):
-    matrix_data, sz = create_raw_matrix_for_image(graph, hide_equal_predicates, bolded=False, shrink_ratio=1)
+def print_graph_statistics(graph):
+    matrix_data, sz = create_raw_matrix_for_image(graph, bolded=False, shrink_ratio=1)
     print("Number of graph vertices: %s" % sz)
     print("Number of graph edges: %s" % matrix_data.count_nonzero())
 
 
-def shrink_matrix_raw_to_grayscale(graph, hide_equal_predicates=False, bolded=False, shrink_ratio=6):
+def shrink_matrix_raw_to_grayscale(graph, bolded=False, shrink_ratio=6):
     """ Assuming no self loops!!!
     Partitioned into squares of size 6, to shrink the graph into target image size:
     Turning binaries into numbers up to 32bit signed - [0, 2147483647 = 2^31 - 1]
@@ -98,7 +98,7 @@ def shrink_matrix_raw_to_grayscale(graph, hide_equal_predicates=False, bolded=Fa
     assert(shrink_ratio > 0)
     assert(shrink_ratio <= 6)
 
-    matrix_data, sz = create_raw_matrix_for_image(graph, hide_equal_predicates, bolded, shrink_ratio)
+    matrix_data, sz = create_raw_matrix_for_image(graph, bolded, shrink_ratio)
 
     print("Number of graph nodes: %s" % sz)
     print("Shrink ratio: %s" % shrink_ratio)
@@ -125,7 +125,7 @@ def shrink_matrix_raw_to_grayscale(graph, hide_equal_predicates=False, bolded=Fa
             n += 1
     return shrinked_matrix_data_test, shrinked_sz
 
-def write_matrix_image_grayscale(graph, output_directory, hide_equal_predicates=False, bolded=False, shrink_ratio=6, target_size=128, write_original_size=False):
+def write_matrix_image_grayscale(graph, output_directory, bolded=False, shrink_ratio=6, target_size=128, write_original_size=False):
     """Write the graph into a grayscale image"""
     """If shrink_ratio of 1 is used, using raw [0, 1] values for each pixel.
         If shrink_ratio of up to 3 is used, using [0, 255] values for each pixel.
@@ -142,7 +142,7 @@ def write_matrix_image_grayscale(graph, output_directory, hide_equal_predicates=
     nm_thumbnail = '%s-%s-%s-thumbnail.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
     nm_constant_size = '%s-%s-%s-cs.png' % (fname_base, grayscale_type, ("bolded" if bolded else "reg"))
 
-    matrix_data, sz = shrink_matrix_raw_to_grayscale(graph, hide_equal_predicates, bolded, shrink_ratio)
+    matrix_data, sz = shrink_matrix_raw_to_grayscale(graph, bolded, shrink_ratio)
     #print matrix_data[matrix_data.nonzero()]
     ## For grayscale_type "L", sharpen the image by 4 (there are only 6 entries used, so the maximal number is 63)
     if grayscale_type == 'L':
@@ -195,6 +195,12 @@ if __name__ == "__main__":
     #task.dump()
     with timers.timing("Creating abstract structure graph..", True):
         graph = AbstractStructureGraph(task, only_object_symmetries, stabilize_initial_state, stabilize_goal)
+        if options.dump_dot_graph:
+            f = open('out.dot', 'w')
+            graph.write_dot_graph(f, hide_equal_predicates=True)
+            f.close()
+
+        print("Turning graph into adjacency list representation")
         adjacency_graph = []
         node_counter = 0
         vertex_indices = {}
@@ -211,22 +217,18 @@ if __name__ == "__main__":
                 i = vertex_indices[edge[0]]
                 j = vertex_indices[edge[1]]
                 adjacency_graph[i].append(j)
-        print len(adjacency_graph)
-        print adjacency_graph
+        print("Done")
 
-    if options.dump_dot_graph:
-        f = open('out.dot', 'w')
-        graph.write_dot_graph(f, hide_equal_predicates=True)
-        f.close()
+
     if options.write_abstract_structure_image_raw:
         with timers.timing("Writing abstract structure graph raw image..", True):
-            write_matrix_image_grayscale(adjacency_graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=1, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=1, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
     if options.write_abstract_structure_image_reg:
         with timers.timing("Writing abstract structure graph grayscale 8bit image..", True):
-            write_matrix_image_grayscale(adjacency_graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=3, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=3, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
     if options.write_abstract_structure_image_int:
         with timers.timing("Writing abstract structure graph grayscale 32bit image..", True):
-            write_matrix_image_grayscale(adjacency_graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
 
     print("Done creating image! %s" % timer)
 
