@@ -24,13 +24,8 @@ def create_raw_matrix_for_image(graph, hide_equal_predicates=False, bolded=False
             return
         m[i,j] = 1
 
-    sz = 0
-    vertex_indices = {}
-    for vertex in graph.graph.get_vertices():
-        if hide_equal_predicates and vertex in graph.graph.excluded_vertices:
-            continue
-        vertex_indices[vertex] = sz
-        sz += 1
+    sz = len(graph)
+
     ## Creating a matrix
     print("Creating matrix for a graph with %s nodes.." % sz)
     ## TODO: This seems to be memory intensive in some cases (e.g., airport:p21-airport4halfMUC-p2.pddl and onwards,
@@ -52,12 +47,8 @@ def create_raw_matrix_for_image(graph, hide_equal_predicates=False, bolded=False
     print("Matrix created, filling with values for edges..")
     if bolded:
         print("Performing bolding.")
-    for edge in graph.graph.edges:
-        assert type(edge) is tuple
-        assert len(edge) == 2
-        if edge[0] in vertex_indices and edge[1] in vertex_indices:
-            i = vertex_indices[edge[0]]
-            j = vertex_indices[edge[1]]
+    for i, successors in enumerate(graph):
+        for j in successors:
             matrix_data[i,j] = 1
             if bolded:
                 ## Try to make wider
@@ -190,6 +181,7 @@ if __name__ == "__main__":
     stabilize_initial_state = not options.do_not_stabilize_initial_state
     stabilize_goal = not options.do_not_stabilize_goal
 
+    hide_equal_predicates = True
     image_output_directory = options.image_output_directory
     use_bolding = options.bolding_abstract_structure_image
     write_original_size = options.write_abstract_structure_image_original_size
@@ -203,19 +195,38 @@ if __name__ == "__main__":
     #task.dump()
     with timers.timing("Creating abstract structure graph..", True):
         graph = AbstractStructureGraph(task, only_object_symmetries, stabilize_initial_state, stabilize_goal)
+        adjacency_graph = []
+        node_counter = 0
+        vertex_indices = {}
+        for vertex in graph.graph.get_vertices():
+            if hide_equal_predicates and vertex in graph.graph.excluded_vertices:
+                continue
+            vertex_indices[vertex] = node_counter
+            adjacency_graph.append([])
+            node_counter += 1
+        for edge in graph.graph.edges:
+            assert type(edge) is tuple
+            assert len(edge) == 2
+            if edge[0] in vertex_indices and edge[1] in vertex_indices:
+                i = vertex_indices[edge[0]]
+                j = vertex_indices[edge[1]]
+                adjacency_graph[i].append(j)
+        print len(adjacency_graph)
+        print adjacency_graph
+
     if options.dump_dot_graph:
         f = open('out.dot', 'w')
         graph.write_dot_graph(f, hide_equal_predicates=True)
         f.close()
     if options.write_abstract_structure_image_raw:
         with timers.timing("Writing abstract structure graph raw image..", True):
-            write_matrix_image_grayscale(graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=1, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            write_matrix_image_grayscale(adjacency_graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=1, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
     if options.write_abstract_structure_image_reg:
         with timers.timing("Writing abstract structure graph grayscale 8bit image..", True):
-            write_matrix_image_grayscale(graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=3, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            write_matrix_image_grayscale(adjacency_graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=3, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
     if options.write_abstract_structure_image_int:
         with timers.timing("Writing abstract structure graph grayscale 32bit image..", True):
-            write_matrix_image_grayscale(graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
+            write_matrix_image_grayscale(adjacency_graph, image_output_directory, hide_equal_predicates=True, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
 
     print("Done creating image! %s" % timer)
 
