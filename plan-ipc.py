@@ -72,9 +72,9 @@ def compute_graph_for_task(domain, problem, image_from_lifted_task, image_from_g
     except:
         # Possibly hit the time limit or other errors occured.
         sys.stdout.flush()
-        print()
+        print
         print("Computing abstract structure graph from the " + ("lifted" if image_from_lifted_task else "grounded") + " task description failed, switching to fallback!")
-        print()
+        print
         return None
     return graph_file
 
