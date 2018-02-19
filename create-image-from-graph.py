@@ -213,6 +213,7 @@ if __name__ == "__main__":
     write_original_size = args.write_abstract_structure_image_original_size
     abstract_structure_image_target_size = args.abstract_structure_image_target_size
 
+    print("Computing image from given graph...")
     if not os.path.exists(input_file):
         sys.exit("Graph input file {} not found".format(input_file))
     elif not os.path.isabs(input_file):
@@ -248,7 +249,8 @@ if __name__ == "__main__":
         with timers.timing("Writing abstract structure graph grayscale 32bit image..", True):
             write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
 
-    print("Done creating image! %s" % timer)
+    print("Done computing image! %s" % timer)
+    print
 
     sys.stdout.flush()
 

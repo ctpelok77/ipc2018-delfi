@@ -556,7 +556,7 @@ if __name__ == "__main__":
             graph.write_dot_graph(f, hide_equal_predicates=True)
             f.close()
 
-        print("Turning graph into adjacency list representation")
+        # print("Turning graph into adjacency list representation")
         adjacency_graph = []
         node_counter = 0
         vertex_indices = {}

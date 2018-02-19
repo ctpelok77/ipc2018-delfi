@@ -15,7 +15,8 @@ from dl_model import selector
 
 # TODO: better fallback than blind?
 FALLBACK_COMMAND_LINE_OPTIONS = ['--symmetries', 'sym=structural_symmetries(search_symmetries=dks)', '--search', 'astar(blind,symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)']
-IMAGE_CREATION_TIME_LIMIT = 180 # 300s
+GRAPH_CREATION_TIME_LIMIT = 30 # seconds
+IMAGE_CREATION_TIME_LIMIT = 150 # seconds
 
 def get_script():
     """Get file name of main script."""
@@ -57,45 +58,87 @@ def build_planner_from_command_line_options(repo_dir, command_line_options):
         planner.extend(command_line_options)
     return planner
 
+def compute_graph_for_task(domain, problem, image_from_lifted_task, image_from_grounded_task):
+    repo_dir = get_repo_base()
+    pwd = os.getcwd()
+    if image_from_lifted_task:
+        try:
+            subprocess.check_call([sys.executable, os.path.join(repo_dir, 'src/translate/abstract_structure_module.py'), '--only-functions-from-initial-state', domain, problem], timeout=GRAPH_CREATION_TIME_LIMIT)
+            graph_file = os.path.join(pwd, 'abstract-structure-graph.txt')
+            return graph_file
+        except:
+            # Possibly hit the time limit or other errors occured.
+            sys.stdout.flush()
+            print()
+            print("Computing abstract structure graph from the PDDL description failed, switching to fallback!")
+            print()
+            return None
+
+    if image_from_grounded_task:
+        print("Not implemented")
+        return None
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("domain_file")
     parser.add_argument("problem_file")
     parser.add_argument("plan_file")
+    parser.add_argument(
+        "--image-from-lifted-task", action="store_true",
+        help="If true, create the abstract structure graph based on the PDDL "
+        "description of the task and then create an image from it.")
+    parser.add_argument(
+        "--image-from-grounded-task", action="store_true",
+        help="If true, create the PDG-style graph based on the grounded SAS "
+        "task and then create an image from it.")
 
     args = parser.parse_args()
     domain = args.domain_file
     problem = args.problem_file
     plan = args.plan_file
+    image_from_lifted_task = args.image_from_lifted_task
+    image_from_grounded_task = args.image_from_grounded_task
+    if (image_from_lifted_task and image_from_grounded_task) or (not image_from_lifted_task and not image_from_grounded_task):
+        sys.exit("Please use exactly one of --image-from-lifted-task and --image-from-grounded-task")
 
     repo_dir = get_repo_base()
-    try:
-        # Create an image from the abstract structure for the given domain and problem.
-        image_dir = os.getcwd()
-        subprocess.check_call([sys.executable, os.path.join(repo_dir, 'src/translate/create_image.py'), '--only-functions-from-initial-state', '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', '--image-output-directory', image_dir, domain, problem], timeout=IMAGE_CREATION_TIME_LIMIT)
-        sys.stdout.flush()
-        # TODO: we should be able to not hard-code the file name
-        image_file_name = 'graph-gs-L-bolded-cs.png'
-        image_path = os.path.join(image_dir, image_file_name)
-        assert os.path.exists(image_path)
-        # Use the learned model to select the appropriate planner (its command line options)
-        json_model = os.path.join(repo_dir, 'dl_model/model.json')
-        h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
-        command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
-        print("Command line options from model: {}".format(command_line_options))
-    except:
-        # Image creation failed, e.g. due to reaching the time limit
-        sys.stdout.flush()
-        print()
-        print("Image creation failed, switching to fallback!")
-        print()
+    pwd = os.getcwd()
+
+    print("Computing abstract graph structure for the given problem and domain.")
+    graph_file = compute_graph_for_task(domain, problem, image_from_lifted_task, image_from_lifted_task)
+    print("Done computing abstract graph structure.")
+    print
+
+    if graph_file is None:
         command_line_options = FALLBACK_COMMAND_LINE_OPTIONS
+    else:
+        try:
+            # Create an image from the abstract structure for the given domain and problem.
+            subprocess.check_call([sys.executable, os.path.join(repo_dir, 'create-image-from-graph.py'), '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', graph_file, pwd], timeout=IMAGE_CREATION_TIME_LIMIT)
+            sys.stdout.flush()
+            # TODO: we should be able to not hard-code the file name
+            image_file_name = 'graph-gs-L-bolded-cs.png'
+            image_path = os.path.join(pwd, image_file_name)
+            assert os.path.exists(image_path)
+            # Use the learned model to select the appropriate planner (its command line options)
+            json_model = os.path.join(repo_dir, 'dl_model/model.json')
+            h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
+            command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
+            print("Command line options from model: {}".format(command_line_options))
+        except:
+            # Image creation failed, e.g. due to reaching the time limit
+            sys.stdout.flush()
+            print
+            print("Image creation failed, switching to fallback!")
+            print
+            command_line_options = FALLBACK_COMMAND_LINE_OPTIONS
 
     # Build the planner call from the command line options computed above.
     planner = build_planner_from_command_line_options(repo_dir, command_line_options)
     try:
         print("Planner call string: {}".format(planner))
+        print
         sys.stdout.flush()
         subprocess.call(planner)
     except:
@@ -103,10 +146,13 @@ if __name__ == "__main__":
         # script from outside will not actually kill it.
         # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics.
         sys.stdout.flush()
-        print()
+        print
         print("Planner failed, switching to fallback!")
-        print()
+        print
         planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS)
         print("Planner call string: {}".format(planner))
+        print
         subprocess.call(planner)
+
+    print
     print("Done running the chosen planner.")
