@@ -232,6 +232,7 @@ if __name__ == "__main__":
     with open(input_file) as f:
         for line in f:
             line = line.rstrip('\n')
+            line = line.rstrip(',')
             if line == '':
                 successors = []
             else:
