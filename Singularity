@@ -47,6 +47,7 @@ From: ubuntu
         $PROBLEMFILE \
         $PLANFILE \
         --image-from-lifted-task
+    ## replace by --image-from-grounded-task for the second planner
 
 ## Update the following fields with meta data about your submission.
 ## Please use the same field names and use only one line for each value.
