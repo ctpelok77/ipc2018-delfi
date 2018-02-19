@@ -89,19 +89,22 @@ exp = Experiment(environment=ENV)
 # "parser". Parsers have to be executable.
 exp.add_resource('parser', 'plan-ipc-parser.py', dest='parser.py')
 
-# Absolute path to executable
-image = os.path.join(os.path.abspath(REPO_DIR), 'ipc2018.img')
+# Add image and run script as resources to use them in runs
+image = os.path.expanduser('~/repos/downward/ipc2018.img')
+exp.add_resource('image', image, dest='image')
+singularity_sript = os.path.abspath(os.path.join(REPO_DIR, 'experiments/ipc2018/run_singularity.sh'))
+exp.add_resource('run_singularity', singularity_sript, dest='run_singularity.sh')
 
 for task in suites.build_suite(BENCHMARKS_DIR, SUITE):
     run = exp.add_run()
     # Create symbolic links and aliases. This is optional. We
     # could also use absolute paths in add_command().
-    run.add_resource('domain', task.domain_file, symlink=True)
-    run.add_resource('problem', task.problem_file, symlink=True)
+    run.add_resource('domain', task.domain_file, 'domain.pddl')
+    run.add_resource('problem', task.problem_file, 'problem.pddl')
     # We could also use exp.add_resource() for the binary.
     run.add_command(
         'run-planner',
-        ['singularity', 'run', '-C', '-H', '$PWD', image, '$PWD/{domain}', '$PWD/{problem}', 'sas_plan'],
+        ['{run_singularity}', '{image}', '{domain}', '{problem}', 'sas_plan'],
         time_limit=1800,
         memory_limit=7600)
     run.set_property('domain', task.domain)
