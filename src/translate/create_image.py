@@ -1,19 +1,15 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import normalize
-import options
-import os
-import pddl_parser
-from abstract_structure_module import AbstractStructureGraph
-import sys
-import timers
-
+import argparse
 from PIL import Image
-import numpy as np
-
-from scipy.sparse import lil_matrix, coo_matrix, csr_matrix
 import math
+import numpy as np
+import os
+from scipy.sparse import lil_matrix, coo_matrix, csr_matrix
+import sys
+
+import timers
 
 MAX_SIZE_EXPLICIT = 15000
 
@@ -177,56 +173,78 @@ def write_matrix_image_grayscale(graph, output_directory, bolded=False, shrink_r
 if __name__ == "__main__":
     timer = timers.Timer()
 
-    only_object_symmetries = options.only_object_symmetries
-    stabilize_initial_state = not options.do_not_stabilize_initial_state
-    stabilize_goal = not options.do_not_stabilize_goal
+    # Options related to dumping planning task as image.
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "input_file", help="Absolute path to a file containing one line of "
+        "integers denoting successors as in an adjacency graph.")
+    parser.add_argument(
+        "image_output_directory", help="Absolute path where the image of the abstract "
+        "structure graph should be stored.")
+    parser.add_argument(
+        "--write-abstract-structure-image-raw", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    parser.add_argument(
+        "--write-abstract-structure-image-reg", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    parser.add_argument(
+        "--write-abstract-structure-image-int", action="store_true",
+        help="If true, the constant size image representing the abstract structure "
+        "as a graph is written to the disk.")
+    parser.add_argument(
+        "--write-abstract-structure-image-original-size", action="store_true",
+        help="If true, the original size image representing the abstract structure "
+        "as a graph is also written to the disk, when at least one of "
+        "--write-abstract-structure-image-XXX is used.")
+    parser.add_argument(
+        "--abstract-structure-image-target-size", default=128, type=int,
+        help="Target size for the constant size image")
+    parser.add_argument(
+        "--bolding-abstract-structure-image", action="store_true",
+        help="If true, then bolding is performed on the image, "
+        "that is each dot is surrounded by 4 additional dots.")
 
-    hide_equal_predicates = True
-    image_output_directory = options.image_output_directory
-    use_bolding = options.bolding_abstract_structure_image
-    write_original_size = options.write_abstract_structure_image_original_size
-    abstract_structure_image_target_size = options.abstract_structure_image_target_size
+    args = parser.parse_args()
+    input_file = args.input_file
+    image_output_directory = args.image_output_directory
+    use_bolding = args.bolding_abstract_structure_image
+    write_original_size = args.write_abstract_structure_image_original_size
+    abstract_structure_image_target_size = args.abstract_structure_image_target_size
 
-    with timers.timing("Parsing pddl..", True):
-        task = pddl_parser.open()
-    with timers.timing("Normalizing task..", True):
-        normalize.normalize(task)
-    #print("Dumping task..")
-    #task.dump()
-    with timers.timing("Creating abstract structure graph..", True):
-        graph = AbstractStructureGraph(task, only_object_symmetries, stabilize_initial_state, stabilize_goal)
-        if options.dump_dot_graph:
-            f = open('out.dot', 'w')
-            graph.write_dot_graph(f, hide_equal_predicates=True)
-            f.close()
+    if not os.path.exists(input_file):
+        sys.exit("Graph input file {} not found".format(input_file))
+    elif not os.path.isabs(input_file):
+        sys.exit("Graph input file {} is not an absolute path".format(input_file))
+    else:
+        print("Using graph input file {}".format(input_file))
 
-        print("Turning graph into adjacency list representation")
-        adjacency_graph = []
-        node_counter = 0
-        vertex_indices = {}
-        for vertex in graph.graph.get_vertices():
-            if hide_equal_predicates and vertex in graph.graph.excluded_vertices:
-                continue
-            vertex_indices[vertex] = node_counter
-            adjacency_graph.append([])
-            node_counter += 1
-        for edge in graph.graph.edges:
-            assert type(edge) is tuple
-            assert len(edge) == 2
-            if edge[0] in vertex_indices and edge[1] in vertex_indices:
-                i = vertex_indices[edge[0]]
-                j = vertex_indices[edge[1]]
-                adjacency_graph[i].append(j)
-        print("Done")
+    if not os.path.exists(image_output_directory):
+        sys.exit("Invalid image output directory: {}".format(image_output_directory))
+    elif not os.path.isabs(image_output_directory):
+        sys.exit("Image output directory {} is not an absolute path".format(image_output_directory))
+    else:
+        print("Using image output directory {}".format(image_output_directory))
 
+    adjacency_graph = []
+    with open(input_file) as f:
+        for line in f:
+            line = line.rstrip('\n')
+            if line == '':
+                successors = []
+            else:
+                successors = [int(succ) for succ in line.split(',')]
+            adjacency_graph.append(successors)
+        # print adjacency_graph
 
-    if options.write_abstract_structure_image_raw:
+    if args.write_abstract_structure_image_raw:
         with timers.timing("Writing abstract structure graph raw image..", True):
             write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=1, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
-    if options.write_abstract_structure_image_reg:
+    if args.write_abstract_structure_image_reg:
         with timers.timing("Writing abstract structure graph grayscale 8bit image..", True):
             write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=3, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
-    if options.write_abstract_structure_image_int:
+    if args.write_abstract_structure_image_int:
         with timers.timing("Writing abstract structure graph grayscale 32bit image..", True):
             write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
 
