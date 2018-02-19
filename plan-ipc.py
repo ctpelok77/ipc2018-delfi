@@ -15,8 +15,8 @@ from dl_model import selector
 
 # TODO: better fallback than blind?
 FALLBACK_COMMAND_LINE_OPTIONS = ['--symmetries', 'sym=structural_symmetries(search_symmetries=dks)', '--search', 'astar(blind,symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)']
-GRAPH_CREATION_TIME_LIMIT = 30 # seconds
-IMAGE_CREATION_TIME_LIMIT = 150 # seconds
+GRAPH_CREATION_TIME_LIMIT = 60 # seconds
+IMAGE_CREATION_TIME_LIMIT = 180 # seconds
 
 def get_script():
     """Get file name of main script."""
@@ -62,21 +62,21 @@ def compute_graph_for_task(domain, problem, image_from_lifted_task, image_from_g
     repo_dir = get_repo_base()
     pwd = os.getcwd()
     if image_from_lifted_task:
-        try:
-            subprocess.check_call([sys.executable, os.path.join(repo_dir, 'src/translate/abstract_structure_module.py'), '--only-functions-from-initial-state', domain, problem], timeout=GRAPH_CREATION_TIME_LIMIT)
-            graph_file = os.path.join(pwd, 'abstract-structure-graph.txt')
-            return graph_file
-        except:
-            # Possibly hit the time limit or other errors occured.
-            sys.stdout.flush()
-            print()
-            print("Computing abstract structure graph from the PDDL description failed, switching to fallback!")
-            print()
-            return None
-
-    if image_from_grounded_task:
-        print("Not implemented")
+        command = [sys.executable, os.path.join(repo_dir, 'src/translate/abstract_structure_module.py'), '--only-functions-from-initial-state', domain, problem]
+        graph_file = os.path.join(pwd, 'abstract-structure-graph.txt')
+    else:
+        command = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--build', 'release64', domain, problem, '--symmetries','sym=structural_symmetries(time_bound=0,search_symmetries=oss,dump_symmetry_graph=true,stop_after_symmetry_graph_creation=true)', '--search', 'astar(blind(),symmetries=sym)']
+        graph_file = os.path.join(pwd, 'symmetry-graph.txt')
+    try:
+        subprocess.check_call(command, timeout=GRAPH_CREATION_TIME_LIMIT)
+    except:
+        # Possibly hit the time limit or other errors occured.
+        sys.stdout.flush()
+        print()
+        print("Computing abstract structure graph from the " + ("lifted" if image_from_lifted_task else "grounded") + " task description failed, switching to fallback!")
+        print()
         return None
+    return graph_file
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -144,6 +144,8 @@ if __name__ == "__main__":
     except:
         # TODO: make the type of exception more precise, otherwise killing this
         # script from outside will not actually kill it.
+        # TODO: if the fallback planner fails, there is likely no reason to
+        # attempt another run of the fallback planner.
         # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics.
         sys.stdout.flush()
         print
