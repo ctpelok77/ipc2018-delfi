@@ -552,7 +552,7 @@ if __name__ == "__main__":
     with timers.timing("Creating abstract structure graph..", True):
         graph = AbstractStructureGraph(task, only_object_symmetries, stabilize_initial_state, stabilize_goal)
         if options.dump_dot_graph:
-            f = open('out.dot', 'w')
+            f = open('abstract-structure-graph.dot', 'w')
             graph.write_dot_graph(f, hide_equal_predicates=True)
             f.close()
 
