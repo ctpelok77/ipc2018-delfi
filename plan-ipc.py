@@ -100,7 +100,7 @@ def run_planner(repo_dir, selected_planner):
     if selected_planner == 'seq-opt-symba-1':
         planner = [sys.executable, os.path.join(repo_dir, 'symba.py'), selected_planner, domain, problem, plan]
     elif selected_planner == 'fallback':
-        planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS, use_h2=True)
+        planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS, use_h2_preprocessor=True)
     else:
         command_line_options = selector.ALGORITHM_TO_COMMAND_LINE_STRING[selected_planner]
         use_h2_preprocessor = selected_planner not in selector.ALGORITHMS_WITHOUT_H2_PREPROCESSOR
