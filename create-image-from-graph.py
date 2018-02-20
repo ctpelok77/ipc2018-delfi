@@ -251,7 +251,5 @@ if __name__ == "__main__":
             write_matrix_image_grayscale(adjacency_graph, image_output_directory, shrink_ratio=6, bolded=use_bolding, target_size=abstract_structure_image_target_size, write_original_size=write_original_size)
 
     print("Done computing image! %s" % timer)
-    print
-
     sys.stdout.flush()
 
