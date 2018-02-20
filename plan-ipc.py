@@ -44,40 +44,110 @@ def get_repo_base():
         path = os.path.dirname(path)
     sys.exit("repo base could not be found")
 
-def force_remove_file(file_name):
+
+def print_highlighted_line(string, block=True):
+    if block:
+        print
+    print("==== " + string + " ====")
+    if block:
+        print
+
+
+def run_translator_and_compute_abstract_structure_graph(repo_dir, pwd, domain, problem):
+    graph_file = None
+    # TODO: run preprocess separately and only if needed?
+    translate = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--transform-task', 'preprocess', '--build', 'release64', '--translate', domain, problem]
+    if image_from_lifted_task:
+        translate.extend(['--translate-options', '--compute-abstract-structure-graph', '--only-functions-from-initial-state'])
+        graph_file = os.path.join(pwd, 'abstract-structure-graph.txt')
+    subprocess.check_call(translate)
+
+    if image_from_grounded_task:
+        command = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--build', 'release64', os.path.join(pwd, 'output.sas'), '--symmetries','sym=structural_symmetries(time_bound=0,search_symmetries=oss,dump_symmetry_graph=true,stop_after_symmetry_graph_creation=true)', '--search', 'astar(blind(),symmetries=sym)']
+        subprocess.check_call(command)
+        graph_file = os.path.join(pwd, 'symmetry-graph.txt')
+    assert graph_file is not None
+    return graph_file
+
+
+def select_planner_from_model(graph_file, pwd, repo_dir):
     try:
-        os.remove(file_name)
-    except OSError:
-        pass
+        # Create an image from the abstract structure for the given domain and problem.
+        subprocess.check_call([sys.executable, os.path.join(repo_dir, 'create-image-from-graph.py'), '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', graph_file, pwd], timeout=IMAGE_CREATION_TIME_LIMIT)
+        sys.stdout.flush()
+        # TODO: we should be able to not hard-code the file name
+        image_file_name = 'graph-gs-L-bolded-cs.png'
+        image_path = os.path.join(pwd, image_file_name)
+        assert os.path.exists(image_path)
+        # Use the learned model to select the appropriate planner (its command line options)
+        json_model = os.path.join(repo_dir, 'dl_model/model.json')
+        h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
+        command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
+        print("Command line options from model: {}".format(command_line_options))
+    except:
+        # Image creation failed, e.g. due to reaching the time limit
+        sys.stdout.flush()
+        print_highlighted_line("Image creation or selection from model failed, using fallback planner!", block=False)
+        command_line_options = FALLBACK_COMMAND_LINE_OPTIONS
+    return command_line_options
+
+
+def run_symba():
+    print("Running symba...")
+    with open(os.path.join(pwd, 'output.sas')) as stdin_file:
+        try:
+            subprocess.check_call([os.path.join(repo_dir, 'symba/src/preprocess/preprocess')], stdin=stdin_file)
+            success = True
+        except:
+            sys.stdout.flush()
+            success = False
+
+    if success:
+        with open(os.path.join(pwd, 'output')) as stdin_file:
+            try:
+                subprocess.check_call([os.path.join(repo_dir, 'symba/src/search/downward'), 'ipc', 'seq-opt-symba-1'], stdin=stdin_file)
+                success = True
+            except:
+                sys.stdout.flush()
+                success = False
+
+    if success:
+        print("Done running symba.")
+    else:
+        print_highlighted_line("Failed running symba.")
+    return success
+
 
 def build_planner_from_command_line_options(repo_dir, command_line_options):
-    if len(command_line_options) == 1:
-        assert command_line_options[0] == 'seq-opt-symba-1'
-        planner = [sys.executable, os.path.join(repo_dir, 'symba.py'), command_line_options[0], domain, problem, plan]
-    else:
-        planner = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--transform-task', 'preprocess', '--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem]
-        planner.extend(command_line_options)
+    planner = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--transform-task', 'preprocess', '--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem]
+    planner.extend(command_line_options)
     return planner
 
-def compute_graph_for_task(domain, problem, image_from_lifted_task):
-    repo_dir = get_repo_base()
-    pwd = os.getcwd()
-    if image_from_lifted_task:
-        command = [sys.executable, os.path.join(repo_dir, 'src/translate/abstract_structure_module.py'), '--only-functions-from-initial-state', domain, problem]
-        graph_file = os.path.join(pwd, 'abstract-structure-graph.txt')
-    else:
-        command = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--build', 'release64', domain, problem, '--symmetries','sym=structural_symmetries(time_bound=0,search_symmetries=oss,dump_symmetry_graph=true,stop_after_symmetry_graph_creation=true)', '--search', 'astar(blind(),symmetries=sym)']
-        graph_file = os.path.join(pwd, 'symmetry-graph.txt')
+
+def run_fallback_planner(repo_dir):
+    planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS)
     try:
-        subprocess.check_call(command, timeout=GRAPH_CREATION_TIME_LIMIT)
-    except:
-        # Possibly hit the time limit or other errors occured.
+        print("Running fallback planner, call string: {}".format(planner))
         sys.stdout.flush()
-        print
-        print("Computing abstract structure graph from the " + ("lifted" if image_from_lifted_task else "grounded") + " task description failed, switching to fallback!")
-        print
-        return None
-    return graph_file
+        subprocess.call(planner)
+    except:
+        sys.stdout.flush()
+        print_highlighted_line("Fallback planner failed, giving up.", block=False)
+
+
+def run_planner(repo_dir, command_line_options):
+    planner = build_planner_from_command_line_options(repo_dir, command_line_options)
+    try:
+        print("Running planner, call string: {}".format(planner))
+        sys.stdout.flush()
+        subprocess.call(planner)
+    except:
+        # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics.
+        # TODO: make the type of exception more precise, otherwise killing this script from outside will not actually kill it.
+        sys.stdout.flush()
+        print_highlighted_line("Planner failed, switching to fallback!")
+        run_fallback_planner(repo_dir)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -106,56 +176,23 @@ if __name__ == "__main__":
     repo_dir = get_repo_base()
     pwd = os.getcwd()
 
-    print("Computing abstract graph structure for the given problem and domain.")
-    graph_file = compute_graph_for_task(domain, problem, image_from_lifted_task)
-    print("Done computing abstract graph structure.")
-    print
+    print_highlighted_line("Running translator and create an abstract structure graph from the " + ("lifted" if image_from_lifted_task else "grounded") + " task description...")
+    graph_file = run_translator_and_compute_abstract_structure_graph(repo_dir, pwd, domain, problem)
+    print_highlighted_line("Done running translator and creating abstract structure graph.")
 
-    if graph_file is None:
-        command_line_options = FALLBACK_COMMAND_LINE_OPTIONS
+    print_highlighted_line("Selecting planner with learned model...")
+    command_line_options = select_planner_from_model(graph_file, pwd, repo_dir)
+    print_highlighted_line("Done selecting planner with learned model.")
+
+    print_highlighted_line("Running the selected planner...")
+    # Check if symba or a regular FD planner should be run. Use the following
+    # line for testing running symba.
+    # command_line_options = ['seq-opt-symba-1']
+    if len(command_line_options) == 1:
+        assert command_line_options[0] == 'seq-opt-symba-1'
+        success = run_symba()
+        if not success:
+            run_fallback_planner(repo_dir)
     else:
-        try:
-            # Create an image from the abstract structure for the given domain and problem.
-            subprocess.check_call([sys.executable, os.path.join(repo_dir, 'create-image-from-graph.py'), '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', graph_file, pwd], timeout=IMAGE_CREATION_TIME_LIMIT)
-            sys.stdout.flush()
-            # TODO: we should be able to not hard-code the file name
-            image_file_name = 'graph-gs-L-bolded-cs.png'
-            image_path = os.path.join(pwd, image_file_name)
-            assert os.path.exists(image_path)
-            # Use the learned model to select the appropriate planner (its command line options)
-            json_model = os.path.join(repo_dir, 'dl_model/model.json')
-            h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
-            command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
-            print("Command line options from model: {}".format(command_line_options))
-        except:
-            # Image creation failed, e.g. due to reaching the time limit
-            sys.stdout.flush()
-            print
-            print("Image creation failed, switching to fallback!")
-            print
-            command_line_options = FALLBACK_COMMAND_LINE_OPTIONS
-
-    # Build the planner call from the command line options computed above.
-    planner = build_planner_from_command_line_options(repo_dir, command_line_options)
-    try:
-        print("Planner call string: {}".format(planner))
-        print
-        sys.stdout.flush()
-        subprocess.call(planner)
-    except:
-        # TODO: make the type of exception more precise, otherwise killing this
-        # script from outside will not actually kill it.
-        # TODO: if the fallback planner fails, there is likely no reason to
-        # attempt another run of the fallback planner.
-        # Execution of the planner failed, e.g. due to the h2 preprocessor in conjunction with some heuristics.
-        sys.stdout.flush()
-        print
-        print("Planner failed, switching to fallback!")
-        print
-        planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS)
-        print("Planner call string: {}".format(planner))
-        print
-        subprocess.call(planner)
-
-    print
-    print("Done running the chosen planner.")
+        run_planner(repo_dir, command_line_options)
+    print_highlighted_line("Done running the selected planner.")
