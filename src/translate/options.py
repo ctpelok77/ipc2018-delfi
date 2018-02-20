@@ -63,6 +63,9 @@ def parse_args():
 
     # Options related to symmetries/computation of abstract structure graphs.
     argparser.add_argument(
+        "--compute-abstract-structure-graph", action="store_true",
+        help="Compute the abstract structure graph from the PDDL description.")
+    argparser.add_argument(
         "--only-object-symmetries", action="store_true",
         help="HACK! Only allow objects to be permuted, but not "
         "predicates, operators, axioms or functions. (Set option "
@@ -81,8 +84,7 @@ def parse_args():
         "color. (Set option --compute-symmetries)")
     argparser.add_argument(
         "--dump-dot-graph", action="store_true",
-        help="If true, dumping the abstract structure as dot graph."
-        "as a graph is written to the disk.")
+        help="If true, dumping the abstract structure as dot graph.")
 
     return argparser.parse_args()
 
