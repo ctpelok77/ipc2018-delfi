@@ -31,10 +31,15 @@ ALGORITHM_TO_COMMAND_LINE_STRING = {
     '{}-h2-simpless-oss-masginfsccdfp'.format(TRAINING_REVISION): ['--symmetries', 'sym=structural_symmetries(search_symmetries=oss)', '--search', 'astar(merge_and_shrink(shrink_strategy=shrink_bisimulation(greedy=true),merge_strategy=merge_sccs(order_of_sccs=topological,merge_selector=score_based_filtering(scoring_functions=[goal_relevance,dfp,total_order(atomic_before_product=false,atomic_ts_order=level,product_ts_order=random)])),label_reduction=exact(before_shrinking=true,before_merging=false),max_states=infinity,threshold_before_merge=1,prune_unreachable_states=false),symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)'],
     '{}-h2-simpless-oss-cpdbshc900'.format(TRAINING_REVISION): ['--symmetries', 'sym=structural_symmetries(search_symmetries=oss)', '--search', 'astar(cpdbs(patterns=hillclimbing(max_time=900),transform=multiply_out_conditional_effects),symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)'],
     '{}-h2-simpless-oss-zopdbsgenetic'.format(TRAINING_REVISION): ['--symmetries', 'sym=structural_symmetries(search_symmetries=oss)', '--search', 'astar(zopdbs(patterns=genetic(pdb_max_size=50000,num_collections=5,num_episodes=30,mutation_probability=0.01),transform=multiply_out_conditional_effects),symmetries=sym,pruning=stubborn_sets_simple(minimum_pruning_ratio=0.01),num_por_probes=1000)'],
-    'seq-opt-symba-1' : ['seq-opt-symba-1']
+    'seq-opt-symba-1' : ['dummy']
 }
 
-def compute_command_line_options(json_model, h5_model, image):
+ALGORITHMS_WITHOUT_H2_PREPROCESSOR = [
+    '{}-simpless-dks-masb50kmiasmdfp'.format(TRAINING_REVISION),
+    '{}-simpless-oss-masb50kmiasmdfp'.format(TRAINING_REVISION),
+]
+
+def select_algorithm_from_model(json_model, h5_model, image):
     # TODO: what is that and what do we need it for?
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -69,4 +74,4 @@ def compute_command_line_options(json_model, h5_model, image):
     print("Chose %s" % selected_algorithm)
 
     assert selected_algorithm in ALGORITHM_TO_COMMAND_LINE_STRING
-    return ALGORITHM_TO_COMMAND_LINE_STRING[selected_algorithm]
+    return selected_algorithm

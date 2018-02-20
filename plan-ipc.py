@@ -79,28 +79,32 @@ def select_planner_from_model(repo_dir, pwd, graph_file):
         # Use the learned model to select the appropriate planner (its command line options)
         json_model = os.path.join(repo_dir, 'dl_model/model.json')
         h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
-        command_line_options = selector.compute_command_line_options(json_model, h5_model, image_path)
-        print("Command line options from model: {}".format(command_line_options))
-        return command_line_options
+        selected_algorithm = selector.select_algorithm_from_model(json_model, h5_model, image_path)
+        return selected_algorithm
     except:
         # Image creation failed, e.g. due to reaching the time limit
         sys.stdout.flush()
         return None
 
 
-def build_planner_from_command_line_options(repo_dir, command_line_options):
-    # TODO: if the config does not use h2, don't use it here either
-    planner = [sys.executable, os.path.join(repo_dir, 'fast-downward.py'), '--transform-task', 'preprocess', '--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem]
+def build_planner_from_command_line_options(repo_dir, command_line_options, use_h2_preprocessor):
+    planner = [sys.executable, os.path.join(repo_dir, 'fast-downward.py')]
+    if use_h2_preprocessor:
+        planner.extend(['--transform-task', 'preprocess'])
+    planner.extend(['--build', 'release64', '--search-memory-limit', '7600M', '--plan-file', plan, domain, problem])
     planner.extend(command_line_options)
     return planner
 
 
-def run_planner(repo_dir, command_line_options):
-    if len(command_line_options) == 1:
-        assert command_line_options[0] == 'seq-opt-symba-1'
-        planner = [sys.executable, os.path.join(repo_dir, 'symba.py'), command_line_options[0], domain, problem, plan]
+def run_planner(repo_dir, selected_planner):
+    if selected_planner == 'seq-opt-symba-1':
+        planner = [sys.executable, os.path.join(repo_dir, 'symba.py'), selected_planner, domain, problem, plan]
+    elif selected_planner == 'fallback':
+        planner = build_planner_from_command_line_options(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS, use_h2=True)
     else:
-        planner = build_planner_from_command_line_options(repo_dir, command_line_options)
+        command_line_options = selector.ALGORITHM_TO_COMMAND_LINE_STRING[selected_planner]
+        use_h2_preprocessor = selected_planner not in selector.ALGORITHMS_WITHOUT_H2_PREPROCESSOR
+        planner = build_planner_from_command_line_options(repo_dir, command_line_options, use_h2_preprocessor)
     try:
         print("Running planner, call string: {}".format(planner))
         sys.stdout.flush()
@@ -125,8 +129,8 @@ def determine_and_run_planner(domain, problem, plan, image_from_lifted_task):
         print_highlighted_line("Done computing an abstract structure graph.")
 
     print_highlighted_line("Selecting planner from learned model...")
-    command_line_options = select_planner_from_model(repo_dir, pwd, graph_file)
-    if command_line_options is None:
+    selected_planner = select_planner_from_model(repo_dir, pwd, graph_file)
+    if selected_planner is None:
         print_highlighted_line("Image creation or selection from model failed, using fallback planner!")
         return False
     else:
@@ -135,7 +139,7 @@ def determine_and_run_planner(domain, problem, plan, image_from_lifted_task):
     print_highlighted_line("Running the selected planner...")
     # Uncomment the following line for testing running symba.
     # command_line_options = ['seq-opt-symba-1']
-    success = run_planner(repo_dir, command_line_options)
+    success = run_planner(repo_dir, selected_planner)
     if success:
         print_highlighted_line("Done running the selected planner.")
     else:
@@ -170,7 +174,7 @@ if __name__ == "__main__":
     if not success:
         print_highlighted_line("Running fallback planner...")
         repo_dir = get_repo_base()
-        if run_planner(repo_dir, FALLBACK_COMMAND_LINE_OPTIONS):
+        if run_planner(repo_dir, 'fallback'):
             print_highlighted_line("Done running fallback planner.")
         else:
             print_highlighted_line("Fallback planner failed, giving up.")
