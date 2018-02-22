@@ -12,6 +12,7 @@ class TransitionSystem;
 
 class ShrinkStrategy {
 protected:
+    mutable std::vector<double> miss_qualified_states_ratios;
     virtual std::string name() const = 0;
     virtual void dump_strategy_specific_options() const = 0;
 public:
@@ -38,6 +39,10 @@ public:
         int target_size) const = 0;
     virtual bool requires_init_distances() const = 0;
     virtual bool requires_goal_distances() const = 0;
+
+    std::vector<double> &get_miss_qualified_states_ratios() {
+        return miss_qualified_states_ratios;
+    }
 
     void dump_options() const;
     std::string get_name() const;

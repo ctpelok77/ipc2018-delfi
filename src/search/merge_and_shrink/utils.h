@@ -7,6 +7,7 @@
 #include <vector>
 
 namespace merge_and_shrink {
+class Distances;
 class FactoredTransitionSystem;
 class ShrinkStrategy;
 class TransitionSystem;
@@ -33,15 +34,17 @@ extern bool shrink_before_merge_step(
 /*
   Prune unreachable and/or irrelevant states of the factor at index. This
   requires that init and/or goal distances have been computed accordingly.
-  Return true iff any states have been pruned.
+  Return true in the first component iff any states have been pruned. Return
+  true in the second component iff unreachable states have been pruned.
 
   TODO: maybe this functionality belongs to a new class PruningStrategy.
 */
-extern bool prune_step(
+extern std::pair<bool, bool> prune_step(
     FactoredTransitionSystem &fts,
     int index,
     bool prune_unreachable_states,
     bool prune_irrelevant_states,
+    bool pruning_as_abstraction,
     Verbosity verbosity);
 
 /*
@@ -67,6 +70,33 @@ extern std::unique_ptr<TransitionSystem> shrink_before_merge_externally(
     int max_states,
     int max_states_before_merge,
     int shrink_threshold_before_merge);
+
+/*
+  Copy the two transition systems at the given indices, possibly shrink them
+  according to the same rules as merge-and-shrink does, compute their product,
+  and finally prune the product according to given flags. Return both the
+  product and the distance information.
+*/
+extern std::pair<std::unique_ptr<TransitionSystem>, std::unique_ptr<Distances>> shrink_merge_prune_externally(
+    const FactoredTransitionSystem &fts,
+    int index1,
+    int index2,
+    const ShrinkStrategy &shrink_strategy,
+    int max_states,
+    int max_states_before_merge,
+    int shrink_threshold_before_merge,
+    const bool prune_unreachable_states,
+    const bool prune_irrelevant_states,
+    const bool pruning_as_abstraction);
+
+extern int compute_number_of_product_transitions(
+    const TransitionSystem &ts1, const TransitionSystem &ts2);
+
+extern double compute_average_h_value(const Distances &distances);
+
+extern void compute_irrelevant_labels(
+    const FactoredTransitionSystem &fts,
+    std::vector<std::vector<bool>> &ts_index_to_irrelevant_labels);
 }
 
 #endif

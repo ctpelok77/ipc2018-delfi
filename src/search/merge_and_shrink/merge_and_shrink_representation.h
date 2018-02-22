@@ -1,6 +1,7 @@
 #ifndef MERGE_AND_SHRINK_MERGE_AND_SHRINK_REPRESENTATION_H
 #define MERGE_AND_SHRINK_MERGE_AND_SHRINK_REPRESENTATION_H
 
+#include <cassert>
 #include <memory>
 #include <vector>
 
@@ -25,6 +26,7 @@ public:
     virtual int get_value(const State &state) const = 0;
     virtual void apply_abstraction_to_lookup_table(
         const std::vector<int> &abstraction_mapping) = 0;
+    virtual bool operator==(const MergeAndShrinkRepresentation &other) const = 0;
     virtual void dump() const = 0;
 };
 
@@ -42,6 +44,18 @@ public:
     virtual void apply_abstraction_to_lookup_table(
         const std::vector<int> &abstraction_mapping) override;
     virtual int get_value(const State &state) const override;
+    virtual bool operator==(const MergeAndShrinkRepresentation &other) const override {
+        try {
+            const MergeAndShrinkRepresentationLeaf &tmp = dynamic_cast<const MergeAndShrinkRepresentationLeaf &>(other);
+            assert(domain_size == tmp.domain_size);
+            assert(var_id == tmp.var_id);
+            assert(lookup_table == tmp.lookup_table);
+            return var_id == tmp.var_id && lookup_table == tmp.lookup_table;
+        } catch (const std::bad_cast &) {
+            assert(false);
+            return false;
+        }
+    }
     virtual void dump() const override;
 };
 
@@ -61,6 +75,19 @@ public:
     virtual void apply_abstraction_to_lookup_table(
         const std::vector<int> &abstraction_mapping) override;
     virtual int get_value(const State &state) const override;
+    virtual bool operator==(const MergeAndShrinkRepresentation &other) const override {
+        try {
+            const MergeAndShrinkRepresentationMerge &tmp = dynamic_cast<const MergeAndShrinkRepresentationMerge &>(other);
+            assert(domain_size == tmp.domain_size);
+            assert(*left_child.get() == *tmp.left_child.get());
+            assert(*right_child.get() == *tmp.right_child.get());
+            assert(lookup_table == tmp.lookup_table);
+            return *left_child.get() == *tmp.left_child.get() && *right_child.get() == *tmp.right_child.get() && lookup_table == tmp.lookup_table;
+        } catch (const std::bad_cast &) {
+            assert(false);
+            return false;
+        }
+    }
     virtual void dump() const override;
 };
 }
