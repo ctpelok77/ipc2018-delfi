@@ -40,7 +40,7 @@ ALGORITHMS_WITHOUT_H2_PREPROCESSOR = [
 ]
 
 def select_algorithm_from_model(json_model, h5_model, image):
-    # TODO: what is that and what do we need it for?
+    # suppress unwanted output
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     # load json and create model
