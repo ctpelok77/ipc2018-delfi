@@ -6,6 +6,10 @@
 #include <memory>
 #include <vector>
 
+namespace utils {
+class Timer;
+}
+
 namespace merge_and_shrink {
 class Distances;
 class FactoredTransitionSystem;
@@ -72,7 +76,8 @@ public:
         std::vector<std::unique_ptr<Distances>> &&distances,
         const bool compute_init_distances,
         const bool compute_goal_distances,
-        Verbosity verbosity);
+        Verbosity verbosity,
+        const utils::Timer &timer);
     FactoredTransitionSystem(FactoredTransitionSystem &&other);
     ~FactoredTransitionSystem();
 
@@ -165,6 +170,7 @@ public:
     }
 
     bool is_active(int index) const;
+    int get_init_state_goal_distance(int index) const;
     void remove(int index);
 };
 }

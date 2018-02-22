@@ -601,25 +601,34 @@ fast_downward_plugin(
         merge_and_shrink/merge_and_shrink_heuristic
         merge_and_shrink/merge_and_shrink_representation
         merge_and_shrink/merge_scoring_function
+        merge_and_shrink/merge_scoring_function_causally_connected_variable
+        merge_and_shrink/merge_scoring_function_cg_goal
+        merge_and_shrink/merge_scoring_function_collection
         merge_and_shrink/merge_scoring_function_dfp
         merge_and_shrink/merge_scoring_function_goal_relevance
+        merge_and_shrink/merge_scoring_function_goal_variable
+        merge_and_shrink/merge_scoring_function_linear
         merge_and_shrink/merge_scoring_function_miasm
         merge_and_shrink/merge_scoring_function_single_random
         merge_and_shrink/merge_scoring_function_total_order
         merge_and_shrink/merge_selector
         merge_and_shrink/merge_selector_score_based_filtering
+        merge_and_shrink/merge_selector_score_based_weighted_sum
         merge_and_shrink/merge_strategy
         merge_and_shrink/merge_strategy_aliases
         merge_and_shrink/merge_strategy_factory
         merge_and_shrink/merge_strategy_factory_precomputed
         merge_and_shrink/merge_strategy_factory_sccs
         merge_and_shrink/merge_strategy_factory_stateless
+        merge_and_shrink/merge_strategy_factory_symmetries
         merge_and_shrink/merge_strategy_precomputed
         merge_and_shrink/merge_strategy_sccs
         merge_and_shrink/merge_strategy_stateless
+        merge_and_shrink/merge_symmetries
         merge_and_shrink/merge_tree
         merge_and_shrink/merge_tree_factory
         merge_and_shrink/merge_tree_factory_linear
+        merge_and_shrink/merge_tree_factory_manual
         merge_and_shrink/merge_tree_factory_miasm
         merge_and_shrink/shrink_bisimulation
         merge_and_shrink/shrink_bucket_based
@@ -748,6 +757,16 @@ fast_downward_plugin(
         structural_symmetries/group.cc
         structural_symmetries/permutation.cc
     DEPENDS BLISS
+)
+
+fast_downward_plugin(
+    NAME SYMMETRIES
+    HELP "Plugin containing the code for symmetries"
+    SOURCES
+        merge_and_shrink/symmetries/ms_graph_creator.cc
+        merge_and_shrink/symmetries/symmetry_generator.cc
+        merge_and_shrink/symmetries/symmetry_group.cc
+    DEPENDS BLISS SCCS
 )
 
 fast_downward_add_plugin_sources(PLANNER_SOURCES)

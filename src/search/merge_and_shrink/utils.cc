@@ -2,6 +2,8 @@
 
 #include "distances.h"
 #include "factored_transition_system.h"
+#include "label_equivalence_relation.h"
+#include "labels.h"
 #include "shrink_strategy.h"
 #include "transition_system.h"
 
@@ -11,6 +13,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <unordered_map>
 
 using namespace std;
 
@@ -151,55 +154,114 @@ bool shrink_before_merge_step(
     return shrunk1 || shrunk2;
 }
 
-bool prune_step(
-    FactoredTransitionSystem &fts,
-    int index,
+pair<StateEquivalenceRelation, bool> compute_pruning_equivalence_relation(
+    const TransitionSystem &ts,
+    const Distances &distances,
     bool prune_unreachable_states,
     bool prune_irrelevant_states,
+    bool pruning_as_abstraction,
     Verbosity verbosity) {
-    assert(prune_unreachable_states || prune_irrelevant_states);
-    const TransitionSystem &ts = fts.get_ts(index);
-    const Distances &distances = fts.get_distances(index);
     int num_states = ts.get_size();
     StateEquivalenceRelation state_equivalence_relation;
     state_equivalence_relation.reserve(num_states);
     int unreachable_count = 0;
     int irrelevant_count = 0;
-    int dead_count = 0;
-    for (int state = 0; state < num_states; ++state) {
-        /* If pruning both unreachable and irrelevant states, a state which is
-           dead is counted for both statistics! */
-        bool prune_state = false;
-        if (prune_unreachable_states) {
-            assert(distances.are_init_distances_computed());
-            if (distances.get_init_distance(state) == INF) {
-                ++unreachable_count;
-                prune_state = true;
-            }
-        }
-        if (prune_irrelevant_states) {
-            assert(distances.are_goal_distances_computed());
-            if (distances.get_goal_distance(state) == INF) {
+    bool pruned_unreachable_states = false;
+    if (pruning_as_abstraction) {
+        StateEquivalenceClass unreachable_states;
+        StateEquivalenceClass irrelevant_states;
+        for (int state = 0; state < num_states; ++state) {
+            /* If pruning both unreachable and irrelevant states, it is mapped
+             * to the "irrelevant state". */
+            if (prune_irrelevant_states && distances.get_goal_distance(state) == INF) {
                 ++irrelevant_count;
-                prune_state = true;
+                irrelevant_states.push_front(state);
+            } else if (prune_unreachable_states && distances.get_init_distance(state) == INF) {
+                ++unreachable_count;
+                unreachable_states.push_front(state);
+            } else {
+                StateEquivalenceClass state_equivalence_class;
+                state_equivalence_class.push_front(state);
+                state_equivalence_relation.push_back(state_equivalence_class);
             }
         }
-        if (prune_state) {
-            ++dead_count;
-        } else {
-            StateEquivalenceClass state_equivalence_class;
-            state_equivalence_class.push_front(state);
-            state_equivalence_relation.push_back(state_equivalence_class);
+        if (verbosity >= Verbosity::VERBOSE &&
+            (unreachable_count || irrelevant_count)) {
+            cout << ts.tag()
+                 << "unreachable: " << unreachable_count << " states, "
+                 << "irrelevant: " << irrelevant_count << " states " << endl;
+        }
+        if (unreachable_count) {
+            state_equivalence_relation.push_back(unreachable_states);
+            pruned_unreachable_states = true;
+        }
+        if (irrelevant_count) {
+            state_equivalence_relation.push_back(irrelevant_states);
+        }
+    } else {
+        int dead_count = 0;
+        for (int state = 0; state < num_states; ++state) {
+            /* If pruning both unreachable and irrelevant states, a state which is
+               dead is counted for both statistics! */
+            bool prune_state = false;
+            if (prune_unreachable_states) {
+                assert(distances.are_init_distances_computed());
+                if (distances.get_init_distance(state) == INF) {
+                    ++unreachable_count;
+                    prune_state = true;
+                }
+            }
+            if (prune_irrelevant_states) {
+                assert(distances.are_goal_distances_computed());
+                if (distances.get_goal_distance(state) == INF) {
+                    ++irrelevant_count;
+                    prune_state = true;
+                }
+            }
+            if (prune_state) {
+                ++dead_count;
+            } else {
+                StateEquivalenceClass state_equivalence_class;
+                state_equivalence_class.push_front(state);
+                state_equivalence_relation.push_back(state_equivalence_class);
+            }
+        }
+        if (verbosity >= Verbosity::VERBOSE &&
+            (unreachable_count || irrelevant_count)) {
+            cout << ts.tag()
+                 << "unreachable: " << unreachable_count << " states, "
+                 << "irrelevant: " << irrelevant_count << " states ("
+                 << "total dead: " << dead_count << " states)" << endl;
+        }
+        if (unreachable_count) {
+            pruned_unreachable_states = true;
         }
     }
-    if (verbosity >= Verbosity::VERBOSE &&
-        (unreachable_count || irrelevant_count)) {
-        cout << ts.tag()
-             << "unreachable: " << unreachable_count << " states, "
-             << "irrelevant: " << irrelevant_count << " states ("
-             << "total dead: " << dead_count << " states)" << endl;
-    }
-    return fts.apply_abstraction(index, state_equivalence_relation, verbosity);
+    return make_pair(state_equivalence_relation, pruned_unreachable_states);
+}
+
+pair<bool, bool> prune_step(
+    FactoredTransitionSystem &fts,
+    int index,
+    bool prune_unreachable_states,
+    bool prune_irrelevant_states,
+    bool pruning_as_abstraction,
+    Verbosity verbosity) {
+    assert(prune_unreachable_states || prune_irrelevant_states);
+    const TransitionSystem &ts = fts.get_ts(index);
+    const Distances &distances = fts.get_distances(index);
+    pair<StateEquivalenceRelation, bool> state_equivalence_relation_and_pruned_unreachable =
+        compute_pruning_equivalence_relation(
+            ts,
+            distances,
+            prune_unreachable_states,
+            prune_irrelevant_states,
+            pruning_as_abstraction,
+            verbosity);
+    bool pruned = fts.apply_abstraction(
+        index, state_equivalence_relation_and_pruned_unreachable.first, verbosity);
+    return make_pair(
+        pruned, state_equivalence_relation_and_pruned_unreachable.second);
 }
 
 vector<int> compute_abstraction_mapping(
@@ -321,5 +383,141 @@ unique_ptr<TransitionSystem> shrink_before_merge_externally(
         (ts1 ? *ts1 : original_ts1),
         (ts2 ? *ts2 : original_ts2),
         verbosity);
+}
+
+pair<unique_ptr<TransitionSystem>, unique_ptr<Distances>> shrink_merge_prune_externally(
+    const FactoredTransitionSystem &fts,
+    int index1,
+    int index2,
+    const ShrinkStrategy &shrink_strategy,
+    int max_states,
+    int max_states_before_merge,
+    int shrink_threshold_before_merge,
+    const bool prune_unreachable_states,
+    const bool prune_irrelevant_states,
+    const bool pruning_as_abstraction) {
+    unique_ptr<TransitionSystem> product =
+        shrink_before_merge_externally(
+            fts,
+            index1,
+            index2,
+            shrink_strategy,
+            max_states,
+            max_states_before_merge,
+            shrink_threshold_before_merge);
+
+    unique_ptr<Distances> distances = utils::make_unique_ptr<Distances>(*product);
+    Verbosity verbosity = Verbosity::SILENT;
+    // Pruning unreachable states requires init distance information, pruning
+    // irrelevant states requires goal distance information. Also below.
+    distances->compute_distances(prune_unreachable_states, prune_irrelevant_states, verbosity);
+
+    if (prune_unreachable_states || prune_irrelevant_states) {
+        // Prune the result.
+        pair<StateEquivalenceRelation, bool> equiv_rel_and_pruned_unreachable =
+            compute_pruning_equivalence_relation(
+                *product,
+                *distances,
+                prune_unreachable_states,
+                prune_irrelevant_states,
+                pruning_as_abstraction,
+                verbosity);
+        const StateEquivalenceRelation &equiv_rel = equiv_rel_and_pruned_unreachable.first;
+        if (static_cast<int>(equiv_rel.size()) < product->get_size()) {
+            product->apply_abstraction(equiv_rel, compute_abstraction_mapping(product->get_size(), equiv_rel), verbosity);
+            distances->apply_abstraction(equiv_rel, prune_unreachable_states, prune_irrelevant_states, verbosity);
+        }
+    }
+
+    return make_pair(move(product), move(distances));
+}
+
+int compute_number_of_product_transitions(
+    const TransitionSystem &ts1, const TransitionSystem &ts2) {
+    // TODO: this is copied from the merge constructor of TransitionSystem
+    /*
+      Note that this computes the number of tranistions in the product
+      without considering possible shrinking due to unreachable or
+      irrelevant states, which hence may reduce the actual number of
+      transitions in the product.
+    */
+    int number_of_transitions = 0;
+    for (const GroupAndTransitions &gat : ts1) {
+        const LabelGroup &group1 = gat.label_group;
+        const vector<Transition> &transitions1 = gat.transitions;
+
+        // Distribute the labels of this group among the "buckets"
+        // corresponding to the groups of ts2.
+        unordered_map<int, vector<double>> buckets;
+        for (int label_no : group1) {
+            int group2_id = ts2.get_group_id_for_label(label_no);
+            buckets[group2_id].push_back(label_no);
+        }
+
+        // Now create the new groups together with their transitions.
+        for (const auto &bucket : buckets) {
+            const vector<Transition> &transitions2 =
+                ts2.get_transitions_for_group_id(bucket.first);
+            int new_transitions_for_new_group = transitions1.size() * transitions2.size();
+            number_of_transitions += new_transitions_for_new_group;
+        }
+    }
+    return number_of_transitions;
+}
+
+double compute_average_h_value(const Distances &distances) {
+    int num_states = distances.get_num_states();
+    int sum_distances = 0;
+    for (int state = 0; state < num_states; ++state) {
+        int distance = distances.get_goal_distance(state);
+        if (distance == INF) {
+            sum_distances = INF;
+            break;
+        }
+        sum_distances += distance;
+    }
+    if (num_states == 0) {
+        // For unsolvable transition systems
+        return INF;
+    }
+    return static_cast<double>(sum_distances) / static_cast<double>(num_states);
+}
+
+void compute_irrelevant_labels(const FactoredTransitionSystem &fts,
+                               vector<vector<bool>> &ts_index_to_irrelevant_labels) {
+    int num_ts = fts.get_size();
+    ts_index_to_irrelevant_labels.resize(num_ts, vector<bool>());
+    int num_labels = fts.get_labels().get_size();
+    for (int ts_index = 0; ts_index < num_ts; ++ts_index) {
+        if (fts.is_active(ts_index)) {
+            vector<bool> irrelevant_labels(num_labels, false);
+            const TransitionSystem &ts = fts.get_ts(ts_index);
+            for (const GroupAndTransitions &gat : ts) {
+                const vector<Transition> &transitions = gat.transitions;
+                bool group_relevant = false;
+                if (static_cast<int>(transitions.size()) == ts.get_size()) {
+                    /*
+                      A label group is irrelevant in the earlier notion if it has
+                      exactly a self loop transition for every state.
+                    */
+                    for (size_t i = 0; i < transitions.size(); ++i) {
+                        if (transitions[i].target != transitions[i].src) {
+                            group_relevant = true;
+                            break;
+                        }
+                    }
+                } else {
+                    group_relevant = true;
+                }
+                if (!group_relevant) {
+                    const LabelGroup &label_group = gat.label_group;
+                    for (int label_no : label_group) {
+                        irrelevant_labels[label_no] = true;
+                    }
+                }
+            }
+            ts_index_to_irrelevant_labels[ts_index] = irrelevant_labels;
+        }
+    }
 }
 }

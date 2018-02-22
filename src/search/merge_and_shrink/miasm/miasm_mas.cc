@@ -15,6 +15,8 @@
 #include "../../plugin.h"
 //#include "../../utilities.h"
 
+#include "../utils/timer.h"
+
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -32,6 +34,7 @@ MiasmAbstraction::MiasmAbstraction(const Options &)
       verbosity(Verbosity::SILENT),
       prune_unreachable_states(true),
       prune_irrelevant_states(true),
+      pruning_as_abstraction(false),
       fts(nullptr) {
 //    merge_strategy->initialize(task);
 //    if (opts.contains("label_reduction")) {
@@ -74,15 +77,18 @@ void MiasmAbstraction::initialize(const TaskProxy &task_proxy) {
     assert(!fts);
     const bool compute_init_distances = true;
     const bool compute_goal_distances = true;
+    const int max_time = INF;
+    utils::Timer timer;
     fts = make_shared<FactoredTransitionSystem>(
         create_factored_transition_system(
-            task_proxy, compute_init_distances, compute_goal_distances, verbosity));
+            task_proxy, compute_init_distances, compute_goal_distances, verbosity, max_time, timer));
     for (int index = 0; index < fts->get_size(); ++index) {
         prune_step(
             *fts,
             index,
             prune_unreachable_states,
             prune_irrelevant_states,
+            pruning_as_abstraction,
             verbosity);
     }
 
@@ -154,6 +160,7 @@ int MiasmAbstraction::build_transition_system(
         new_ts_index,
         prune_unreachable_states,
         prune_irrelevant_states,
+        pruning_as_abstraction,
         verbosity);
 
     newly_built.push_back(G);
