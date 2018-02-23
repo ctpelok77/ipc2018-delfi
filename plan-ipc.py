@@ -3,7 +3,6 @@
 
 import argparse
 import os
-
 import sys
 
 if (sys.version_info > (3, 0)):
@@ -60,10 +59,16 @@ def compute_graph_for_task(repo_dir, pwd, domain, problem, image_from_lifted_tas
         graph_file = os.path.join(pwd, 'symmetry-graph.txt')
     try:
         subprocess.check_call(command, timeout=GRAPH_CREATION_TIME_LIMIT)
-    except:
-        # Possibly hit the time limit or other errors occured.
+    except subprocess.TimeoutExpired:
         sys.stdout.flush()
+        print("Graph computation reached the time limit!")
         return None
+    except subprocess.CalledProcessError as err:
+        sys.stdout.flush()
+        print("Graph computation returned nonzero exitcode {}".format(err.returncode))
+        return None
+    except:
+        raise
     return graph_file
 
 
@@ -71,20 +76,26 @@ def select_planner_from_model(repo_dir, pwd, graph_file):
     try:
         # Create an image from the abstract structure for the given domain and problem.
         subprocess.check_call([sys.executable, os.path.join(repo_dir, 'create-image-from-graph.py'), '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', graph_file, pwd], timeout=IMAGE_CREATION_TIME_LIMIT)
+    except subprocess.TimeoutExpired:
         sys.stdout.flush()
-        # TODO: we should be able to not hard-code the file name
-        image_file_name = 'graph-gs-L-bolded-cs.png'
-        image_path = os.path.join(pwd, image_file_name)
-        assert os.path.exists(image_path)
-        # Use the learned model to select the appropriate planner (its command line options)
-        json_model = os.path.join(repo_dir, 'dl_model/model.json')
-        h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
-        selected_algorithm = selector.select_algorithm_from_model(json_model, h5_model, image_path)
-        return selected_algorithm
-    except:
-        # Image creation failed, e.g. due to reaching the time limit
-        sys.stdout.flush()
+        print("Image computation reached the time limit!")
         return None
+    except subprocess.CalledProcessError as err:
+        sys.stdout.flush()
+        print("Image computation returned nonzero exitcode {}".format(err.returncode))
+        return None
+    except:
+        raise
+
+    # TODO: we should be able to not hard-code the file name
+    image_file_name = 'graph-gs-L-bolded-cs.png'
+    image_path = os.path.join(pwd, image_file_name)
+    assert os.path.exists(image_path)
+    # Use the learned model to select the appropriate planner (its command line options)
+    json_model = os.path.join(repo_dir, 'dl_model/model.json')
+    h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
+    selected_algorithm = selector.select_algorithm_from_model(json_model, h5_model, image_path)
+    return selected_algorithm
 
 
 def build_planner_from_command_line_options(repo_dir, command_line_options, use_h2_preprocessor):
@@ -110,9 +121,9 @@ def run_planner(repo_dir, selected_planner):
         sys.stdout.flush()
         subprocess.check_call(planner)
         return True
-    except:
-        # Planner execution failed
+    except subprocess.CalledProcessError as err:
         sys.stdout.flush()
+        print("Planner returned nonzero exitcode {}".format(err.returncode))
         return False
 
 
