@@ -72,7 +72,7 @@ def compute_graph_for_task(repo_dir, pwd, domain, problem, image_from_lifted_tas
     return graph_file
 
 
-def select_planner_from_model(repo_dir, pwd, graph_file):
+def select_planner_from_model(repo_dir, pwd, graph_file, image_from_lifted_task):
     try:
         # Create an image from the abstract structure for the given domain and problem.
         subprocess.check_call([sys.executable, os.path.join(repo_dir, 'create-image-from-graph.py'), '--write-abstract-structure-image-reg', '--bolding-abstract-structure-image', '--abstract-structure-image-target-size', '128', graph_file, pwd], timeout=IMAGE_CREATION_TIME_LIMIT)
@@ -92,8 +92,12 @@ def select_planner_from_model(repo_dir, pwd, graph_file):
     image_path = os.path.join(pwd, image_file_name)
     assert os.path.exists(image_path)
     # Use the learned model to select the appropriate planner (its command line options)
-    json_model = os.path.join(repo_dir, 'dl_model/model.json')
-    h5_model = os.path.join(repo_dir, 'dl_model/model.h5')
+    if image_from_lifted_task:
+        model_subfolder = 'lifted'
+    else:
+        model_subfolder = 'grounded'
+    json_model = os.path.join(repo_dir, 'dl_model', model_subfolder, 'model.json')
+    h5_model = os.path.join(repo_dir, 'dl_model', model_subfolder, 'model.h5')
     selected_algorithm = selector.select_algorithm_from_model(json_model, h5_model, image_path)
     return selected_algorithm
 
@@ -140,7 +144,7 @@ def determine_and_run_planner(domain, problem, plan, image_from_lifted_task):
         print_highlighted_line("Done computing an abstract structure graph.")
 
     print_highlighted_line("Selecting planner from learned model...")
-    selected_planner = select_planner_from_model(repo_dir, pwd, graph_file)
+    selected_planner = select_planner_from_model(repo_dir, pwd, graph_file, image_from_lifted_task)
     if selected_planner is None:
         print_highlighted_line("Image creation or selection from model failed, using fallback planner!")
         return False
