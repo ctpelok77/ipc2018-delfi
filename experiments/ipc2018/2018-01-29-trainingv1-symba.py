@@ -76,7 +76,7 @@ SUITE.extend(['briefcaseworld', 'cavediving-14-adl', 'citycar-opt14-adl',
 'ss_maintenance', 'ss_maintenance_large', 'ss_schedule'])
 
 if not REMOTE:
-    SUITE = ['gripper:prob01.pddl', 'depot:p01.pddl']
+    SUITE = ['gripper:prob01.pddl', 'miconic-simpleadl:s1-0.pddl']
 ATTRIBUTES = [
     'cost', 'coverage', 'error', 'memory', 'plan_length', 'search_time',
     'total_time',
