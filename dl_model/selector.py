@@ -40,6 +40,9 @@ ALGORITHMS_WITHOUT_H2_PREPROCESSOR = [
 ]
 
 def select_algorithm_from_model(json_model, h5_model, image):
+    print("Using json model file {}".format(json_model))
+    print("Using h5 model file {}".format(h5_model))
+
     # suppress unwanted output
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
