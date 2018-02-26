@@ -68,7 +68,11 @@ def compute_graph_for_task(repo_dir, pwd, domain, problem, image_from_lifted_tas
         print("Graph computation returned nonzero exitcode {}".format(err.returncode))
         return None
     except:
-        raise
+        # We catch all exceptions (this unfortunately includes signals) to make
+        # sure that if we cannot automatically select a planner, we still run
+        # our fallback planner.
+        return None
+        #raise
     return graph_file
 
 
@@ -85,7 +89,11 @@ def select_planner_from_model(repo_dir, pwd, graph_file, image_from_lifted_task)
         print("Image computation returned nonzero exitcode {}".format(err.returncode))
         return None
     except:
-        raise
+        # We catch all exceptions (this unfortunately includes signals) to make
+        # sure that if we cannot automatically select a planner, we still run
+        # our fallback planner.
+        return None
+        #raise
 
     # TODO: we should be able to not hard-code the file name
     image_file_name = 'graph-gs-L-bolded-cs.png'
@@ -96,8 +104,8 @@ def select_planner_from_model(repo_dir, pwd, graph_file, image_from_lifted_task)
         model_subfolder = 'lifted'
     else:
         model_subfolder = 'grounded'
-    json_model = os.path.join(repo_dir, 'dl_model', model_subfolder, 'model.json')
-    h5_model = os.path.join(repo_dir, 'dl_model', model_subfolder, 'model.h5')
+    json_model = os.path.join(repo_dir, 'dl_model', 'models', model_subfolder, 'model.json')
+    h5_model = os.path.join(repo_dir, 'dl_model', 'models', model_subfolder, 'model.h5')
     selected_algorithm = selector.select_algorithm_from_model(json_model, h5_model, image_path)
     return selected_algorithm
 
@@ -120,18 +128,13 @@ def run_planner(repo_dir, selected_planner):
         command_line_options = selector.ALGORITHM_TO_COMMAND_LINE_STRING[selected_planner]
         use_h2_preprocessor = selected_planner not in selector.ALGORITHMS_WITHOUT_H2_PREPROCESSOR
         planner = build_planner_from_command_line_options(repo_dir, command_line_options, use_h2_preprocessor)
-    try:
-        print("Running planner, call string: {}".format(planner))
-        sys.stdout.flush()
-        subprocess.check_call(planner)
-        return True
-    except subprocess.CalledProcessError as err:
-        sys.stdout.flush()
-        print("Planner returned nonzero exitcode {}".format(err.returncode))
-        return False
+    print("Running planner, call string: {}".format(planner))
+    sys.stdout.flush()
+    subprocess.call(planner)
 
 
 def determine_and_run_planner(domain, problem, plan, image_from_lifted_task):
+    """Return true iff the determined planner succesfully solved the task."""
     repo_dir = get_repo_base()
     pwd = os.getcwd()
 
@@ -154,12 +157,10 @@ def determine_and_run_planner(domain, problem, plan, image_from_lifted_task):
     print_highlighted_line("Running the selected planner...")
     # Uncomment the following line for testing running symba.
     # command_line_options = ['seq-opt-symba-1']
-    success = run_planner(repo_dir, selected_planner)
-    if success:
-        print_highlighted_line("Done running the selected planner.")
-    else:
-        print_highlighted_line("Planner failed, using fallback planner!")
-    return success
+    run_planner(repo_dir, selected_planner)
+    print_highlighted_line("Done running the selected planner.")
+    # Consider any non-crashed planner run as succesful.
+    return True
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
