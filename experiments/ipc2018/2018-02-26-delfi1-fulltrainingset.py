@@ -109,7 +109,7 @@ for task in suites.build_suite(BENCHMARKS_DIR, SUITE):
         memory_limit=7600)
     run.set_property('domain', task.domain)
     run.set_property('problem', task.problem)
-    run.set_property('algorithm', 'delfi')
+    run.set_property('algorithm', 'delfi1')
     # Every run has to have a unique id in the form of a list.
     # The algorithm name is only really needed when there are
     # multiple algorithms.
