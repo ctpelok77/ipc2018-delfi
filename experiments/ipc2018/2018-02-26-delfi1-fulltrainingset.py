@@ -80,7 +80,7 @@ if not REMOTE:
     SUITE = ['gripper:prob01.pddl', 'depot:p01.pddl']
 ATTRIBUTES = [
     'cost', 'coverage', 'error', 'memory', 'plan_length', 'planner',
-    'search_time', 'total_time',
+    'run_dir', 'search_time', 'total_time',
 ]
 
 # Create a new experiment.
@@ -91,6 +91,7 @@ exp.add_resource('parser', 'plan-ipc-parser.py', dest='parser.py')
 
 # Add image and run script as resources to use them in runs
 image = os.path.expanduser('~/ipc2018-delfi1.img')
+algo_name = 'delfi1'
 exp.add_resource('image', image, dest='image')
 singularity_sript = os.path.abspath(os.path.join(REPO_DIR, 'experiments/ipc2018/run_singularity.sh'))
 exp.add_resource('run_singularity', singularity_sript, dest='run_singularity.sh')
@@ -109,11 +110,11 @@ for task in suites.build_suite(BENCHMARKS_DIR, SUITE):
         memory_limit=7600)
     run.set_property('domain', task.domain)
     run.set_property('problem', task.problem)
-    run.set_property('algorithm', 'delfi1')
+    run.set_property('algorithm', algo_name)
     # Every run has to have a unique id in the form of a list.
     # The algorithm name is only really needed when there are
     # multiple algorithms.
-    run.set_property('id', [task.domain, task.problem])
+    run.set_property('id', [algo_name, task.domain, task.problem])
     # Schedule parser.
     run.add_command('parse', ['{parser}'])
 
