@@ -52,7 +52,7 @@ def main(revisions=[]):
         '{}-h2-simpless-oss-900masb50ksccdfp'.format(REV2),
         '{}-h2-simpless-oss-900masb50ksbmiasm'.format(REV2),
         '{}-simpless-oss-900masb50kmiasmdfp'.format(REV2),
-        '{}-h2-simpless-oss-900masginfsccdfp'.format(REV2),
+        '{}-h2-simpless-oss-masginfsccdfp'.format(REV2), # missing 900 in its name
         '{}-h2-simpless-oss-cpdbshc900'.format(REV1),
         '{}-h2-simpless-oss-zopdbsgenetic'.format(REV1),
         'seq-opt-symba-1',
