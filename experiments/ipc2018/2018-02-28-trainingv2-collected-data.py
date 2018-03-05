@@ -22,39 +22,35 @@ def main(revisions=[]):
         environment=environment,
     )
 
-    exp.add_fetcher(os.path.expanduser('~/data/2018-02-22-trainingv1-alternative-ms-planners-mk-eval'))
-    exp.add_fetcher(os.path.expanduser('~/data/2018-02-28-trainingv1-dks-part1-mk-eval'),merge=True)
-    exp.add_fetcher(os.path.expanduser('~/data/2018-02-28-trainingv1-dks-part2-mk-eval'),merge=True)
-    exp.add_fetcher(os.path.expanduser('~/data/2018-02-28-trainingv1-oss-part1-mk-eval'),merge=True)
-    exp.add_fetcher(os.path.expanduser('~/data/2018-02-28-trainingv1-oss-part2-mk-eval'),merge=True)
-    exp.add_fetcher(os.path.expanduser('~/data/2018-02-27-trainingv1-symba-mk-eval'),merge=True)
+    exp.add_fetcher('data/2018-02-28-trainingv2-dks-eval',merge=True)
+    exp.add_fetcher('data/2018-02-28-trainingv2-oss-eval',merge=True)
+    exp.add_fetcher('data/2018-02-28-trainingv2-symba-eval',merge=True)
 
     attributes = [
-        'cost', 'coverage', 'error', 'memory', 'plan_length', 'planner',
+        'cost', 'coverage', 'error', 'memory', 'plan_length',
         'run_dir', 'search_time', 'total_time',
     ]
 
-    REV1 = '1b3fcd1654b3'
-    REV2 = '5652d59dafed'
+    REV = '5652d59dafed'
     exp.add_absolute_report_step(attributes=attributes,filter_algorithm=[
-        '{}-h2-simpless-dks-blind'.format(REV1),
-        '{}-h2-simpless-dks-celmcut'.format(REV1),
-        '{}-h2-simpless-dks-lmcountlmrhw'.format(REV1),
-        '{}-h2-simpless-dks-lmcountlmmergedlmrhwlmhm1'.format(REV1),
-        '{}-h2-simpless-dks-900masb50ksccdfp'.format(REV2),
-        '{}-h2-simpless-dks-900masb50ksbmiasm'.format(REV2),
-        '{}-simpless-dks-900masb50kmiasmdfp'.format(REV2),
-        '{}-h2-simpless-dks-900masginfsccdfp'.format(REV2),
-        '{}-h2-simpless-dks-cpdbshc900'.format(REV1),
-        '{}-h2-simpless-dks-zopdbsgenetic'.format(REV1),
-        '{}-h2-simpless-oss-blind'.format(REV1),
-        '{}-h2-simpless-oss-celmcut'.format(REV1),
-        '{}-h2-simpless-oss-900masb50ksccdfp'.format(REV2),
-        '{}-h2-simpless-oss-900masb50ksbmiasm'.format(REV2),
-        '{}-simpless-oss-900masb50kmiasmdfp'.format(REV2),
-        '{}-h2-simpless-oss-masginfsccdfp'.format(REV2), # missing 900 in its name
-        '{}-h2-simpless-oss-cpdbshc900'.format(REV1),
-        '{}-h2-simpless-oss-zopdbsgenetic'.format(REV1),
+        '{}-h2-simpless-dks-blind'.format(REV),
+        '{}-h2-simpless-dks-celmcut'.format(REV),
+        '{}-h2-simpless-dks-lmcountlmrhw'.format(REV),
+        '{}-h2-simpless-dks-lmcountlmmergedlmrhwlmhm1'.format(REV),
+        '{}-h2-simpless-dks-900masb50ksccdfp'.format(REV),
+        '{}-h2-simpless-dks-900masb50ksbmiasm'.format(REV),
+        '{}-simpless-dks-900masb50kmiasmdfp'.format(REV),
+        '{}-h2-simpless-dks-900masginfsccdfp'.format(REV),
+        '{}-h2-simpless-dks-cpdbshc900'.format(REV),
+        '{}-h2-simpless-dks-zopdbsgenetic'.format(REV),
+        '{}-h2-simpless-oss-blind'.format(REV),
+        '{}-h2-simpless-oss-celmcut'.format(REV),
+        '{}-h2-simpless-oss-900masb50ksccdfp'.format(REV),
+        '{}-h2-simpless-oss-900masb50ksbmiasm'.format(REV),
+        '{}-simpless-oss-900masb50kmiasmdfp'.format(REV),
+        '{}-h2-simpless-oss-masginfsccdfp'.format(REV), # missing 900 in its name
+        '{}-h2-simpless-oss-cpdbshc900'.format(REV),
+        '{}-h2-simpless-oss-zopdbsgenetic'.format(REV),
         'seq-opt-symba-1',
     ])
 
