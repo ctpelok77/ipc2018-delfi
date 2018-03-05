@@ -91,6 +91,7 @@ exp.add_resource('parser', 'plan-ipc-parser.py', dest='parser.py')
 
 # Add image and run script as resources to use them in runs
 image = os.path.expanduser('~/path/to/singularity/container')
+planner = 'planner-name' # e.g. delfi1 or delfi2
 exp.add_resource('image', image, dest='image')
 singularity_sript = os.path.abspath(os.path.join(REPO_DIR, 'experiments/ipc2018/run_singularity.sh'))
 exp.add_resource('run_singularity', singularity_sript, dest='run_singularity.sh')
@@ -109,7 +110,7 @@ for task in suites.build_suite(BENCHMARKS_DIR, SUITE):
         memory_limit=7600)
     run.set_property('domain', task.domain)
     run.set_property('problem', task.problem)
-    run.set_property('algorithm', 'delfi')
+    run.set_property('algorithm', planner)
     # Every run has to have a unique id in the form of a list.
     # The algorithm name is only really needed when there are
     # multiple algorithms.
