@@ -40,6 +40,13 @@ void SearchEngine::set_plan(const Plan &p) {
 }
 
 void SearchEngine::search() {
+    // HACK!
+    if (test_goal(*g_initial_state)) {
+        cout << "Initial state is a goal state!" << endl;
+        Plan plan;
+        set_plan(plan);
+        return;
+    }
     initialize();
     Timer timer;
     while (step() == IN_PROGRESS)
