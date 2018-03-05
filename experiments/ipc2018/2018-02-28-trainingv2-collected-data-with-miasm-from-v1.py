@@ -32,7 +32,8 @@ def main(revisions=[]):
 
     def remove_miasm(props):
         return (props['algorithm'] != '{}-simpless-dks-900masb50kmiasmdfp'.format(REV) and
-                props['algorithm'] != '{}-simpless-oss-900masb50kmiasmdfp'.format(REV))
+                props['algorithm'] != '{}-simpless-oss-900masb50kmiasmdfp'.format(REV) and
+                'lmcount' not in props['algorithm'])
 
     REV = '5652d59dafed'
     exp.add_fetcher('data/2018-02-28-trainingv2-dks-eval',merge=True,filter=[remove_miasm])
