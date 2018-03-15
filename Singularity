@@ -32,6 +32,19 @@ From: ubuntu
     cd /planner/symba
     ./build -j4
 
+    ## Clean up     
+    mkdir -p /compiled-planner/builds/release64
+    mv /planner/driver /compiled-planner
+    mv /planner/symba /planner/symba.py /compiled-planner
+    mv /planner/fast-downward.py /planner/plan-ipc.py /planner/create-image-from-graph.py /planner/timers.py /compiled-planner
+    mv /planner/dl_model /compiled-planner
+    rm -rf /compiled-planner/dl_model/model_creation /compiled-planner/dl_model/model.h5 /compiled-planner/dl_model/model.json
+    mv /planner/builds/release64/bin /compiled-planner/builds/release64
+    rm -rf /third-party
+    rm -rf /planner
+    mv /compiled-planner /planner
+    apt-get -y autoremove cmake g++ make unzip default-jre
+
 
 %runscript
     ## The runscript is called whenever the container is used to solve
