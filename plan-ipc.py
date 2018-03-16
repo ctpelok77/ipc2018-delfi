@@ -179,7 +179,5 @@ if __name__ == "__main__":
     if not success:
         print_highlighted_line("Running fallback planner...")
         base_dir = get_base_dir()
-        if run_planner(base_dir, 'fallback'):
-            print_highlighted_line("Done running fallback planner.")
-        else:
-            print_highlighted_line("Fallback planner failed, giving up.")
+        run_planner(base_dir, 'fallback')
+        print_highlighted_line("Done running fallback planner.")
