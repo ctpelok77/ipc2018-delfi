@@ -32,7 +32,7 @@ From: ubuntu
     cd /planner/symba
     ./build -j4
 
-    ## Clean up     
+    ## Clean up
     mkdir -p /compiled-planner/builds/release64
     mv /planner/driver /compiled-planner
     mv /planner/symba /planner/symba.py /compiled-planner
@@ -40,6 +40,8 @@ From: ubuntu
     mv /planner/dl_model /compiled-planner
     rm -rf /compiled-planner/dl_model/model_creation /compiled-planner/dl_model/model.h5 /compiled-planner/dl_model/model.json
     mv /planner/builds/release64/bin /compiled-planner/builds/release64
+    mkdir -p /compiled-planner/src
+    mv /planner/src/translate/ /compiled-planner/src/
     rm -rf /third-party
     rm -rf /planner
     mv /compiled-planner /planner
