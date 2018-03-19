@@ -90,7 +90,7 @@ exp = Experiment(environment=ENV)
 exp.add_resource('parser', 'plan-ipc-parser.py', dest='parser.py')
 
 # Add image and run script as resources to use them in runs
-image = os.path.expanduser('~/ipc2018-delfi2.img')
+image = os.path.expanduser('~/2018-02-28-ipc2018-delfi2.img')
 algo_name = 'delfi2'
 exp.add_resource('image', image, dest='image')
 singularity_sript = os.path.abspath(os.path.join(REPO_DIR, 'experiments/ipc2018/run_singularity.sh'))
