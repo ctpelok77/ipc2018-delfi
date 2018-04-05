@@ -98,8 +98,10 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
             }
         }
         if (fires) {
+            // Check if not redundant
             FactPair fact = parent->get_operator_effect(op_no, fact_index, false);
-            effects.push_back(GlobalEffect(fact.var, fact.value, empty_cond));
+            if (assignment[fact.var] != fact.value)
+                effects.push_back(GlobalEffect(fact.var, fact.value, empty_cond));
         }
     }
     if (effects.empty())
@@ -121,7 +123,7 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
       way, i.e. according to the order of (var, val) of the operator's effects.
     */
     auto GlobalConditionComparator = [effect_var_indices] (const GlobalCondition &p1, const GlobalCondition &p2) {
-        return (effect_var_indices[p1.var] < effect_var_indices[p2.var]);
+        return (effect_var_indices[p1.var] < effect_var_indices[p2.var] || (effect_var_indices[p1.var] == effect_var_indices[p2.var] && p1.var < p2.var));
     };
     set<GlobalCondition, decltype(GlobalConditionComparator)> conditions(GlobalConditionComparator);
     for (int fact_index = 0; fact_index < parent->get_num_operator_preconditions(op_no, false); ++fact_index) {
