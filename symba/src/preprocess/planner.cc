@@ -131,6 +131,13 @@ int main(int argc, const char ** argv) {
     strip_axioms(axioms);
   }
 
+  if (ordering.empty()) {
+    cout << "Unsolvable task in preprocessor" << endl;
+    generate_unsolvable_cpp_input();
+    cout << "done" << endl;
+    exit(0);
+  } 
+
   //Merge mutexes and make exactly one invariant groups
   generate_invariants(mutexes, operators, initial_state);
 

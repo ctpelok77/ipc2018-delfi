@@ -159,6 +159,51 @@ void dump_DTGs(const vector<Variable *> &ordering,
     }
 }
 
+
+void generate_unsolvable_cpp_input() {
+    ofstream outfile;
+    outfile.open("output.sas", ios::out);
+    outfile << "begin_version" << endl;
+    outfile << PRE_FILE_VERSION << endl;
+    outfile << "end_version" << endl;
+
+    outfile << "begin_metric" << endl << "1" << endl << "end_metric" << endl;
+
+    //variables
+    outfile << "1" << endl << "begin_variable" << endl
+            << "var0" << endl
+            << "-1" << endl
+            << "2" << endl
+            << "Atom dummy(val1)" << endl
+            << "Atom dummy(val2)" << endl
+            << "end_variable" << endl;
+
+    //Mutexes
+    outfile << "0" << endl;
+
+    //Initial state and goal
+    outfile << "begin_state" << endl << "0" << endl << "end_state" << endl;
+    outfile << "begin_goal" << endl << "1" << endl << "0 1" << endl << "end_goal" << endl;
+
+    //Operators
+    outfile << "0" << endl;
+
+    //Axioms
+    outfile << "0" << endl;
+
+    outfile << "begin_SG" << endl;
+    outfile << "check 0" << endl;
+    outfile << "end_SG" << endl;
+
+    outfile << "begin_DTG" << endl << "0" << endl << "0" << endl
+            << "end_DTG" << endl;
+
+    outfile << "begin_CG" << endl << "0" << endl << "end_CG" << endl;
+
+    outfile.close();
+}
+
+
 void generate_cpp_input(bool /*solvable_in_poly_time*/,
                         const vector<Variable *> &ordered_vars,
                         const bool &metric,
