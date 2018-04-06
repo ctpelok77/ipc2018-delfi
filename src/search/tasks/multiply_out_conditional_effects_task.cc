@@ -87,10 +87,12 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
     // Going over the effects and collecting those that fire.
     vector<GlobalEffect> effects;
     vector<GlobalCondition> empty_cond;
-    for (int fact_index = 0; fact_index < parent->get_num_operator_effects(op_no, false); ++fact_index) {
+    for (int eff_index = 0; eff_index < parent->get_num_operator_effects(op_no, false); ++eff_index) {
         bool fires = true;
-        for (int c_index = 0; c_index < parent->get_num_operator_effect_conditions(op_no, fact_index, false); ++c_index) {
-            FactPair fact = parent->get_operator_effect_condition(op_no, fact_index, c_index, false);
+        for (int cond_index = 0;
+             cond_index < parent->get_num_operator_effect_conditions(op_no, eff_index, false);
+             ++cond_index) {
+            FactPair fact = parent->get_operator_effect_condition(op_no, eff_index, cond_index, false);
             assert(assignment[fact.var] != -1);
             if (assignment[fact.var] != fact.value) {
                 fires = false;
@@ -98,8 +100,9 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
             }
         }
         if (fires) {
-            // Check if not redundant
-            FactPair fact = parent->get_operator_effect(op_no, fact_index, false);
+            FactPair fact = parent->get_operator_effect(op_no, eff_index, false);
+            // Check if the operator effect is not redundant because it is
+            // already a (multiplied out) precondidtion.
             if (assignment[fact.var] != fact.value)
                 effects.push_back(GlobalEffect(fact.var, fact.value, empty_cond));
         }
@@ -123,7 +126,9 @@ void MultiplyOutConditionalEffectsTask::add_conditional_operator(int op_no,
       way, i.e. according to the order of (var, val) of the operator's effects.
     */
     auto GlobalConditionComparator = [effect_var_indices] (const GlobalCondition &p1, const GlobalCondition &p2) {
-        return (effect_var_indices[p1.var] < effect_var_indices[p2.var] || (effect_var_indices[p1.var] == effect_var_indices[p2.var] && p1.var < p2.var));
+        return (effect_var_indices[p1.var] < effect_var_indices[p2.var] ||
+                (effect_var_indices[p1.var] == effect_var_indices[p2.var]
+                 && p1.var < p2.var));
     };
     set<GlobalCondition, decltype(GlobalConditionComparator)> conditions(GlobalConditionComparator);
     for (int fact_index = 0; fact_index < parent->get_num_operator_preconditions(op_no, false); ++fact_index) {
