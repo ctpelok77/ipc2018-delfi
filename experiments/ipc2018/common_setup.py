@@ -135,10 +135,8 @@ def get_repo_base():
 
 def is_running_on_cluster():
     node = platform.node()
-    return (
-        "scicore" in node or
-        node.startswith("gkigrid") or
-        node in ["habakuk", "turtur"])
+    return ((platform.node() == "login-infai.scicore.unibas.ch") or
+        platform.node().endswith(".cluster.bc2.ch"))
 
 
 def is_test_run():
