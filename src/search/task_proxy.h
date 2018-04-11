@@ -481,6 +481,8 @@ public:
         assert(!is_an_axiom);
         return task->get_global_operator_id(OperatorID(index));
     }
+
+    void dump_fdr() const;
 };
 
 

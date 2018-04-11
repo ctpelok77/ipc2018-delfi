@@ -6,23 +6,27 @@
 
 using namespace std;
 
+void OperatorProxy::dump_fdr() const {
+    cout << "operator " << get_name() << endl;
+    cout << "preconditions: ";
+    for (FactProxy cond : get_preconditions()) {
+        cout << cond.get_pair() << ", ";
+    }
+    cout << endl;
+    cout << "effects: " << endl;
+    for (EffectProxy eff : get_effects()) {
+        cout << "effect conditions: ";
+        for (FactProxy eff_cond : eff.get_conditions()) {
+            cout << eff_cond.get_pair() << ", ";
+        }
+        cout << "effect: " << eff.get_fact().get_pair() << endl;
+    }
+    cout << endl;
+}
+
 void OperatorsProxy::dump_fdr() const {
     for (OperatorProxy op : *this) {
-        cout << "operator " << op.get_name() << endl;
-        cout << "preconditions: ";
-        for (FactProxy cond : op.get_preconditions()) {
-            cout << cond.get_pair() << ", ";
-        }
-        cout << endl;
-        cout << "effects: " << endl;
-        for (EffectProxy eff : op.get_effects()) {
-            cout << "effect conditions: ";
-            for (FactProxy eff_cond : eff.get_conditions()) {
-                cout << eff_cond.get_pair() << ", ";
-            }
-            cout << "effect: " << eff.get_fact().get_pair() << endl;
-        }
-        cout << endl;
+        op.dump_fdr();
     }
 }
 
